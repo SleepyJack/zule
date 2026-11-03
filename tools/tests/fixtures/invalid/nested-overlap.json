@@ -1,0 +1,15 @@
+{
+  "slot_us": 100,
+  "tasks": {
+    "long_task": { "budget_slots": 7 },
+    "short_task": { "budget_slots": 1 }
+  },
+  "cycle": {
+    "slots": 10,
+    "windows": [
+      { "task": "long_task", "start_slot": 0 },
+      { "task": "short_task", "start_slot": 2 },
+      { "task": "short_task", "start_slot": 5 }
+    ]
+  }
+}

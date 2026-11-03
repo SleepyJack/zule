@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Zule schedule configuration",
+  "description": "Draft configuration for a repeating, single-core schedule. All timing uses integer slots. Each window reserves its referenced task's budget; early completion does not advance subsequent windows. Unallocated slots are idle.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slot_us", "tasks", "cycle"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional reference to this configuration's JSON Schema."
+    },
+    "slot_us": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Duration of one slot in microseconds."
+    },
+    "tasks": {
+      "type": "object",
+      "description": "Scheduled task definition",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/task"
+      }
+    },
+    "cycle": {
+      "$ref": "#/$defs/cycle"
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["budget_slots"],
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "budget_slots": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Reserved wall-clock duration of each invocation in slots. The task must complete within this window, allowing for scheduler and interrupt interference."
+        }
+      }
+    },
+    "cycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slots", "windows"],
+      "properties": {
+        "slots": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total cycle length in slots, including idle time. The schedule repeats at this interval."
+        },
+        "windows": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Execution windows in increasing start-slot order. A task may appear more than once. Each window's duration comes exclusively from the referenced task's budget_slots.",
+          "items": {
+            "$ref": "#/$defs/window"
+          }
+        }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task", "start_slot"],
+      "properties": {
+        "task": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Identifier declared in tasks."
+        },
+        "start_slot": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Start offset from the cycle boundary in slots. The window occupies [start_slot, start_slot + task budget_slots)."
+        }
+      }
+    }
+  }
+}

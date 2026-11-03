@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../zule_tools/schedule.schema.json",
+  "slot_us": 100,
+  "tasks": {
+    "sense": {
+      "description": "Sample inputs into a stable snapshot.",
+      "budget_slots": 2
+    },
+    "control": {
+      "description": "Compute control outputs from the input snapshot.",
+      "budget_slots": 3
+    },
+    "output": {
+      "description": "Publish the computed outputs.",
+      "budget_slots": 2
+    }
+  },
+  "cycle": {
+    "slots": 10,
+    "windows": [
+      { "task": "sense", "start_slot": 0 },
+      { "task": "control", "start_slot": 2 },
+      { "task": "output", "start_slot": 5 }
+    ]
+  }
+}
