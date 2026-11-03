@@ -42,7 +42,8 @@ int main(void) {
 }
 ''')
             executable = Path(directory) / "test"
-            subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", str(harness), "-o", str(executable)], check=True, capture_output=True, text=True)
+            include_dir = Path(__file__).resolve().parents[2] / "core/inc"
+            subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(include_dir), str(harness), "-o", str(executable)], check=True, capture_output=True, text=True)
             subprocess.run([str(executable)], check=True, capture_output=True, text=True)
             original = output.read_bytes()
             self.assertEqual(generate_schedule(schedule, directory).read_bytes(), original)

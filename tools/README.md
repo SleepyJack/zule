@@ -54,8 +54,8 @@ The draft C format contains `zule_slot_us`, `zule_cycle_slots`,
 `zule_windows`, and `zule_window_count`. Each window holds a function
 pointer, start slot, and budget. Applications provide `void zule_task_<name>(void)`
 for each scheduled task. The prefix allows task identifiers such as `switch`
-without colliding with C keywords. The type definition is currently emitted
-in the C file; a shared runtime header can replace it when the runtime is defined.
+without colliding with C keywords. The generated file includes `zule.h` from
+`core/inc` and exports `const zule_schedule_t zule_schedule` for `zule_init()`.
 Only one generated schedule is intended per application at this stage.
 
 Generation requires all timing fields to fit `uint32_t`; validation alone has

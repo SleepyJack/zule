@@ -32,14 +32,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     lines = [
         "/* Generated Zule schedule. Do not edit. */",
-        "#include <stddef.h>",
-        "#include <stdint.h>",
-        "",
-        "typedef struct {",
-        "    void (*task)(void);",
-        "    uint32_t start_slot;",
-        "    uint32_t budget_slots;",
-        "} zule_window_t;",
+        '#include "zule.h"',
         "",
     ]
     # Declaration order does not depend on JSON object key order.
@@ -62,6 +55,13 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         "",
         "const size_t zule_window_count =",
         "    sizeof(zule_windows) / sizeof(zule_windows[0]);",
+        "",
+        "const zule_schedule_t zule_schedule = {",
+        f"    {int(schedule['slot_us'])}U,",
+        f"    {int(schedule['cycle']['slots'])}U,",
+        "    zule_windows,",
+        "    sizeof(zule_windows) / sizeof(zule_windows[0])",
+        "};",
         "",
     ])
     source = "\n".join(lines)

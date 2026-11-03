@@ -1,6 +1,10 @@
-__pycache__/
-*.egg-info/
+# Python environment and bytecode
 .venv/
-build/
-dist/
+__pycache__/
+*.py[cod]
+
+# Generated demo schedule
 /demo/gen/
+
+# CMake build output
+/build/

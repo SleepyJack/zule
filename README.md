@@ -26,3 +26,20 @@ python demo/generate.py
 Output goes to `demo/gen/schedule.c`. See [demo/README.md](demo/README.md).
 
 See [tools/README.md](tools/README.md) for the current format and tool behavior.
+
+Build the Ubuntu demo with a C compiler, CMake (3.16 or later), and the Python
+environment above. From the project root:
+
+```sh
+cmake -S . -B build -DZULE_BUILD_DEMO=ON -DPython3_EXECUTABLE="$PWD/.venv/bin/python"
+cmake --build build
+./build/demo/zule_demo
+```
+
+The build generates `build/demo/gen/schedule.c` and links it with the core and
+demo tasks. The executable steps through one cycle of logical slots; it does
+not yet implement wall-clock timing or budget enforcement.
+
+`ZULE_BUILD_DEMO` defaults to `OFF`. A core-only build needs a C compiler and
+CMake, without Python. Consumers can use `add_subdirectory(path/to/zule)` and
+link `zule::core`, or compile `core/src/zule.c` with `core/inc` on their include path.
