@@ -1,6 +1,6 @@
 {
   "$schema": "../tools/schedule/zule_schedule/schedule.schema.json",
-  "slot_us": 100,
+  "slot_us": 50000,
   "tasks": {
     "sense": {
       "description": "Sample inputs into a stable snapshot.",

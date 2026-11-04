@@ -11,7 +11,7 @@ from pathlib import Path
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="report formatting errors without editing")
-    parser.add_argument("files", nargs="*", type=Path, help="C files or headers; default: core and demo sources")
+    parser.add_argument("files", nargs="*", type=Path, help="C files or headers; default: core, ports, and demo sources")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
 
@@ -19,7 +19,7 @@ def main() -> int:
     if not sources:
         sources = sorted(
             path
-            for directory in (root / "core", root / "demo")
+            for directory in (root / "core", root / "ports", root / "demo")
             for path in directory.rglob("*")
             if path.is_file()
             and path.suffix in (".c", ".h")

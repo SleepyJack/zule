@@ -46,6 +46,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DZULE_BUILD_TESTS=ON
           -DZULE_BUILD_DEMO=ON
+          -DZULE_PORT=posix
           -DPython3_EXECUTABLE="${{ steps.python.outputs.python-path }}"
 
       - name: Build C tests and demo

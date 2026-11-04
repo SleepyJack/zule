@@ -1,0 +1,28 @@
+if(NOT UNIX)
+    message(FATAL_ERROR "The POSIX port requires a POSIX host")
+endif()
+
+find_package(Threads REQUIRED)
+add_library(zule_port_posix STATIC zule_port.c)
+add_library(zule::port ALIAS zule_port_posix)
+target_include_directories(zule_port_posix PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+target_compile_definitions(zule_port_posix PRIVATE _POSIX_C_SOURCE=200809L)
+target_compile_features(zule_port_posix PUBLIC c_std_99)
+target_link_libraries(zule_port_posix PUBLIC Threads::Threads)
+set_target_properties(zule_port_posix PROPERTIES C_EXTENSIONS OFF)
+
+if(ZULE_BUILD_TESTS)
+    add_executable(zule_posix_tests tests/zule_port_test.c)
+    target_link_libraries(zule_posix_tests PRIVATE zule::port)
+    set_target_properties(zule_posix_tests PROPERTIES C_EXTENSIONS OFF)
+    add_test(NAME zule_posix COMMAND zule_posix_tests)
+    set_tests_properties(zule_posix PROPERTIES TIMEOUT 10)
+endif()
+
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(zule_port_posix PRIVATE -Wall -Wextra -Wpedantic)
+    if(ZULE_BUILD_TESTS)
+        target_compile_options(zule_posix_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endif()

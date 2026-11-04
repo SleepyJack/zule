@@ -7,12 +7,14 @@
 
 #include "zule.h"
 #include "zule_schedule_definition.h"
+#include "zule_test_port.h"
 
 static uint32_t first_calls;
 static uint32_t second_calls;
 static bool simulate_overrun;
 
 static void first_task(void) {
+    assert(!zule_test_port_is_critical());
     ++first_calls;
     if (simulate_overrun) {
         /* Simulate two timer interrupts while the task is executing. */
@@ -22,6 +24,7 @@ static void first_task(void) {
 }
 
 static void second_task(void) {
+    assert(!zule_test_port_is_critical());
     ++second_calls;
 }
 
@@ -109,5 +112,6 @@ int main(void) {
     schedule_definition = &schedule;
     assert(zule_init() == ZULE_RESULT_OK);
     assert(zule_run() == ZULE_RESULT_OK);
+    assert(!zule_test_port_is_critical());
     return 0;
 }

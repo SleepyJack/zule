@@ -22,12 +22,18 @@ consistency, not whether tasks actually finish within their budgets.
 Missed dispatches and running tasks at window end latch faults and stop timeline
 progression and further dispatch. Boundary processing continues so a late return
 can retire to idle. The first fault remains latched until reinitialization.
-There is no hardware clock, preemption, or forced task termination. ISR/main-loop
-synchronization remains to be implemented. `slot_us` is separate timing metadata.
+There is no clock source, preemption, or forced task termination in the core.
+Run protects the task handoff and completion through the port critical-section
+API. An embedded tick ISR must be non-reentrant; a native tick thread must
+acquire the port's exclusion around each tick call. Init must precede both
+contexts, and reinitialization requires them to stop. `slot_us` is separate
+timing metadata used by the native demo timer.
 
 Integrators can use `add_subdirectory(path/to/zule)` and link `zule::core`.
 The demo is disabled by default, and building only the core requires no Python.
-Hardware-specific integration can be added separately when needed.
+Select a port through `ZULE_PORT` or provide a `zule::port` target before adding
+Zule. Its usage requirements supply the selected `zule_port_types.h` and library.
 
 Enable `ZULE_BUILD_TESTS` to build the standalone core API tests and run them
-with CTest. They supply their own schedule and require no Python tools.
+with CTest. They supply their own schedule and deterministic test port, with no
+timer threads or Python tools. The POSIX mutex is tested separately.

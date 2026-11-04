@@ -4,6 +4,7 @@ A static, time-triggered scheduler with offline schedule validation and C table
 generation.
 
 - `core/`: platform-independent C scheduling engine and public interfaces.
+- `ports/`: target integration API and native POSIX development port.
 - `tools/schedule/`: schedule definition tools, their tests, fixtures, and schema.
 - `tools/format.py`: standalone C formatting utility.
 - `demo/`: a standalone example schedule and generation script.
@@ -32,23 +33,29 @@ Build the Ubuntu demo with a C compiler, CMake (3.16 or later), and the Python
 environment above. From the project root:
 
 ```sh
-cmake -S . -B build -DZULE_BUILD_DEMO=ON -DPython3_EXECUTABLE="$PWD/.venv/bin/python"
+cmake -S . -B build -DZULE_PORT=posix -DZULE_BUILD_DEMO=ON -DPython3_EXECUTABLE="$PWD/.venv/bin/python"
 cmake --build build
 ./build/demo/zule_demo
 ```
 
 The build generates `build/demo/gen/zule_schedule_definition.c` and links it with the core and
-demo tasks. The executable steps through one cycle of logical slots; it does
-not yet implement wall-clock timing or forced termination of overrunning tasks.
+demo tasks. A timer thread delivers ticks at absolute monotonic deadlines while
+the main thread dispatches tasks. The demo runs one 500 ms cycle with 50 ms
+slots, then stops and joins its timer. It is a native development example,
+without hard real-time guarantees or forced termination of overrunning tasks.
 
 `ZULE_BUILD_DEMO` defaults to `OFF`. A core-only build needs a C compiler and
-CMake, without Python. Consumers can use `add_subdirectory(path/to/zule)` and
-link `zule::core`, or compile the C sources in `core/src/` with `core/inc` on their include path.
+CMake, without Python. Select `ZULE_PORT=posix` for the native implementation.
+Consumers can provide their own `zule::port` target before adding Zule, supplying
+their implementation and the include directory for `zule_port_types.h`.
+Then use `add_subdirectory(path/to/zule)` and link `zule::core`. Integrators using
+another build system compile the core and chosen port with their include paths.
+See [ports/posix/README.md](ports/posix/README.md) for the host port contract.
 
 To build and run the core API tests:
 
 ```sh
-cmake -S . -B build -DZULE_BUILD_TESTS=ON
+cmake -S . -B build -DZULE_PORT=posix -DZULE_BUILD_TESTS=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
@@ -62,8 +69,8 @@ python tools/format.py
 python tools/format.py --check
 ```
 
-By default, the script formats handwritten C sources and headers under `core/`
-and `demo/`. `--check` reports differences without editing and returns a failure
+By default, the script formats handwritten C sources and headers under `core/`,
+`ports/`, and `demo/`. `--check` reports differences without editing and returns a failure
 status if formatting is needed. Paths are resolved from the script, so it can
 be invoked from any working directory. Explicit file arguments are relative
 to the caller's working directory.

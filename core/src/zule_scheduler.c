@@ -1,4 +1,5 @@
 #include "zule.h"
+#include "zule_port.h"
 #include "zule_schedule_definition.h"
 
 #include <stdbool.h>
@@ -96,16 +97,25 @@ zule_result_t zule_tick(void) {
 }
 
 zule_result_t zule_run(void) {
+    zule_result_t result = ZULE_RESULT_OK;
     if (!scheduler.initialized) {
-        return ZULE_RESULT_NOT_INITIALIZED;
-    }
-    // Dispatch the active task if it is pending and there is no active fault
-    if ((scheduler.task.fault == ZULE_RESULT_OK) && (scheduler.task.state == ZULE_TASK_PENDING)) {
-        scheduler.task.state = ZULE_TASK_RUNNING;
-        scheduler.task.function();
-        if (scheduler.task.state == ZULE_TASK_RUNNING) {
-            scheduler.task.state = ZULE_TASK_COMPLETED;
+        result = ZULE_RESULT_NOT_INITIALIZED;
+    } else {
+        zule_port_critical_state_t critical_state = zule_port_critical_enter();
+        // Dispatch the active task if it is pending and there is no active fault
+        if ((scheduler.task.fault == ZULE_RESULT_OK) &&
+            (scheduler.task.state == ZULE_TASK_PENDING)) {
+            scheduler.task.state = ZULE_TASK_RUNNING;
+            zule_task_function_t task_function = scheduler.task.function;
+            zule_port_critical_exit(critical_state);
+            task_function();
+            critical_state = zule_port_critical_enter();
+            if (scheduler.task.state == ZULE_TASK_RUNNING) {
+                scheduler.task.state = ZULE_TASK_COMPLETED;
+            }
         }
+        result = scheduler.task.fault;
+        zule_port_critical_exit(critical_state);
     }
-    return scheduler.task.fault;
+    return result;
 }
