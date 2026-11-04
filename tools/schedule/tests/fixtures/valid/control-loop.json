@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../zule_tools/schedule.schema.json",
+  "$schema": "../../../zule_schedule/schedule.schema.json",
   "slot_us": 100,
   "tasks": {
     "sense": {

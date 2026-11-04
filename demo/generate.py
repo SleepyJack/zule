@@ -11,12 +11,12 @@ def main() -> int:
         [
             sys.executable,
             "-m",
-            "zule_tools",
+            "zule_schedule",
             "generate",
             str(demo_dir / "control-loop.json"),
             str(demo_dir / "gen"),
         ],
-        cwd=demo_dir.parent / "tools",
+        cwd=demo_dir.parent / "tools" / "schedule",
     )
     return result.returncode
 

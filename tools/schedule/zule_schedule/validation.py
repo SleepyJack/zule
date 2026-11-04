@@ -28,7 +28,7 @@ def validate_schedule(schedule: Any) -> list[ValidationIssue]:
     and are never fetched. Budgets are declarations, not measured WCET bounds.
     """
     schema = json.loads(
-        files("zule_tools").joinpath("schedule.schema.json").read_text(encoding="utf-8")
+        files("zule_schedule").joinpath("schedule.schema.json").read_text(encoding="utf-8")
     )
     validator = Draft202012Validator(schema)
     errors = sorted(

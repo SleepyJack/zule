@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zule_tools.schedule_io import load_schedule
+from zule_schedule.schedule_io import load_schedule
 
 
 class ScheduleIOTests(unittest.TestCase):

@@ -9,7 +9,7 @@ from .validation import validate_schedule
 
 
 def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
-    """Validate and write schedule.c, returning its path.
+    """Validate and write zule_schedule.c, returning its path.
 
     Raise ValueError for invalid or unrepresentable schedules, or OSError for
     output failures. Invalid input leaves existing output untouched.
@@ -32,7 +32,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     lines = [
         "/* Generated Zule schedule. Do not edit. */",
-        '#include "schedule.h"',
+        '#include "zule_schedule.h"',
         "",
     ]
     # Declaration order does not depend on JSON object key order.
@@ -48,18 +48,17 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         name = window["task"]
         start = int(window["start_slot"])
         budget = int(tasks[name]["budget_slots"])
-        lines.append(f"    {{ zule_task_{name}, {start}U, {budget}U }},")
+        lines.append(f"    {{zule_task_{name}, {start}U, {budget}U}},")
     lines.extend([
         "};",
         "",
-        "static zule_schedule_t zule_schedule = {",
+        "static const zule_schedule_t zule_schedule = {",
         f"    .cycle_slots = {int(schedule['cycle']['slots'])}U,",
         "    .windows = zule_windows,",
-        "    .window_count = sizeof(zule_windows) / sizeof(zule_windows[0])",
+        "    .window_count = sizeof(zule_windows) / sizeof(zule_windows[0]),",
         "};",
         "",
-        "zule_schedule_t *zule_schedule_get(void)",
-        "{",
+        "const zule_schedule_t *zule_schedule_get(void) {",
         "    return &zule_schedule;",
         "}",
         "",
@@ -68,7 +67,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
-    output = directory / "schedule.c"
+    output = directory / "zule_schedule.c"
     temporary = None
     try:
         with NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=directory, delete=False) as stream:

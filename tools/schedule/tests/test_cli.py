@@ -4,7 +4,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from zule_tools.cli import main
+from zule_schedule.cli import main
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -16,7 +16,7 @@ class CLITests(unittest.TestCase):
             output_dir = Path(directory) / "generated"
             with redirect_stdout(io.StringIO()) as output:
                 self.assertEqual(main(["generate", str(FIXTURES / "valid/control-loop.json"), str(output_dir)]), 0)
-            self.assertTrue((output_dir / "schedule.c").is_file())
+            self.assertTrue((output_dir / "zule_schedule.c").is_file())
             self.assertIn(": generated", output.getvalue())
 
     def test_generate_rejects_invalid_input(self):

@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zule_tools.generation import generate_schedule
-from zule_tools.schedule_io import load_schedule
+from zule_schedule.generation import generate_schedule
+from zule_schedule.schedule_io import load_schedule
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -21,7 +21,7 @@ class GenerationTests(unittest.TestCase):
             output = generate_schedule(schedule, directory)
             harness = Path(directory) / "test.c"
             harness.write_text('''#include <assert.h>
-#include "schedule.h"
+#include "zule_schedule.h"
 extern const uint32_t zule_slot_us;
 static unsigned called;
 void zule_task_sense(void) { called = 1; }
@@ -45,7 +45,7 @@ int main(void) {
 }
 ''')
             executable = Path(directory) / "test"
-            include_dir = Path(__file__).resolve().parents[2] / "core/inc"
+            include_dir = Path(__file__).resolve().parents[3] / "core/inc"
             subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(include_dir), str(harness), str(output), "-o", str(executable)], check=True, capture_output=True, text=True)
             subprocess.run([str(executable)], check=True, capture_output=True, text=True)
             original = output.read_bytes()
@@ -56,13 +56,13 @@ int main(void) {
         with tempfile.TemporaryDirectory() as directory:
             source = generate_schedule(schedule, directory).read_text()
             self.assertEqual(source.count("extern void zule_task_sense(void);"), 1)
-            self.assertIn("{ zule_task_sense, 0U, 2U }", source)
-            self.assertIn("{ zule_task_sense, 2U, 2U }", source)
+            self.assertIn("{zule_task_sense, 0U, 2U}", source)
+            self.assertIn("{zule_task_sense, 2U, 2U}", source)
 
     def test_invalid_input_preserves_existing_output(self):
         for name, message in (("invalid/overlap.json", "overlaps"), ("valid/large-slot.json", "uint32_t")):
             with self.subTest(fixture=name), tempfile.TemporaryDirectory() as directory:
-                output = Path(directory) / "schedule.c"
+                output = Path(directory) / "zule_schedule.c"
                 output.write_text("existing output")
                 with self.assertRaisesRegex(ValueError, message):
                     generate_schedule(load_schedule(FIXTURES / name), directory)

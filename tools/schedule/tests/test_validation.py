@@ -5,7 +5,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from zule_tools.validation import validate_schedule
+from zule_schedule.validation import validate_schedule
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -17,7 +17,7 @@ def read_fixture(name):
 
 class ValidationTests(unittest.TestCase):
     def test_schema_and_example(self):
-        schema = json.loads(files("zule_tools").joinpath("schedule.schema.json").read_text())
+        schema = json.loads(files("zule_schedule").joinpath("schedule.schema.json").read_text())
         Draft202012Validator.check_schema(schema)
         self.assertEqual(validate_schedule(read_fixture("valid/control-loop.json")), [])
 

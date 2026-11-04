@@ -1,20 +1,20 @@
-# Zule tools (draft)
+# Zule schedule tools (draft)
 
 A small Python package for offline schedule validation and C table generation.
 
 From this directory:
 
 ```sh
-python3 -m venv ../.venv
-../.venv/bin/python -m pip install -r requirements.txt
-../.venv/bin/python -m zule_tools validate tests/fixtures/valid/control-loop.json
+python3 -m venv ../../.venv
+../../.venv/bin/python -m pip install -r requirements.txt
+../../.venv/bin/python -m zule_schedule validate tests/fixtures/valid/control-loop.json
 ```
 
 Alternatively, with dependencies installed, run from this directory:
 
 ```sh
-python3 -m zule_tools validate tests/fixtures/valid/control-loop.json
-python3 -m zule_tools generate tests/fixtures/valid/control-loop.json generated
+python3 -m zule_schedule validate tests/fixtures/valid/control-loop.json
+python3 -m zule_schedule generate tests/fixtures/valid/control-loop.json generated
 python3 -m unittest discover -s tests -v
 ```
 
@@ -31,7 +31,7 @@ Each window occupies `[start_slot, start_slot + task.budget_slots)`. Windows
 may touch, tasks may run multiple times, and gaps are idle time. Budgets include
 the allowance for interrupt and scheduler interference within a window.
 
-The schema lives in `zule_tools/schedule.schema.json`; the control-loop fixture references
+The schema lives in `zule_schedule/schedule.schema.json`; the control-loop fixture references
 it directly. The CLI always uses this schema and does not fetch input `$schema`
 references.
 
@@ -47,16 +47,16 @@ JSON test cases live in `tests/fixtures/`:
 - `invalid/`: schedules with specific structural, reference, ordering, or timing errors.
 
 `generate <schedule.json> <output_dir>` creates the output directory if needed
-and writes `schedule.c`, replacing existing output only after the new file is
+and writes `zule_schedule.c`, replacing existing output only after the new file is
 complete. Validation failures leave existing output untouched.
 
-The generated C implements `zule_schedule_get()` from `core/inc/schedule.h`.
+The generated C implements `zule_schedule_get()` from `core/inc/zule_schedule.h`.
 It returns a static schedule with cycle length, windows, and window count.
 `zule_slot_us` is emitted separately as timing metadata; the core schedule type
 does not contain it. Each window holds a function
 pointer, start slot, and budget. Applications provide `void zule_task_<name>(void)`
 for each scheduled task. The prefix allows task identifiers such as `switch`
-without colliding with C keywords. The generated file includes `schedule.h`
+without colliding with C keywords. The generated file includes `zule_schedule.h`
 from `core/inc`; `zule_init()` obtains the schedule through the getter.
 Only one generated schedule is intended per application at this stage.
 

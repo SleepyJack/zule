@@ -1,6 +1,20 @@
-add_library(zule_core STATIC src/zule.c)
+add_library(zule_core STATIC src/zule_scheduler.c)
 add_library(zule::core ALIAS zule_core)
 
 target_include_directories(zule_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/inc")
 target_compile_features(zule_core PUBLIC c_std_99)
 set_target_properties(zule_core PROPERTIES C_EXTENSIONS OFF)
+
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(zule_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(ZULE_BUILD_TESTS)
+    add_executable(zule_core_tests tests/zule_scheduler_test.c)
+    target_link_libraries(zule_core_tests PRIVATE zule::core)
+    set_target_properties(zule_core_tests PROPERTIES C_EXTENSIONS OFF)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(zule_core_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME zule_core COMMAND zule_core_tests)
+endif()
