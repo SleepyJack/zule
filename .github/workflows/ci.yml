@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests-and-format:
+    name: Tests and formatting
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        id: python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            tools/schedule/requirements.txt
+
+      - name: Install Python dependencies and formatter
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Check handwritten C formatting
+        run: python tools/format.py --check
+
+      - name: Run Python unit tests
+        working-directory: tools/schedule
+        run: python -m unittest discover -s tests -v
+
+      - name: Configure C tests and demo
+        run: >-
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DZULE_BUILD_TESTS=ON
+          -DZULE_BUILD_DEMO=ON
+          -DPython3_EXECUTABLE="${{ steps.python.outputs.python-path }}"
+
+      - name: Build C tests and demo
+        run: cmake --build build --parallel
+
+      - name: Run C unit tests
+        run: ctest --test-dir build --output-on-failure --no-tests=error
+
+      - name: Check generated C formatting
+        run: python tools/format.py --check build/demo/gen/zule_schedule_definition.c
+
+      - name: Run demo
+        run: ./build/demo/zule_demo

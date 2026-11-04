@@ -84,3 +84,7 @@ stars next to variable names. All conditional and loop bodies use braces.
 See [doc/CODING_GUIDELINES.md](doc/CODING_GUIDELINES.md) for naming, API,
 ownership, and review conventions. [AGENTS.md](AGENTS.md) directs agent reviews
 against those guidelines.
+
+GitHub Actions runs the C and Python unit tests, checks handwritten and
+generated C formatting, and builds/runs the demo on Ubuntu for pushes and pull
+requests. The [CI workflow](.github/workflows/ci.yml) can also be run manually.
