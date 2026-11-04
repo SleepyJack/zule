@@ -1,17 +1,23 @@
 # Zule core
 
 `inc/zule.h` defines the public result enum and no-argument `zule_init()`,
-`zule_tick()`, and `zule_run()` functions. Schedule definitions and the generated
-getter live in `inc/zule_schedule.h`. `src/zule_scheduler.c` contains the private
+`zule_tick()`, and `zule_run()` functions. Schedule types live in
+`inc/zule_schedule.h`; `inc/zule_schedule_definition.h` declares the generated
+getter. `src/zule_scheduler.c` contains the private
 state and platform-independent implementation. The CMake target is `zule::core`.
 
 `zule_init()` obtains the generated schedule through `zule_schedule_get()` in
-`inc/zule_schedule.h` and initializes the private singleton. `zule_tick()` advances
+`inc/zule_schedule_definition.h` and initializes the private singleton. `zule_tick()` advances
 logical slots and publishes tasks; `zule_run()` dispatches pending tasks from
 the main loop. Tick and run return `ZULE_RESULT_NOT_INITIALIZED` until init
 succeeds. Idle polling returns `ZULE_RESULT_OK`; faults are returned until reset.
-Runtime schedule validation is a TODO. Configuration must currently be validated
-offline; `ZULE_RESULT_INVALID_SCHEDULE` is reserved for the future validation path.
+`zule_schedule_validate()` in `src/zule_schedule.c` checks pointers, nonzero
+counts and budgets, task functions, window bounds, ordering, and overlap.
+End-bound checks avoid unsigned addition overflow. Init returns
+`ZULE_RESULT_INVALID_SCHEDULE` on failure and leaves tick/run disabled, including
+after a failed reinitialization. Pointer storage validity and execution-time
+budgets still require external evidence; the validator checks structural timing
+consistency, not whether tasks actually finish within their budgets.
 
 Missed dispatches and running tasks at window end latch faults and stop timeline
 progression and further dispatch. Boundary processing continues so a late return

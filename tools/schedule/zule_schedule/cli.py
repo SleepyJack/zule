@@ -13,9 +13,9 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     validate = commands.add_parser("validate", help="validate a JSON schedule")
     validate.add_argument("schedule", help="path to the JSON schedule")
-    generate = commands.add_parser("generate", help="validate a JSON schedule and generate zule_schedule.c")
+    generate = commands.add_parser("generate", help="validate a JSON schedule and generate zule_schedule_definition.c")
     generate.add_argument("schedule", help="path to the JSON schedule")
-    generate.add_argument("output_dir", help="directory for the generated zule_schedule.c")
+    generate.add_argument("output_dir", help="directory for the generated zule_schedule_definition.c")
     args = parser.parse_args(argv)
 
     try:

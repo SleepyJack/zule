@@ -9,7 +9,7 @@ from .validation import validate_schedule
 
 
 def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
-    """Validate and write zule_schedule.c, returning its path.
+    """Validate and write zule_schedule_definition.c, returning its path.
 
     Raise ValueError for invalid or unrepresentable schedules, or OSError for
     output failures. Invalid input leaves existing output untouched.
@@ -32,7 +32,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     lines = [
         "/* Generated Zule schedule. Do not edit. */",
-        '#include "zule_schedule.h"',
+        '#include "zule_schedule_definition.h"',
         "",
     ]
     # Declaration order does not depend on JSON object key order.
@@ -67,7 +67,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
-    output = directory / "zule_schedule.c"
+    output = directory / "zule_schedule_definition.c"
     temporary = None
     try:
         with NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=directory, delete=False) as stream:

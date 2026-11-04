@@ -21,7 +21,7 @@ class GenerationTests(unittest.TestCase):
             output = generate_schedule(schedule, directory)
             harness = Path(directory) / "test.c"
             harness.write_text('''#include <assert.h>
-#include "zule_schedule.h"
+#include "zule_schedule_definition.h"
 extern const uint32_t zule_slot_us;
 static unsigned called;
 void zule_task_sense(void) { called = 1; }
@@ -62,7 +62,7 @@ int main(void) {
     def test_invalid_input_preserves_existing_output(self):
         for name, message in (("invalid/overlap.json", "overlaps"), ("valid/large-slot.json", "uint32_t")):
             with self.subTest(fixture=name), tempfile.TemporaryDirectory() as directory:
-                output = Path(directory) / "zule_schedule.c"
+                output = Path(directory) / "zule_schedule_definition.c"
                 output.write_text("existing output")
                 with self.assertRaisesRegex(ValueError, message):
                     generate_schedule(load_schedule(FIXTURES / name), directory)

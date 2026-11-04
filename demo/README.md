@@ -10,7 +10,7 @@ python demo/generate.py
 ```
 
 The script can also be invoked from another working directory. It uses the
-current Python interpreter and writes `demo/gen/zule_schedule.c` on Windows and Linux.
+current Python interpreter and writes `demo/gen/zule_schedule_definition.c` on Windows and Linux.
 Install `tools/schedule/requirements.txt` into that interpreter's environment first. The generated
 directory is ignored by Git.
 

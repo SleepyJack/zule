@@ -10,8 +10,8 @@ typedef enum {
 } zule_result_t;
 
 /* Initialize or reset the singleton. Tick delivery must be stopped and no task
- * may be executing. Schedule validation is not implemented yet; callers must
- * supply valid generated configuration. INVALID_SCHEDULE is reserved for it. */
+ * may be executing. Returns INVALID_SCHEDULE if configuration validation fails,
+ * leaving tick and run disabled until a successful initialization. */
 zule_result_t zule_init(void);
 
 /* Process one logical slot. Returns NOT_INITIALIZED before initialization;

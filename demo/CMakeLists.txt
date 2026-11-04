@@ -5,7 +5,7 @@ set(ZULE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/gen")
 file(GLOB ZULE_GENERATOR_SOURCES CONFIGURE_DEPENDS "${ZULE_SCHEDULE_TOOLS_DIR}/zule_schedule/*.py")
 
 add_custom_command(
-    OUTPUT "${ZULE_GENERATED_DIR}/zule_schedule.c"
+    OUTPUT "${ZULE_GENERATED_DIR}/zule_schedule_definition.c"
     COMMAND "${Python3_EXECUTABLE}" -m zule_schedule generate
             "${CMAKE_CURRENT_SOURCE_DIR}/control-loop.json" "${ZULE_GENERATED_DIR}"
     WORKING_DIRECTORY "${ZULE_SCHEDULE_TOOLS_DIR}"
@@ -17,7 +17,7 @@ add_custom_command(
     VERBATIM
 )
 
-add_executable(zule_demo main.c "${ZULE_GENERATED_DIR}/zule_schedule.c")
+add_executable(zule_demo main.c "${ZULE_GENERATED_DIR}/zule_schedule_definition.c")
 target_link_libraries(zule_demo PRIVATE zule::core)
 set_target_properties(zule_demo PROPERTIES C_EXTENSIONS OFF)
 

@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "zule.h"
-#include "zule_schedule.h"
+#include "zule_schedule_definition.h"
 
 static uint32_t first_calls;
 static uint32_t second_calls;
@@ -36,14 +36,33 @@ static const zule_schedule_t schedule = {
     .window_count = sizeof(windows) / sizeof(windows[0]),
 };
 
+static const zule_schedule_t *schedule_definition = &schedule;
+
+static const zule_schedule_t invalid_schedule = {
+    .cycle_slots = 0U,
+    .windows = windows,
+    .window_count = sizeof(windows) / sizeof(windows[0]),
+};
+
 const zule_schedule_t *zule_schedule_get(void) {
-    return &schedule;
+    return schedule_definition;
 }
 
 int main(void) {
     assert(zule_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_run() == ZULE_RESULT_NOT_INITIALIZED);
     assert(first_calls == 0U && second_calls == 0U);
+
+    schedule_definition = NULL;
+    assert(zule_init() == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_tick() == ZULE_RESULT_NOT_INITIALIZED);
+    assert(zule_run() == ZULE_RESULT_NOT_INITIALIZED);
+    assert(first_calls == 0U && second_calls == 0U);
+    schedule_definition = &invalid_schedule;
+    assert(zule_init() == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_tick() == ZULE_RESULT_NOT_INITIALIZED);
+    assert(zule_run() == ZULE_RESULT_NOT_INITIALIZED);
+    schedule_definition = &schedule;
 
     assert(zule_init() == ZULE_RESULT_OK);
     assert(zule_run() == ZULE_RESULT_OK);
@@ -80,5 +99,15 @@ int main(void) {
     assert(zule_tick() == ZULE_RESULT_OK);
     assert(zule_run() == ZULE_RESULT_OK);
     assert(first_calls == 4U && second_calls == 2U);
+
+    /* A failed reinitialization must disable an already initialized scheduler. */
+    schedule_definition = NULL;
+    assert(zule_init() == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_tick() == ZULE_RESULT_NOT_INITIALIZED);
+    assert(zule_run() == ZULE_RESULT_NOT_INITIALIZED);
+    assert(first_calls == 4U && second_calls == 2U);
+    schedule_definition = &schedule;
+    assert(zule_init() == ZULE_RESULT_OK);
+    assert(zule_run() == ZULE_RESULT_OK);
     return 0;
 }

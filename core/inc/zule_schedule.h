@@ -1,6 +1,8 @@
 #ifndef ZULE_SCHEDULE_H
 #define ZULE_SCHEDULE_H
 
+#include "zule.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,9 +20,12 @@ typedef struct {
     size_t window_count;
 } zule_schedule_t;
 
-/* Generated configuration must remain alive and immutable throughout use.
- * It must have nonzero cycle/window counts, non-null windows and task pointers,
- * and ordered, nonoverlapping windows contained within the cycle. */
-const zule_schedule_t *zule_schedule_get(void);
+/* Return OK for a nonempty schedule with nonzero cycle length, callable tasks,
+ * positive budgets, and ordered, nonoverlapping windows within the cycle.
+ * Otherwise return INVALID_SCHEDULE, including for null schedule/windows.
+ * Non-null pointers must address readable storage for the declared array size;
+ * validation cannot establish storage validity or task execution-time bounds.
+ * The configuration must remain unchanged during validation and subsequent use. */
+zule_result_t zule_schedule_validate(const zule_schedule_t *schedule);
 
 #endif

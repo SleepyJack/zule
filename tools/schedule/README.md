@@ -47,16 +47,17 @@ JSON test cases live in `tests/fixtures/`:
 - `invalid/`: schedules with specific structural, reference, ordering, or timing errors.
 
 `generate <schedule.json> <output_dir>` creates the output directory if needed
-and writes `zule_schedule.c`, replacing existing output only after the new file is
+and writes `zule_schedule_definition.c`, replacing existing output only after the new file is
 complete. Validation failures leave existing output untouched.
 
-The generated C implements `zule_schedule_get()` from `core/inc/zule_schedule.h`.
+The generated C implements `zule_schedule_get()` from
+`core/inc/zule_schedule_definition.h`, which includes the types in `zule_schedule.h`.
 It returns a static schedule with cycle length, windows, and window count.
 `zule_slot_us` is emitted separately as timing metadata; the core schedule type
 does not contain it. Each window holds a function
 pointer, start slot, and budget. Applications provide `void zule_task_<name>(void)`
 for each scheduled task. The prefix allows task identifiers such as `switch`
-without colliding with C keywords. The generated file includes `zule_schedule.h`
+without colliding with C keywords. The generated file includes `zule_schedule_definition.h`
 from `core/inc`; `zule_init()` obtains the schedule through the getter.
 Only one generated schedule is intended per application at this stage.
 

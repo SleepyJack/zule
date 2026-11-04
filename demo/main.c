@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "zule.h"
-#include "zule_schedule.h"
+#include "zule_schedule_definition.h"
 
 void zule_task_sense(void) {
     puts("sense");

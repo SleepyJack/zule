@@ -1,5 +1,5 @@
 #include "zule.h"
-#include "zule_schedule.h"
+#include "zule_schedule_definition.h"
 
 #include <stdbool.h>
 
@@ -29,8 +29,10 @@ static zule_scheduler_t scheduler;
 zule_result_t zule_init(void) {
     scheduler.initialized = false;
     scheduler.schedule = zule_schedule_get();
-    // TODO: Validate configuration before enabling operation; return
-    // ZULE_RESULT_INVALID_SCHEDULE on failure, leaving initialized false.
+    const zule_result_t result = zule_schedule_validate(scheduler.schedule);
+    if (result != ZULE_RESULT_OK) {
+        return result;
+    }
     scheduler.slot = 0U;
     scheduler.active_window_ind = 0U;
     scheduler.task.function = NULL;

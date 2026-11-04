@@ -24,7 +24,7 @@ Generate the demo from the project root with your virtual environment activated:
 python demo/generate.py
 ```
 
-Output goes to `demo/gen/zule_schedule.c`. See [demo/README.md](demo/README.md).
+Output goes to `demo/gen/zule_schedule_definition.c`. See [demo/README.md](demo/README.md).
 
 See [tools/schedule/README.md](tools/schedule/README.md) for the current format and tool behavior.
 
@@ -37,13 +37,13 @@ cmake --build build
 ./build/demo/zule_demo
 ```
 
-The build generates `build/demo/gen/zule_schedule.c` and links it with the core and
+The build generates `build/demo/gen/zule_schedule_definition.c` and links it with the core and
 demo tasks. The executable steps through one cycle of logical slots; it does
 not yet implement wall-clock timing or forced termination of overrunning tasks.
 
 `ZULE_BUILD_DEMO` defaults to `OFF`. A core-only build needs a C compiler and
 CMake, without Python. Consumers can use `add_subdirectory(path/to/zule)` and
-link `zule::core`, or compile `core/src/zule_scheduler.c` with `core/inc` on their include path.
+link `zule::core`, or compile the C sources in `core/src/` with `core/inc` on their include path.
 
 To build and run the core API tests:
 
@@ -72,7 +72,7 @@ Generated files are excluded by default. After building the demo, check its
 generated schedule explicitly:
 
 ```sh
-python tools/format.py --check build/demo/gen/zule_schedule.c
+python tools/format.py --check build/demo/gen/zule_schedule_definition.c
 ```
 
 Generated formatting fixes belong in the Python generator. Formatting requires
