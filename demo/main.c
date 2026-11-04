@@ -2,8 +2,6 @@
 
 #include "zule.h"
 
-extern const zule_schedule_t zule_schedule;
-
 void zule_task_sense(void)
 {
     puts("sense");
@@ -21,13 +19,17 @@ void zule_task_output(void)
 
 int main(void)
 {
-    zule_t scheduler;
-    zule_init(&scheduler, &zule_schedule);
+    zule_scheduler_t *scheduler = zule_init();
 
     puts("Zule demo: one cycle of logical slots");
-    for (uint32_t slot = 0U; slot < zule_schedule.cycle_slots; ++slot) {
+    for (uint32_t slot = 0U; slot < scheduler->schedule->cycle_slots; ++slot) {
         printf("slot %u\n", (unsigned int)slot);
-        zule_tick(&scheduler);
+        zule_tick(scheduler);
+        zule_run(scheduler);
+        if (scheduler->task.fault != ZULE_TASK_FAULT_NONE) {
+            fputs("Scheduler fault\n", stderr);
+            return 1;
+        }
     }
     return 0;
 }

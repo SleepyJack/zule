@@ -21,21 +21,24 @@ class GenerationTests(unittest.TestCase):
             output = generate_schedule(schedule, directory)
             harness = Path(directory) / "test.c"
             harness.write_text('''#include <assert.h>
-#include "schedule.c"
+#include "schedule.h"
+extern const uint32_t zule_slot_us;
 static unsigned called;
 void zule_task_sense(void) { called = 1; }
 void zule_task_control(void) { called = 2; }
 void zule_task_output(void) { called = 3; }
 int main(void) {
     assert(zule_slot_us == 100U);
-    assert(zule_cycle_slots == 10U);
-    assert(zule_window_count == 3U);
+    const zule_schedule_t *schedule = zule_schedule_get();
+    assert(schedule == zule_schedule_get());
+    assert(schedule->cycle_slots == 10U);
+    assert(schedule->window_count == 3U);
     const uint32_t starts[] = {0U, 2U, 5U};
     const uint32_t budgets[] = {2U, 3U, 2U};
-    for (size_t i = 0; i < zule_window_count; ++i) {
-        assert(zule_windows[i].start_slot == starts[i]);
-        assert(zule_windows[i].budget_slots == budgets[i]);
-        zule_windows[i].task();
+    for (size_t i = 0; i < schedule->window_count; ++i) {
+        assert(schedule->windows[i].start_slot == starts[i]);
+        assert(schedule->windows[i].budget_slots == budgets[i]);
+        schedule->windows[i].task_function();
         assert(called == i + 1U);
     }
     return 0;
@@ -43,7 +46,7 @@ int main(void) {
 ''')
             executable = Path(directory) / "test"
             include_dir = Path(__file__).resolve().parents[2] / "core/inc"
-            subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(include_dir), str(harness), "-o", str(executable)], check=True, capture_output=True, text=True)
+            subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(include_dir), str(harness), str(output), "-o", str(executable)], check=True, capture_output=True, text=True)
             subprocess.run([str(executable)], check=True, capture_output=True, text=True)
             original = output.read_bytes()
             self.assertEqual(generate_schedule(schedule, directory).read_bytes(), original)

@@ -50,12 +50,14 @@ JSON test cases live in `tests/fixtures/`:
 and writes `schedule.c`, replacing existing output only after the new file is
 complete. Validation failures leave existing output untouched.
 
-The draft C format contains `zule_slot_us`, `zule_cycle_slots`,
-`zule_windows`, and `zule_window_count`. Each window holds a function
+The generated C implements `zule_schedule_get()` from `core/inc/schedule.h`.
+It returns a static schedule with cycle length, windows, and window count.
+`zule_slot_us` is emitted separately as timing metadata; the core schedule type
+does not contain it. Each window holds a function
 pointer, start slot, and budget. Applications provide `void zule_task_<name>(void)`
 for each scheduled task. The prefix allows task identifiers such as `switch`
-without colliding with C keywords. The generated file includes `zule.h` from
-`core/inc` and exports `const zule_schedule_t zule_schedule` for `zule_init()`.
+without colliding with C keywords. The generated file includes `schedule.h`
+from `core/inc`; `zule_init()` obtains the schedule through the getter.
 Only one generated schedule is intended per application at this stage.
 
 Generation requires all timing fields to fit `uint32_t`; validation alone has

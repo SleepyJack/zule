@@ -32,7 +32,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     lines = [
         "/* Generated Zule schedule. Do not edit. */",
-        '#include "zule.h"',
+        '#include "schedule.h"',
         "",
     ]
     # Declaration order does not depend on JSON object key order.
@@ -41,9 +41,8 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     lines.extend([
         "",
         f"const uint32_t zule_slot_us = {int(schedule['slot_us'])}U;",
-        f"const uint32_t zule_cycle_slots = {int(schedule['cycle']['slots'])}U;",
         "",
-        "const zule_window_t zule_windows[] = {",
+        "static const zule_window_t zule_windows[] = {",
     ])
     for window in windows:
         name = window["task"]
@@ -53,15 +52,16 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     lines.extend([
         "};",
         "",
-        "const size_t zule_window_count =",
-        "    sizeof(zule_windows) / sizeof(zule_windows[0]);",
-        "",
-        "const zule_schedule_t zule_schedule = {",
-        f"    {int(schedule['slot_us'])}U,",
-        f"    {int(schedule['cycle']['slots'])}U,",
-        "    zule_windows,",
-        "    sizeof(zule_windows) / sizeof(zule_windows[0])",
+        "static zule_schedule_t zule_schedule = {",
+        f"    .cycle_slots = {int(schedule['cycle']['slots'])}U,",
+        "    .windows = zule_windows,",
+        "    .window_count = sizeof(zule_windows) / sizeof(zule_windows[0])",
         "};",
+        "",
+        "zule_schedule_t *zule_schedule_get(void)",
+        "{",
+        "    return &zule_schedule;",
+        "}",
         "",
     ])
     source = "\n".join(lines)

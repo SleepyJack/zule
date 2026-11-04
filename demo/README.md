@@ -16,6 +16,7 @@ directory is ignored by Git.
 
 To build and run the demo on Ubuntu, follow the CMake commands in the root
 README. CMake generates its own schedule in `build/demo/gen/`, compiles
-`main.c`, and links the `zule::core` library. `main.c` calls `zule_tick()` once
-for each slot in the cycle, printing the slot number and task names. Slots are
-logical steps in this skeleton; there is no real-time clock or overrun handling.
+`main.c`, and links the `zule::core` library. `main.c` initializes the scheduler
+with `zule_init()`, then calls `zule_tick()` followed by `zule_run()` for each
+slot in one cycle, printing the slot number and task names. Slots are logical
+steps; the demo does not simulate ISR concurrency or wall-clock task execution.

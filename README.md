@@ -38,7 +38,7 @@ cmake --build build
 
 The build generates `build/demo/gen/schedule.c` and links it with the core and
 demo tasks. The executable steps through one cycle of logical slots; it does
-not yet implement wall-clock timing or budget enforcement.
+not yet implement wall-clock timing or forced termination of overrunning tasks.
 
 `ZULE_BUILD_DEMO` defaults to `OFF`. A core-only build needs a C compiler and
 CMake, without Python. Consumers can use `add_subdirectory(path/to/zule)` and
