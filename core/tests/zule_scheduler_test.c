@@ -12,6 +12,13 @@
 static uint32_t first_calls;
 static uint32_t second_calls;
 static bool simulate_overrun;
+static uint32_t fault_calls;
+static zule_fault_info_t last_fault;
+
+static void handle_fault(const zule_fault_info_t *fault) {
+    ++fault_calls;
+    last_fault = *fault;
+}
 
 static void first_task(void) {
     assert(!zule_test_port_is_critical());
@@ -59,17 +66,17 @@ int main(void) {
     assert(first_calls == 0U && second_calls == 0U);
 
     schedule_definition = NULL;
-    assert(zule_scheduler_init() == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_scheduler_run() == ZULE_RESULT_NOT_INITIALIZED);
     assert(first_calls == 0U && second_calls == 0U);
     schedule_definition = &invalid_schedule;
-    assert(zule_scheduler_init() == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_scheduler_run() == ZULE_RESULT_NOT_INITIALIZED);
     schedule_definition = &schedule;
 
-    assert(zule_scheduler_init() == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(first_calls == 0U && second_calls == 0U);
     for (uint32_t cycle = 0U; cycle < 2U; ++cycle) {
@@ -82,7 +89,7 @@ int main(void) {
         }
     }
 
-    assert(zule_scheduler_init() == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
@@ -90,7 +97,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(first_calls == 2U && second_calls == 2U);
 
-    assert(zule_scheduler_init() == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
     simulate_overrun = true;
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_EXECUTION_OVERRUN);
@@ -100,20 +107,56 @@ int main(void) {
     assert(first_calls == 3U && second_calls == 2U);
 
     simulate_overrun = false;
-    assert(zule_scheduler_init() == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(first_calls == 4U && second_calls == 2U);
 
     /* A failed reinitialization must disable an already initialized scheduler. */
     schedule_definition = NULL;
-    assert(zule_scheduler_init() == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_scheduler_run() == ZULE_RESULT_NOT_INITIALIZED);
     assert(first_calls == 4U && second_calls == 2U);
     schedule_definition = &schedule;
-    assert(zule_scheduler_init() == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(!zule_test_port_is_critical());
+
+    /* The tick that latches the fault must notify before main-loop polling. */
+    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_tick() == ZULE_RESULT_OK);
+    assert(zule_scheduler_tick() == ZULE_RESULT_OK);
+    assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
+    assert(fault_calls == 1U);
+    assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
+    assert(last_fault.window_index == 0U && last_fault.slot == 2U);
+    assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
+    assert(fault_calls == 1U);
+
+    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    simulate_overrun = true;
+    assert(zule_scheduler_tick() == ZULE_RESULT_OK);
+    assert(zule_scheduler_run() == ZULE_RESULT_EXECUTION_OVERRUN);
+    simulate_overrun = false;
+    assert(fault_calls == 2U);
+    assert(last_fault.reason == ZULE_RESULT_EXECUTION_OVERRUN);
+    assert(zule_scheduler_tick() == ZULE_RESULT_EXECUTION_OVERRUN);
+    assert(zule_scheduler_tick() == ZULE_RESULT_EXECUTION_OVERRUN);
+    assert(fault_calls == 2U);
+
+    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_tick() == ZULE_RESULT_OK);
+    assert(zule_scheduler_run() == ZULE_RESULT_OK);
+    assert(zule_scheduler_tick() == ZULE_RESULT_OK);
+    assert(zule_scheduler_tick() == ZULE_RESULT_OK);
+    assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
+    assert(fault_calls == 3U);
+    assert(last_fault.window_index == 1U && last_fault.slot == 3U);
+
+    schedule_definition = NULL;
+    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
+    assert(fault_calls == 3U);
     return 0;
 }

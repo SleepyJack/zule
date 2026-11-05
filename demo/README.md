@@ -18,8 +18,11 @@ directory is ignored by Git.
 To build and run the demo on Ubuntu, follow the CMake commands in the root
 README. CMake generates its own schedule in `build/demo/gen/`, compiles
 `main.c`, and links the `zule::core` library and selected port. Select
-`-DZULE_PORT=posix` for the native build. `main.c` provides the tasks and calls
-the blocking public `zule_run()`; it has no timer code or scheduler-state access.
+`-DZULE_PORT=posix` for the native build. `main.c` provides the tasks, configures
+a fault handler, and calls the blocking public `zule_run()`; it has no timer code
+or scheduler-state access. Its handler only copies the fault snapshot. Main
+prints it after the runner returns, when tick delivery is quiescent, rather than
+logging from tick context.
 
 The runner initializes the scheduler and starts the port timer through a tick
 callback. The POSIX port owns periodic delivery and main-loop idle behavior.

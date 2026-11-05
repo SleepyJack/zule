@@ -23,11 +23,12 @@ typedef struct {
     size_t active_window_ind;
     zule_task_t task;
     bool initialized;
+    zule_fault_handler_t on_fault;
 } zule_scheduler_t;
 
 static zule_scheduler_t scheduler;
 
-zule_result_t zule_scheduler_init(void) {
+zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault) {
     scheduler.initialized = false;
     scheduler.schedule = zule_schedule_get();
     const zule_result_t result = zule_schedule_validate(scheduler.schedule);
@@ -39,8 +40,24 @@ zule_result_t zule_scheduler_init(void) {
     scheduler.task.function = NULL;
     scheduler.task.state = ZULE_TASK_IDLE;
     scheduler.task.fault = ZULE_RESULT_OK;
+    scheduler.on_fault = on_fault;
     scheduler.initialized = true;
     return ZULE_RESULT_OK;
+}
+
+static void latch_fault(zule_result_t reason) {
+    if (scheduler.task.fault != ZULE_RESULT_OK) {
+        return;
+    }
+    scheduler.task.fault = reason;
+    if (scheduler.on_fault != NULL) {
+        const zule_fault_info_t fault = {
+            .reason = reason,
+            .window_index = scheduler.active_window_ind,
+            .slot = scheduler.slot,
+        };
+        scheduler.on_fault(&fault);
+    }
 }
 
 zule_result_t zule_scheduler_tick(void) {
@@ -57,14 +74,9 @@ zule_result_t zule_scheduler_tick(void) {
             scheduler.task.state = ZULE_TASK_IDLE;
             // TODO: Consider fault recovery here
         } else if (scheduler.task.state == ZULE_TASK_PENDING) {
-            scheduler.task.fault = ZULE_RESULT_DISPATCH_MISSED;
-            // TODO: Critical error handling
+            latch_fault(ZULE_RESULT_DISPATCH_MISSED);
         } else if (scheduler.task.state == ZULE_TASK_RUNNING) {
-            // Preserve a missed-dispatch fault if the task eventually starts.
-            scheduler.task.fault = (scheduler.task.fault == ZULE_RESULT_OK)
-                                       ? ZULE_RESULT_EXECUTION_OVERRUN
-                                       : scheduler.task.fault;
-            // TODO: Critical error handling
+            latch_fault(ZULE_RESULT_EXECUTION_OVERRUN);
         } else {
             // Idle - do nothing
         }

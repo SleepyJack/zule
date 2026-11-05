@@ -1,7 +1,7 @@
 # Zule core
 
-`api/zule.h` contains the public result enum and blocking `zule_run()` entry
-point. `src/zule.c` owns startup, dispatch polling, error propagation, and tick
+`api/zule.h` contains configuration and fault types, `zule_configure()`, and the
+blocking `zule_run()` entry point. `src/zule.c` owns startup, dispatch polling, error propagation, and tick
 shutdown. The CMake target is `zule::core`.
 
 The target exposes only `api/` to application compilation. Headers in `inc/`
@@ -54,3 +54,25 @@ with CTest. They supply their own schedule and deterministic test port, with no
 timer threads or Python tools. Runner lifecycle tests use that same port to
 exercise startup failures, faults, shutdown, and retries. The POSIX mutex and
 timer lifecycle are tested separately.
+
+## Application fault handler
+
+Optionally call `zule_configure()` with a `zule_config_t` before running. The
+configuration is copied and persists across runs; the caller need not keep the
+configuration struct alive. A null handler disables notification. Passing a
+null configuration returns INVALID_CONFIG and preserves the previous settings.
+Configuration changes while running return ALREADY_RUNNING. All configuration
+and runner calls must come from the same application context.
+
+The scheduler captures the configured handler at initialization. On the first
+missed dispatch or execution overrun, tick latches the fault and calls the
+handler once with its reason, window index, and slot. Subsequent faulted ticks
+and eventual task retirement do not repeat notification or clear the fault.
+Initialization and port errors are reported by return code without calling it.
+
+The handler executes synchronously in tick context: an ISR on embedded ports,
+or the excluded POSIX timer thread. Keep it bounded and nonblocking. Do not call
+Zule APIs, timer lifecycle functions, synchronous logging, or allocation from it.
+Copy the snapshot if needed after the call and synchronize application data
+accessed by other contexts. Notification does not abort an executing task or
+establish a safe hardware state by itself; the application supplies that response.

@@ -47,6 +47,11 @@ terminate the demo process. There is no public stop API yet. On an error return,
 tick delivery has been stopped and quiesced. This native development example
 provides no hard real-time guarantees or forced task termination.
 
+Applications can call `zule_configure()` before running to install an optional
+fault handler. Configuration is copied and cannot change while running. The
+handler receives the first scheduler fault in tick context and must remain
+bounded and nonblocking; see [the core notes](core/README.md#application-fault-handler).
+
 `ZULE_BUILD_DEMO` defaults to `OFF`. A core-only build needs a C compiler and
 CMake, without Python. Select `ZULE_PORT=posix` for the native implementation.
 Consumers can provide their own `zule::port` target before adding Zule, supplying
