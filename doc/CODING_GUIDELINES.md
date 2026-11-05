@@ -41,10 +41,10 @@ python tools/format.py --check build/demo/gen/zule_schedule_definition.c
 | Item | Convention | Example |
 | --- | --- | --- |
 | Project-defined types | `zule_..._t` | `zule_schedule_t` |
-| Public functions and global symbols | `zule_...` | `zule_tick()` |
+| Public functions and global symbols | `zule_...` | `zule_run()` |
 | Enum constants and macros | `ZULE_...` | `ZULE_TASK_PENDING` |
-| Public headers | `zule_....h`; main header is `zule.h` | `zule_schedule.h` |
-| Scheduler source files | `zule_....c`, matching the component | `zule_scheduler.c`, `zule_schedule.c` |
+| Headers | `zule_....h`; main public header is `zule.h` | `zule_schedule.h` |
+| Scheduler source files | `zule_....c`, matching the component; public API implementation is `zule.c` | `zule_scheduler.c`, `zule_schedule.c` |
 | Header guards | Uppercase filename with dots replaced by underscores | `ZULE_SCHEDULE_H` |
 | Internal functions and objects | Descriptive snake case, with `static` linkage | `advance_window()` |
 | Locals, parameters, and members | Descriptive snake case | `active_window` |

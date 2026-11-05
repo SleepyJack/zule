@@ -40,8 +40,6 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         lines.append(f"extern void zule_task_{name}(void);")
     lines.extend([
         "",
-        f"const uint32_t zule_slot_us = {int(schedule['slot_us'])}U;",
-        "",
         "static const zule_window_t zule_windows[] = {",
     ])
     for window in windows:
@@ -53,6 +51,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         "};",
         "",
         "static const zule_schedule_t zule_schedule = {",
+        f"    .slot_us = {int(schedule['slot_us'])}U,",
         f"    .cycle_slots = {int(schedule['cycle']['slots'])}U,",
         "    .windows = zule_windows,",
         "    .window_count = sizeof(zule_windows) / sizeof(zule_windows[0]),",

@@ -4,6 +4,7 @@ A static, time-triggered scheduler with offline schedule validation and C table
 generation.
 
 - `core/`: platform-independent C scheduling engine and public interfaces.
+- `core/api/`: public application header; `core/inc/` contains internal interfaces.
 - `ports/`: target integration API and native POSIX development port.
 - `tools/schedule/`: schedule definition tools, their tests, fixtures, and schema.
 - `tools/format.py`: standalone C formatting utility.
@@ -39,10 +40,12 @@ cmake --build build
 ```
 
 The build generates `build/demo/gen/zule_schedule_definition.c` and links it with the core and
-demo tasks. A timer thread delivers ticks at absolute monotonic deadlines while
-the main thread dispatches tasks. The demo runs one 500 ms cycle with 50 ms
-slots, then stops and joins its timer. It is a native development example,
-without hard real-time guarantees or forced termination of overrunning tasks.
+demo tasks. The demo calls the public blocking `zule_run()` entry point. The
+runner initializes the scheduler, starts port-owned periodic ticks, and dispatches
+tasks. The 500 ms cycle repeats with 50 ms slots until a fault; press Ctrl-C to
+terminate the demo process. There is no public stop API yet. On an error return,
+tick delivery has been stopped and quiesced. This native development example
+provides no hard real-time guarantees or forced task termination.
 
 `ZULE_BUILD_DEMO` defaults to `OFF`. A core-only build needs a C compiler and
 CMake, without Python. Select `ZULE_PORT=posix` for the native implementation.
@@ -93,5 +96,5 @@ ownership, and review conventions. [AGENTS.md](AGENTS.md) directs agent reviews
 against those guidelines.
 
 GitHub Actions runs the C and Python unit tests, checks handwritten and
-generated C formatting, and builds/runs the demo on Ubuntu for pushes and pull
+generated C formatting, and builds/smoke-tests the demo on Ubuntu for pushes and pull
 requests. The [CI workflow](.github/workflows/ci.yml) can also be run manually.

@@ -53,12 +53,14 @@ complete. Validation failures leave existing output untouched.
 The generated C implements `zule_schedule_get()` from
 `core/inc/zule_schedule_definition.h`, which includes the types in `zule_schedule.h`.
 It returns a static schedule with cycle length, windows, and window count.
-`zule_slot_us` is emitted separately as timing metadata; the core schedule type
-does not contain it. Each window holds a function
+The schedule's `slot_us` supplies the port timer period through the core runner.
+Each window holds a function
 pointer, start slot, and budget. Applications provide `void zule_task_<name>(void)`
 for each scheduled task. The prefix allows task identifiers such as `switch`
 without colliding with C keywords. The generated file includes `zule_schedule_definition.h`
-from `core/inc`; `zule_init()` obtains the schedule through the getter.
+from `core/inc`; the internal scheduler initialization obtains the schedule through the getter.
+Compile generated definitions with both `core/inc` and `core/api` on the include
+path. Application-only sources need just the public `core/api` directory.
 Only one generated schedule is intended per application at this stage.
 
 Generation requires all timing fields to fit `uint32_t`; validation alone has

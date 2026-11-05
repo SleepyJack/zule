@@ -15,12 +15,13 @@ typedef struct {
 } zule_window_t;
 
 typedef struct {
+    uint32_t slot_us;
     uint32_t cycle_slots;
     const zule_window_t *windows;
     size_t window_count;
 } zule_schedule_t;
 
-/* Return OK for a nonempty schedule with nonzero cycle length, callable tasks,
+/* Return OK for a nonempty schedule with nonzero slot period and cycle length, callable tasks,
  * positive budgets, and ordered, nonoverlapping windows within the cycle.
  * Otherwise return INVALID_SCHEDULE, including for null schedule/windows.
  * Non-null pointers must address readable storage for the declared array size;

@@ -1,7 +1,4 @@
 find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
-if(NOT ZULE_PORT STREQUAL "posix")
-    message(FATAL_ERROR "The native demo requires -DZULE_PORT=posix")
-endif()
 
 set(ZULE_SCHEDULE_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tools/schedule")
 set(ZULE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/gen")
@@ -21,9 +18,11 @@ add_custom_command(
 )
 
 add_executable(zule_demo main.c "${ZULE_GENERATED_DIR}/zule_schedule_definition.c")
+# Only generated configuration needs the scheduler's internal schedule types.
+set_source_files_properties("${ZULE_GENERATED_DIR}/zule_schedule_definition.c" PROPERTIES
+    INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/../core/inc")
 target_link_libraries(zule_demo PRIVATE zule::core)
 set_target_properties(zule_demo PROPERTIES C_EXTENSIONS OFF)
-target_compile_definitions(zule_demo PRIVATE _POSIX_C_SOURCE=200809L)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(zule_demo PRIVATE -Wall -Wextra -Wpedantic)

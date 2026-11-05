@@ -1,4 +1,4 @@
-#include "zule.h"
+#include "zule_scheduler.h"
 #include "zule_port.h"
 #include "zule_schedule_definition.h"
 
@@ -27,7 +27,7 @@ typedef struct {
 
 static zule_scheduler_t scheduler;
 
-zule_result_t zule_init(void) {
+zule_result_t zule_scheduler_init(void) {
     scheduler.initialized = false;
     scheduler.schedule = zule_schedule_get();
     const zule_result_t result = zule_schedule_validate(scheduler.schedule);
@@ -43,7 +43,7 @@ zule_result_t zule_init(void) {
     return ZULE_RESULT_OK;
 }
 
-zule_result_t zule_tick(void) {
+zule_result_t zule_scheduler_tick(void) {
     if (!scheduler.initialized) {
         return ZULE_RESULT_NOT_INITIALIZED;
     }
@@ -96,7 +96,7 @@ zule_result_t zule_tick(void) {
     return scheduler.task.fault;
 }
 
-zule_result_t zule_run(void) {
+zule_result_t zule_scheduler_run(void) {
     zule_result_t result = ZULE_RESULT_OK;
     if (!scheduler.initialized) {
         result = ZULE_RESULT_NOT_INITIALIZED;

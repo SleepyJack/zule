@@ -59,4 +59,21 @@ jobs:
         run: python tools/format.py --check build/demo/gen/zule_schedule_definition.c
 
       - name: Run demo
-        run: ./build/demo/zule_demo
+        run: |
+          python - <<'PY'
+          import subprocess
+          process = subprocess.Popen(
+              ["./build/demo/zule_demo"], stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE, text=True,
+          )
+          try:
+              output, errors = process.communicate(timeout=2)
+          except subprocess.TimeoutExpired:
+              process.terminate()
+              output, errors = process.communicate(timeout=5)
+          else:
+              raise SystemExit(f"Demo exited unexpectedly: {process.returncode}\n{output}\n{errors}")
+          print(output, end="")
+          if errors or not all(task in output.splitlines() for task in ("sense", "control", "output")):
+              raise SystemExit(f"Demo smoke test failed: {errors}")
+          PY

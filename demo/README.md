@@ -17,15 +17,17 @@ directory is ignored by Git.
 
 To build and run the demo on Ubuntu, follow the CMake commands in the root
 README. CMake generates its own schedule in `build/demo/gen/`, compiles
-`main.c`, and links the `zule::core` library and POSIX port. Select
-`-DZULE_PORT=posix` when configuring. The demo initializes before starting a timer
-thread, which sleeps to absolute `CLOCK_MONOTONIC` deadlines and calls
-`zule_tick()` while holding the port mutex. The main thread polls `zule_run()`
-and prints task names; task execution takes place outside the critical section.
+`main.c`, and links the `zule::core` library and selected port. Select
+`-DZULE_PORT=posix` for the native build. `main.c` provides the tasks and calls
+the blocking public `zule_run()`; it has no timer code or scheduler-state access.
 
-The timer delivers one cycle of ticks. The main loop drains the final published
-task, stops the timer, and joins it before exiting. Mutex-protected status fields
-carry errors between threads. Scheduler faults or timer errors cause a nonzero
-exit. A timer delay of at least one slot causes a timer error rather than a burst
-of catch-up ticks. The demo polls at 1 ms intervals and makes no hard real-time
-guarantees. See [the POSIX port notes](../ports/posix/README.md).
+The runner initializes the scheduler and starts the port timer through a tick
+callback. The POSIX port owns periodic delivery and main-loop idle behavior.
+Tasks print their names and run outside critical sections. The cycle repeats
+until a scheduler or port error; the runner stops and joins the tick thread
+before returning, and the demo reports a nonzero exit. Press Ctrl-C to terminate
+the demo process externally; there is no graceful public stop API yet.
+
+CI performs a bounded smoke run, checks that all task names appear, then
+terminates the process. Deterministic runner tests verify graceful error cleanup
+separately. See [the POSIX port notes](../ports/posix/README.md).

@@ -39,19 +39,26 @@ static const zule_window_t equal_starts[] = {
 
 int main(void) {
     const zule_schedule_t valid[] = {
-        {3U, adjacent, 2U},
-        {8U, gaps, 2U},
-        {UINT32_MAX, exact_end, 1U},
-        {UINT32_MAX, full_cycle, 1U},
+        {100U, 3U, adjacent, 2U},
+        {100U, 8U, gaps, 2U},
+        {100U, UINT32_MAX, exact_end, 1U},
+        {100U, UINT32_MAX, full_cycle, 1U},
     };
     const zule_schedule_t invalid[] = {
-        {0U, adjacent, 2U},      {4U, NULL, 1U},
-        {4U, adjacent, 0U},      {1U, adjacent, 2U},
-        {4U, null_task, 1U},     {4U, zero_budget, 1U},
-        {4U, start_outside, 1U}, {4U, end_outside, 1U},
-        {4U, full_cycle, 1U},    {UINT32_MAX, overflowing_end, 1U},
-        {4U, overlap, 2U},       {4U, unordered, 2U},
-        {4U, equal_starts, 2U},
+        {0U, 4U, adjacent, 2U},
+        {100U, 0U, adjacent, 2U},
+        {100U, 4U, NULL, 1U},
+        {100U, 4U, adjacent, 0U},
+        {100U, 1U, adjacent, 2U},
+        {100U, 4U, null_task, 1U},
+        {100U, 4U, zero_budget, 1U},
+        {100U, 4U, start_outside, 1U},
+        {100U, 4U, end_outside, 1U},
+        {100U, 4U, full_cycle, 1U},
+        {100U, UINT32_MAX, overflowing_end, 1U},
+        {100U, 4U, overlap, 2U},
+        {100U, 4U, unordered, 2U},
+        {100U, 4U, equal_starts, 2U},
     };
 
     assert(zule_schedule_validate(NULL) == ZULE_RESULT_INVALID_SCHEDULE);

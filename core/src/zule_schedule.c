@@ -1,8 +1,9 @@
 #include "zule_schedule.h"
 
 zule_result_t zule_schedule_validate(const zule_schedule_t *schedule) {
-    if (schedule == NULL || schedule->cycle_slots == 0U || schedule->windows == NULL ||
-        schedule->window_count == 0U || schedule->window_count > schedule->cycle_slots) {
+    if (schedule == NULL || schedule->slot_us == 0U || schedule->cycle_slots == 0U ||
+        schedule->windows == NULL || schedule->window_count == 0U ||
+        schedule->window_count > schedule->cycle_slots) {
         return ZULE_RESULT_INVALID_SCHEDULE;
     }
 

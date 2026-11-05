@@ -22,14 +22,13 @@ class GenerationTests(unittest.TestCase):
             harness = Path(directory) / "test.c"
             harness.write_text('''#include <assert.h>
 #include "zule_schedule_definition.h"
-extern const uint32_t zule_slot_us;
 static unsigned called;
 void zule_task_sense(void) { called = 1; }
 void zule_task_control(void) { called = 2; }
 void zule_task_output(void) { called = 3; }
 int main(void) {
-    assert(zule_slot_us == 100U);
     const zule_schedule_t *schedule = zule_schedule_get();
+    assert(schedule->slot_us == 100U);
     assert(schedule == zule_schedule_get());
     assert(schedule->cycle_slots == 10U);
     assert(schedule->window_count == 3U);
@@ -45,8 +44,8 @@ int main(void) {
 }
 ''')
             executable = Path(directory) / "test"
-            include_dir = Path(__file__).resolve().parents[3] / "core/inc"
-            subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(include_dir), str(harness), str(output), "-o", str(executable)], check=True, capture_output=True, text=True)
+            core_dir = Path(__file__).resolve().parents[3] / "core"
+            subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"), str(harness), str(output), "-o", str(executable)], check=True, capture_output=True, text=True)
             subprocess.run([str(executable)], check=True, capture_output=True, text=True)
             original = output.read_bytes()
             self.assertEqual(generate_schedule(schedule, directory).read_bytes(), original)
