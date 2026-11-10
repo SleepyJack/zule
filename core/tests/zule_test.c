@@ -102,6 +102,7 @@ int main(void) {
     assert(fault_calls == 1U);
     assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
+    assert(last_fault.cycle_count == 0U);
     assert(!fault_during_task);
     check_stopped();
 
@@ -115,6 +116,7 @@ int main(void) {
     assert(fault_calls == 2U);
     assert(last_fault.reason == ZULE_RESULT_EXECUTION_OVERRUN);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
+    assert(last_fault.cycle_count == 0U);
     assert(fault_during_task);
     check_stopped();
 

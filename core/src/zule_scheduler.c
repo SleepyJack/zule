@@ -20,6 +20,7 @@ typedef struct {
 typedef struct {
     const zule_schedule_t *schedule;
     uint32_t slot;
+    uint32_t cycle_count;
     size_t active_window_ind;
     zule_task_t task;
     bool initialized;
@@ -36,6 +37,7 @@ zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault) {
         return result;
     }
     scheduler.slot = 0U;
+    scheduler.cycle_count = 0U;
     scheduler.active_window_ind = 0U;
     scheduler.task.function = NULL;
     scheduler.task.state = ZULE_TASK_IDLE;
@@ -55,6 +57,7 @@ static void latch_fault(zule_result_t reason) {
             .reason = reason,
             .window_index = scheduler.active_window_ind,
             .slot = scheduler.slot,
+            .cycle_count = scheduler.cycle_count,
         };
         scheduler.on_fault(&fault);
     }
@@ -104,6 +107,9 @@ zule_result_t zule_scheduler_tick(void) {
 
         // Advance the slot
         scheduler.slot = (scheduler.slot + 1u) % scheduler.schedule->cycle_slots;
+        if (scheduler.slot == 0U) {
+            ++scheduler.cycle_count;
+        }
     }
     return scheduler.task.fault;
 }

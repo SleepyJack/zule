@@ -36,9 +36,9 @@ int main(void) {
     const zule_result_t result = zule_run();
     (void)fprintf(stderr, "Zule stopped: %u\n", (unsigned int)result);
     if (fault_seen) {
-        (void)fprintf(stderr, "Fault %u in window %zu at slot %u\n",
+        (void)fprintf(stderr, "Fault %u in window %zu at slot %u (cycle %u)\n",
                       (unsigned int)last_fault.reason, last_fault.window_index,
-                      (unsigned int)last_fault.slot);
+                      (unsigned int)last_fault.slot, (unsigned int)last_fault.cycle_count);
     }
     return result == ZULE_RESULT_OK ? 0 : 1;
 }

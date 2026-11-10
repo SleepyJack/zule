@@ -19,6 +19,7 @@ typedef struct {
     zule_result_t reason;
     size_t window_index;
     uint32_t slot;
+    uint32_t cycle_count;
 } zule_fault_info_t;
 
 /* Called once after the first missed-dispatch or overrun fault is latched.

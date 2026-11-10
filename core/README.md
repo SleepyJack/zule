@@ -66,9 +66,15 @@ and runner calls must come from the same application context.
 
 The scheduler captures the configured handler at initialization. On the first
 missed dispatch or execution overrun, tick latches the fault and calls the
-handler once with its reason, window index, and slot. Subsequent faulted ticks
+handler once with its reason, window index, slot, and cycle count. Subsequent faulted ticks
 and eventual task retirement do not repeat notification or clear the fault.
 Initialization and port errors are reported by return code without calling it.
+
+The `uint32_t` cycle count is zero-based, resets on initialization, and wraps
+modulo 2^32. Together, the snapshot's cycle count and slot identify when the
+fault was detected. A fault detected at slot zero reports the new cycle even
+when the faulting window started in the previous cycle.
+The counter advances with the schedule timeline and stops progressing on a fault.
 
 The handler executes synchronously in tick context: an ISR on embedded ports,
 or the excluded POSIX timer thread. Keep it bounded and nonblocking. Do not call
