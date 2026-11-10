@@ -17,6 +17,7 @@ class CLITests(unittest.TestCase):
             with redirect_stdout(io.StringIO()) as output:
                 self.assertEqual(main(["generate", str(FIXTURES / "valid/control-loop.json"), str(output_dir)]), 0)
             self.assertTrue((output_dir / "zule_schedule_definition.c").is_file())
+            self.assertTrue((output_dir / "zule_task_ids.h").is_file())
             self.assertIn(": generated", output.getvalue())
 
     def test_generate_rejects_invalid_input(self):

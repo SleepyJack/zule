@@ -11,7 +11,8 @@ python demo/generate.py
 ```
 
 The script can also be invoked from another working directory. It uses the
-current Python interpreter and writes `demo/gen/zule_schedule_definition.c` on Windows and Linux.
+current Python interpreter and writes `demo/gen/zule_schedule_definition.c`
+and `demo/gen/zule_task_ids.h` on Windows and Linux.
 Install `tools/schedule/requirements.txt` into that interpreter's environment first. The generated
 directory is ignored by Git.
 
@@ -23,6 +24,18 @@ a fault handler, and calls the blocking public `zule_run()`; it has no timer cod
 or scheduler-state access. Its handler only copies the fault snapshot. Main
 prints it after the runner returns, when tick delivery is quiescent, rather than
 logging from tick context.
+
+The build exposes the generated `zule_task_ids.h` to demo sources for symbolic
+IDs such as `ZULE_TASK_ID_SENSE`. IDs are assigned from zero in sorted task-name
+order, so fault logs must be interpreted using the matching build or schedule.
+
+Fault output includes the task ID and, when compiled in, its diagnostic name.
+`zule_user_config.h` enables task names, overriding Zule's disabled default.
+Demo builds enable this user header for the core, port, tests, and
+application, including generated code. Edit the header or supply a compiler
+definition to change the setting; see
+[build configuration](../doc/build_configuration.md). Recompilation is required,
+but schedule regeneration is not.
 
 The runner initializes the scheduler and starts the port timer through a tick
 callback. The POSIX port owns periodic delivery and main-loop idle behavior.

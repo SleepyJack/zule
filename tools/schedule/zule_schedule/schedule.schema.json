@@ -17,7 +17,7 @@
     },
     "tasks": {
       "type": "object",
-      "description": "Scheduled task definition",
+      "description": "Task definitions keyed by names with distinct uppercase forms for generated enum constants.",
       "minProperties": 1,
       "propertyNames": {
         "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"

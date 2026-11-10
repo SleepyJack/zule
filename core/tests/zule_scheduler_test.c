@@ -40,9 +40,14 @@ static void second_task(void) {
     }
 }
 
+static const zule_task_t tasks[] = {
+    {.id = 10U, .function = first_task},
+    {.id = 20U, .function = second_task},
+};
+
 static const zule_window_t windows[] = {
-    {first_task, 0U, 2U},
-    {second_task, 2U, 1U},
+    {&tasks[0], 0U, 2U},
+    {&tasks[1], 2U, 1U},
 };
 
 static const zule_schedule_t schedule = {
@@ -50,11 +55,13 @@ static const zule_schedule_t schedule = {
     .cycle_slots = 4U,
     .windows = windows,
     .window_count = sizeof(windows) / sizeof(windows[0]),
+    .tasks = tasks,
+    .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
 static const zule_window_t boundary_windows[] = {
-    {first_task, 0U, 2U},
-    {second_task, 2U, 2U},
+    {&tasks[0], 0U, 2U},
+    {&tasks[1], 2U, 2U},
 };
 
 static const zule_schedule_t boundary_schedule = {
@@ -62,6 +69,8 @@ static const zule_schedule_t boundary_schedule = {
     .cycle_slots = 4U,
     .windows = boundary_windows,
     .window_count = sizeof(boundary_windows) / sizeof(boundary_windows[0]),
+    .tasks = tasks,
+    .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
 static const zule_schedule_t *schedule_definition = &schedule;
@@ -71,6 +80,8 @@ static const zule_schedule_t invalid_schedule = {
     .cycle_slots = 0U,
     .windows = windows,
     .window_count = sizeof(windows) / sizeof(windows[0]),
+    .tasks = tasks,
+    .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
 const zule_schedule_t *zule_schedule_get(void) {
@@ -148,6 +159,7 @@ int main(void) {
     assert(fault_calls == 1U);
     assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
+    assert(last_fault.task_id == 10U);
     assert(last_fault.cycle_count == 0U);
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(fault_calls == 1U);
@@ -172,6 +184,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(fault_calls == 3U);
     assert(last_fault.window_index == 1U && last_fault.slot == 3U);
+    assert(last_fault.task_id == 20U);
     assert(last_fault.cycle_count == 0U);
 
     schedule_definition = NULL;
@@ -193,6 +206,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(last_fault.cycle_count == 3U);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
+    assert(last_fault.task_id == 10U);
     for (uint32_t tick = 0U; tick < 8U; ++tick) {
         assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     }
@@ -216,6 +230,7 @@ int main(void) {
     assert(fault_calls == 5U);
     assert(last_fault.cycle_count == 3U);
     assert(last_fault.window_index == 1U && last_fault.slot == 0U);
+    assert(last_fault.task_id == 20U);
 
     /* Reinitialization resets the count, including for a boundary overrun. */
     assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
@@ -230,5 +245,6 @@ int main(void) {
     assert(last_fault.reason == ZULE_RESULT_EXECUTION_OVERRUN);
     assert(last_fault.cycle_count == 1U);
     assert(last_fault.window_index == 1U && last_fault.slot == 0U);
+    assert(last_fault.task_id == 20U);
     return 0;
 }

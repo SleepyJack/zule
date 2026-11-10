@@ -6,6 +6,7 @@ file(GLOB ZULE_GENERATOR_SOURCES CONFIGURE_DEPENDS "${ZULE_SCHEDULE_TOOLS_DIR}/z
 
 add_custom_command(
     OUTPUT "${ZULE_GENERATED_DIR}/zule_schedule_definition.c"
+           "${ZULE_GENERATED_DIR}/zule_task_ids.h"
     COMMAND "${Python3_EXECUTABLE}" -m zule_schedule generate
             "${CMAKE_CURRENT_SOURCE_DIR}/control-loop.json" "${ZULE_GENERATED_DIR}"
     WORKING_DIRECTORY "${ZULE_SCHEDULE_TOOLS_DIR}"
@@ -17,7 +18,9 @@ add_custom_command(
     VERBATIM
 )
 
-add_executable(zule_demo main.c "${ZULE_GENERATED_DIR}/zule_schedule_definition.c")
+add_executable(zule_demo main.c "${ZULE_GENERATED_DIR}/zule_schedule_definition.c"
+    "${ZULE_GENERATED_DIR}/zule_task_ids.h")
+target_include_directories(zule_demo PRIVATE "${ZULE_GENERATED_DIR}")
 # Only generated configuration needs the scheduler's internal schedule types.
 set_source_files_properties("${ZULE_GENERATED_DIR}/zule_schedule_definition.c" PROPERTIES
     INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/../core/inc")

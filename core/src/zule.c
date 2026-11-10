@@ -19,6 +19,23 @@ zule_result_t zule_configure(const zule_config_t *config) {
     return ZULE_RESULT_OK;
 }
 
+const char *zule_task_name_get(uint32_t task_id) {
+#if ZULE_CONFIG_TASK_NAMES
+    const zule_schedule_t *schedule = zule_schedule_get();
+    if (schedule == NULL || schedule->tasks == NULL) {
+        return NULL;
+    }
+    for (size_t index = 0U; index < schedule->task_count; ++index) {
+        if (schedule->tasks[index].id == task_id) {
+            return schedule->tasks[index].name;
+        }
+    }
+#else
+    (void)task_id;
+#endif
+    return NULL;
+}
+
 zule_result_t zule_run(void) {
     if (running) {
         return ZULE_RESULT_ALREADY_RUNNING;

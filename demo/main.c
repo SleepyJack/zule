@@ -36,7 +36,9 @@ int main(void) {
     const zule_result_t result = zule_run();
     (void)fprintf(stderr, "Zule stopped: %u\n", (unsigned int)result);
     if (fault_seen) {
-        (void)fprintf(stderr, "Fault %u in window %zu at slot %u (cycle %u)\n",
+        const char *name = zule_task_name_get(last_fault.task_id);
+        (void)fprintf(stderr, "Task %u (%s): fault %u in window %zu at slot %u (cycle %u)\n",
+                      (unsigned int)last_fault.task_id, name != NULL ? name : "unnamed",
                       (unsigned int)last_fault.reason, last_fault.window_index,
                       (unsigned int)last_fault.slot, (unsigned int)last_fault.cycle_count);
     }

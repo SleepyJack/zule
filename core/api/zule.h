@@ -1,6 +1,8 @@
 #ifndef ZULE_H
 #define ZULE_H
 
+#include "zule_config.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -20,6 +22,7 @@ typedef struct {
     size_t window_index;
     uint32_t slot;
     uint32_t cycle_count;
+    uint32_t task_id;
 } zule_fault_info_t;
 
 /* Called once after the first missed-dispatch or overrun fault is latched.
@@ -42,6 +45,11 @@ typedef struct {
  * still latch. The copied configuration persists across runs. Use the same
  * application context as zule_run(); concurrent configuration is unsupported. */
 zule_result_t zule_configure(const zule_config_t *config);
+
+/* Return the immutable diagnostic name for a declared task, or NULL for an
+ * unknown ID or when the schedule has no names. The linked schedule and names must
+ * remain valid and unchanged for the lifetime of the application. */
+const char *zule_task_name_get(uint32_t task_id);
 
 /* Initialize the scheduler, start periodic ticks, and dispatch tasks until a
  * scheduler or port failure. This blocking entry point must be called from one

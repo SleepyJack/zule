@@ -4,6 +4,7 @@
 #endif
 #include <assert.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "zule.h"
 #include "zule_schedule_definition.h"
@@ -51,8 +52,20 @@ static void second_task(void) {
     ++second_calls;
 }
 
-static const zule_window_t windows[] = {{first_task, 0U, 2U}, {second_task, 2U, 1U}};
-static const zule_schedule_t schedule = {250U, 4U, windows, 2U};
+static const zule_task_t tasks[] = {
+    {.id = 10U, .function = first_task},
+    {.id = 20U, .function = second_task},
+};
+
+static const zule_window_t windows[] = {{&tasks[0], 0U, 2U}, {&tasks[1], 2U, 1U}};
+static const zule_schedule_t schedule = {
+    .slot_us = 250U,
+    .cycle_slots = 4U,
+    .windows = windows,
+    .window_count = sizeof(windows) / sizeof(windows[0]),
+    .tasks = tasks,
+    .task_count = sizeof(tasks) / sizeof(tasks[0]),
+};
 static const zule_schedule_t *definition = &schedule;
 
 const zule_schedule_t *zule_schedule_get(void) {
@@ -66,6 +79,20 @@ static void check_stopped(void) {
 }
 
 int main(void) {
+    assert(zule_task_name_get(10U) == NULL);
+    definition = NULL;
+    assert(zule_task_name_get(UINT32_MAX) == NULL);
+#if ZULE_CONFIG_TASK_NAMES
+    const zule_task_t named_tasks[] = {{UINT32_MAX, first_task, "sample"}};
+    const zule_window_t named_window[] = {{&named_tasks[0], 0U, 1U}};
+    const zule_schedule_t named = {100U, 1U, named_window, 1U, named_tasks, 1U};
+    assert(zule_schedule_validate(&named) == ZULE_RESULT_OK);
+    definition = &named;
+    assert(strcmp(zule_task_name_get(UINT32_MAX), "sample") == 0);
+    assert(zule_task_name_get(0U) == NULL);
+#endif
+    definition = &schedule;
+
     assert(zule_configure(NULL) == ZULE_RESULT_INVALID_CONFIG);
     zule_test_port_reset();
     definition = NULL;
@@ -102,6 +129,7 @@ int main(void) {
     assert(fault_calls == 1U);
     assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
+    assert(last_fault.task_id == 10U);
     assert(last_fault.cycle_count == 0U);
     assert(!fault_during_task);
     check_stopped();
@@ -116,6 +144,7 @@ int main(void) {
     assert(fault_calls == 2U);
     assert(last_fault.reason == ZULE_RESULT_EXECUTION_OVERRUN);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
+    assert(last_fault.task_id == 10U);
     assert(last_fault.cycle_count == 0U);
     assert(fault_during_task);
     check_stopped();

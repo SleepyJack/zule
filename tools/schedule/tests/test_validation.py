@@ -35,6 +35,14 @@ class ValidationTests(unittest.TestCase):
         issues = validate_schedule(read_fixture("invalid/unknown-task.json"))
         self.assertTrue(any(i.path == "/cycle/windows/0/task" for i in issues))
 
+    def test_explicit_task_ids_are_not_supported(self):
+        issues = validate_schedule(read_fixture("invalid/explicit-task-id.json"))
+        self.assertTrue(any(i.path == "/tasks/sense" and "Additional properties" in i.message for i in issues))
+
+    def test_task_names_must_form_distinct_enum_constants(self):
+        issues = validate_schedule(read_fixture("invalid/task-name-collision.json"))
+        self.assertTrue(any(i.path == "/tasks/SENSE" and "collides" in i.message for i in issues))
+
     def test_order_overlap_and_cycle_bounds(self):
         cases = (
             ("invalid/overlap.json", "overlaps"),

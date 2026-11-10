@@ -33,7 +33,7 @@ Generated files are excluded by default. Check them explicitly and fix their
 generator rather than editing generated output:
 
 ```sh
-python tools/format.py --check build/demo/gen/zule_schedule_definition.c
+python tools/format.py --check build/demo/gen/zule_schedule_definition.c build/demo/gen/zule_task_ids.h
 ```
 
 ## Naming and files

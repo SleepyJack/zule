@@ -1,0 +1,21 @@
+{
+  "slot_us": 100,
+  "tasks": {
+    "sense": {
+      "budget_slots": 1,
+      "id": 7
+    },
+    "control": {
+      "budget_slots": 1
+    }
+  },
+  "cycle": {
+    "slots": 2,
+    "windows": [
+      {
+        "task": "sense",
+        "start_slot": 0
+      }
+    ]
+  }
+}

@@ -6,6 +6,10 @@ generation.
 See [the architecture overview](doc/architecture.md) for component boundaries,
 application and tick contexts, and the relationship between the core and ports.
 
+See [build configuration](doc/build_configuration.md) for compile-time defaults
+and user overrides, including optional diagnostic task names. Task IDs are
+generated from task names and are included in fault reports.
+
 - `core/`: platform-independent C scheduling engine and public interfaces.
 - `core/api/`: public application header; `core/inc/` contains internal interfaces.
 - `ports/`: target integration API and native POSIX development port.
@@ -29,7 +33,8 @@ Generate the demo from the project root with your virtual environment activated:
 python demo/generate.py
 ```
 
-Output goes to `demo/gen/zule_schedule_definition.c`. See [demo/README.md](demo/README.md).
+Output goes to `demo/gen/zule_schedule_definition.c` and `demo/gen/zule_task_ids.h`.
+See [demo/README.md](demo/README.md).
 
 See [tools/schedule/README.md](tools/schedule/README.md) for the current format and tool behavior.
 
@@ -90,7 +95,7 @@ Generated files are excluded by default. After building the demo, check its
 generated schedule explicitly:
 
 ```sh
-python tools/format.py --check build/demo/gen/zule_schedule_definition.c
+python tools/format.py --check build/demo/gen/zule_schedule_definition.c build/demo/gen/zule_task_ids.h
 ```
 
 Generated formatting fixes belong in the Python generator. Formatting requires

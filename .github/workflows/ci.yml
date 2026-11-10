@@ -56,7 +56,10 @@ jobs:
         run: ctest --test-dir build --output-on-failure --no-tests=error
 
       - name: Check generated C formatting
-        run: python tools/format.py --check build/demo/gen/zule_schedule_definition.c
+        run: >-
+          python tools/format.py --check
+          build/demo/gen/zule_schedule_definition.c
+          build/demo/gen/zule_task_ids.h
 
       - name: Run demo
         run: |

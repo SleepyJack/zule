@@ -43,6 +43,16 @@ def validate_schedule(schedule: Any) -> list[ValidationIssue]:
         return issues
 
     tasks = schedule["tasks"]
+    enum_names = {}
+    for name in tasks:
+        enum_name = name.upper()
+        if enum_name in enum_names:
+            issues.append(ValidationIssue(
+                _pointer(("tasks", name)),
+                f"task name collides with {enum_names[enum_name]!r} in generated enum constants",
+            ))
+        else:
+            enum_names[enum_name] = name
     cycle = schedule["cycle"]
     previous_start = None
     occupied_until = 0

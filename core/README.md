@@ -1,8 +1,9 @@
 # Zule core
 
 `api/zule.h` contains configuration and fault types, `zule_configure()`, and the
-blocking `zule_run()` entry point. `src/zule.c` owns startup, dispatch polling, error propagation, and tick
-shutdown. The CMake target is `zule::core`.
+blocking `zule_run()` entry point. `src/zule.c` implements the public API,
+including task-name lookup, startup, dispatch polling, error propagation, and
+tick shutdown. The CMake target is `zule::core`.
 
 The target exposes only `api/` to application compilation. Headers in `inc/`
 are internal and used privately by the core and its tests. Generated schedule
@@ -19,8 +20,17 @@ NOT_INITIALIZED before successful scheduler initialization.
 Schedule types live in `inc/zule_schedule.h`; `inc/zule_schedule_definition.h`
 declares the generated getter. The definition includes `slot_us`, used by the
 runner to configure tick delivery, so the timer and schedule share one period.
+An immutable task array holds IDs and function pointers. The generator assigns
+IDs through the enum in `zule_task_ids.h`; handwritten schedules supply their own
+unique IDs. Windows point
+to entries in this array; repeated invocations share the same task definition.
+The `zule_task_t` type includes a `name` member only when task names are enabled.
+The scheduler's private `zule_task_execution_t` tracks mutable execution state.
+`zule_task_name_get()` provides public lookup
+by ID; see [build configuration](../doc/build_configuration.md).
 `zule_schedule_validate()` in `src/zule_schedule.c` checks pointers, nonzero
-slot periods, counts and budgets, task functions, window bounds, ordering, and overlap.
+slot periods, counts and budgets, task functions, unique task IDs, window task
+references, window bounds, ordering, and overlap.
 End-bound checks avoid unsigned addition overflow. Init returns
 `ZULE_RESULT_INVALID_SCHEDULE` on failure and leaves tick/run disabled, including
 after a failed reinitialization. Pointer storage validity and execution-time
@@ -66,7 +76,8 @@ and runner calls must come from the same application context.
 
 The scheduler captures the configured handler at initialization. On the first
 missed dispatch or execution overrun, tick latches the fault and calls the
-handler once with its reason, window index, slot, and cycle count. Subsequent faulted ticks
+handler once with its reason, task ID, window index, slot, and cycle count.
+Subsequent faulted ticks
 and eventual task retirement do not repeat notification or clear the fault.
 Initialization and port errors are reported by return code without calling it.
 
