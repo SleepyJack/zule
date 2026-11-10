@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="840" viewBox="0 0 1120 840" role="img" aria-labelledby="title description">
+  <title id="title">Zule component architecture</title>
+  <desc id="description">The user domain contains configuration and application code. Configuration supplies the task list and schedule to the core. The application controls the scheduler, which calls tasks in application context and fault handlers in tick context. In the Zule domain, the core uses port services and the port delivers ticks to the core.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #172b4d; }
+      .domain { font-size: 19px; font-weight: 700; }
+      .heading { font-size: 22px; font-weight: 700; }
+      .body { font-size: 16px; fill: #334155; }
+      .label { font-size: 15px; fill: #334155; }
+      .context { font-size: 13px; fill: #64748b; }
+      .link { fill: none; stroke: #475569; stroke-width: 2; marker-end: url(#arrow); }
+      .application-context { fill: #f1f5f9; stroke: #cbd5e1; }
+      .tick-context { fill: #fff7ed; stroke: #fed7aa; }
+    </style>
+  </defs>
+
+  <rect width="1120" height="840" fill="#ffffff"/>
+  <rect x="24" y="24" width="380" height="788" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+  <rect x="428" y="24" width="668" height="788" rx="16" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="48" y="63" class="domain">User domain</text>
+  <text x="452" y="63" class="domain">Zule domain</text>
+
+  <rect x="56" y="100" width="316" height="150" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="80" y="138" class="heading">Configuration</text>
+  <text x="80" y="177" class="body">Task list definition</text>
+  <text x="80" y="205" class="body">Schedule definition</text>
+
+  <rect x="56" y="300" width="316" height="290" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="80" y="335" class="heading">Application</text>
+  <rect x="72" y="350" width="284" height="100" rx="8" class="application-context"/>
+  <text x="88" y="375" class="context">Application context</text>
+  <text x="88" y="407" class="body">Scheduler invocation</text>
+  <text x="88" y="434" class="body">Task implementations</text>
+  <rect x="72" y="480" width="284" height="86" rx="8" class="tick-context"/>
+  <text x="88" y="505" class="context">Tick context</text>
+  <text x="88" y="539" class="body">Fault handling</text>
+  <rect x="720" y="300" width="344" height="290" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="744" y="335" class="heading">Core</text>
+  <rect x="736" y="350" width="312" height="90" rx="8" class="application-context"/>
+  <text x="752" y="375" class="context">Application context</text>
+  <text x="752" y="410" class="body">Task runner</text>
+  <rect x="736" y="460" width="312" height="106" rx="8" class="tick-context"/>
+  <text x="752" y="485" class="context">Tick context</text>
+  <text x="752" y="516" class="body">Schedule timing</text>
+  <text x="752" y="543" class="body">Task deadline checks</text>
+  <rect x="720" y="650" width="344" height="150" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="744" y="685" class="heading">Port</text>
+  <rect x="736" y="700" width="312" height="80" rx="8" class="tick-context"/>
+  <text x="752" y="725" class="context">Tick context</text>
+  <text x="752" y="756" class="body">Timer implementation</text>
+  <path d="M 372 175 H 890 V 300" class="link"/>
+  <text x="546" y="150" class="label" text-anchor="middle">Schedule and configuration</text>
+  <path d="M 372 365 H 720" class="link"/>
+  <text x="546" y="342" class="label" text-anchor="middle">Start/stop scheduler</text>
+  <path d="M 720 425 H 372" class="link"/>
+  <text x="546" y="402" class="label" text-anchor="middle">Dispatch task</text>
+  <path d="M 720 520 H 372" class="link"/>
+  <text x="546" y="497" class="label" text-anchor="middle">Notify fault</text>
+  <path d="M 800 590 V 650" class="link"/>
+  <text x="782" y="625" class="label" text-anchor="end">Port services</text>
+  <path d="M 1000 650 V 590" class="link"/>
+  <text x="982" y="625" class="label" text-anchor="end">Periodic tick</text>
+</svg>

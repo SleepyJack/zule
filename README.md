@@ -3,6 +3,9 @@
 A static, time-triggered scheduler with offline schedule validation and C table
 generation.
 
+See [the architecture overview](doc/architecture.md) for component boundaries,
+application and tick contexts, and the relationship between the core and ports.
+
 - `core/`: platform-independent C scheduling engine and public interfaces.
 - `core/api/`: public application header; `core/inc/` contains internal interfaces.
 - `ports/`: target integration API and native POSIX development port.
