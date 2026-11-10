@@ -62,6 +62,25 @@ decisions or a committed order of delivery.
 - Define where the setting belongs and test zero delay, delay countdown, and
   the transition into normal schedule processing.
 
+## Core and port configuration
+
+- Keep core defaults and validation in `core/api/zule_config.h`, with optional
+  application overrides in `zule_user_config.h`.
+- Let each port define its own `zule_port_config.h` for defaults and validation,
+  with optional application overrides in `zule_user_port_config.h`. Introduce
+  port configuration headers when settings are needed; keep the core independent
+  of port-specific settings.
+- Use these Zule-owned headers to document supported settings, defaults,
+  constraints, and required values in one place for each scope.
+- Apply sensible defaults, but fail compilation for missing required hardware
+  information, such as a timer clock frequency, rather than guessing a value.
+- Consider opt-in diagnostics for applied defaults, keeping normal builds quiet.
+  Check compiler support for `#warning` in the supported C99 toolchains and avoid
+  excessive repeated diagnostics across compilation units.
+- Document and verify build integration so the core, selected port, application,
+  and generated code receive consistent settings. Keep `slot_us` in the schedule
+  JSON; the port converts it to timer settings and checks representability.
+
 ## Additional ports
 
 - Add a Cortex-M port, choosing an initial core and board/toolchain to target.
