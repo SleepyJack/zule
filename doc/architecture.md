@@ -4,6 +4,9 @@ Zule is a static, time-triggered scheduler. Tasks execute within predefined boun
 
 An application supplies a schedule and task implementations. The core manages the scheduling of tasks. A port supplies target-specific implementations for core functions (e.g. timing).
 
+See [scheduler design and intended behaviour](scheduler_design.md) for the
+execution state, timing rules, and fault behaviour.
+
 ## System overview
 
 ![Zule architecture: configuration and application in the user domain, connected to the core and port in the Zule domain.](images/architecture.svg)

@@ -75,8 +75,9 @@ zule_result_t zule_scheduler_tick(void) {
         (active_window->start_slot + active_window->budget_slots) % scheduler.schedule->cycle_slots;
     if (scheduler.slot == active_window_end_slot) {
         if (scheduler.exec.state == ZULE_TASK_COMPLETED) {
+            // Note that even if task completion is late we will return to Idle. Overrun fault
+            // remains latched in that case.
             scheduler.exec.state = ZULE_TASK_IDLE;
-            // TODO: Consider fault recovery here
         } else if (scheduler.exec.state == ZULE_TASK_PENDING) {
             raise_fault(ZULE_RESULT_DISPATCH_MISSED);
         } else if (scheduler.exec.state == ZULE_TASK_RUNNING) {
@@ -93,19 +94,23 @@ zule_result_t zule_scheduler_tick(void) {
         }
     }
 
-    // Halt the scheduler in case of active faults
+    // Prevent new task dispatch in case of active faults
     if (scheduler.exec.fault == ZULE_RESULT_OK) {
-
         // Check for start of the new active window
         if (scheduler.slot == active_window->start_slot) {
             if (scheduler.exec.state == ZULE_TASK_IDLE) {
                 scheduler.exec.task = active_window->task;
                 scheduler.exec.state = ZULE_TASK_PENDING;
             } else {
-                // Handle overrun
+                // This should be unreachable - overrun already detected at end of the previous
+                // window and fault raised. Below call to raise_fault is defensive only.
+                raise_fault(ZULE_RESULT_EXECUTION_OVERRUN);
             }
         }
+    }
 
+    // Halt the scheduler in case of active faults
+    if (scheduler.exec.fault == ZULE_RESULT_OK) {
         // Advance the slot
         scheduler.slot = (scheduler.slot + 1u) % scheduler.schedule->cycle_slots;
         if (scheduler.slot == 0U) {
