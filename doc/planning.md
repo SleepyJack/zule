@@ -33,6 +33,32 @@ decisions or a committed order of delivery.
 - Reuse the existing schema and validator for feedback on bounds, overlaps,
   and task references, and save definitions in the existing JSON format.
 
+## Timebase and tick timing checks
+
+- Add a port API for a monotonic timebase with sub-tick resolution, usable from
+  both application and tick contexts. Define units, resolution, wraparound,
+  safe reads, and bounded read overhead. It must continue advancing while tick
+  interrupts are delayed or masked.
+- Use the timebase for core timing checks and task profiling. Keep timing policy
+  and fault detection in the core, with clock and timer implementation in the port.
+- Establish the first expected tick boundary and compare subsequent ticks with
+  expected deadlines, accounting for accumulated drift as well as individual
+  delays. Define acceptable lateness and the fault response for missed periods.
+- Test delayed ticks, missed periods, timebase wraparound, and startup timing.
+  Tick timing checks cannot detect a complete loss of execution on their own;
+  retain independent watchdog monitoring where required.
+
+## Watchdog integration
+
+- Consider an application callback from tick context to support watchdog
+  integration. Define when it runs relative to timing and deadline checks,
+  what scheduler health information it exposes, and its behaviour after faults.
+- Keep the callback bounded and nonblocking. Define how application task progress
+  contributes to watchdog servicing so continued ticks alone do not conceal a
+  stalled task.
+- Document the application's responsibility for watchdog configuration and
+  servicing policy, including detection of lost ticks or a stalled scheduler.
+
 ## Task profiling and benchmarking
 
 - Add tooling to measure task execution times and compare them with configured
