@@ -3,83 +3,54 @@
 This document defines the scheduler's execution contract. See the
 [architecture overview](architecture.md) for components and execution contexts.
 
-## Timeline and windows
+## Scheduling overview
 
-- Initialization validates the schedule and resets execution to idle, with slot
-  and cycle count both zero. It does not release a task; the first tick processes
-  slot zero. The port determines the delay before that first tick.
-- Each fault-free tick processes one slot boundary, then advances the timeline.
-  Slots wrap at the cycle length; the 32-bit cycle count wraps modulo 2^32.
-- A window occupies `[start_slot, start_slot + budget_slots)`. Windows are
-  ordered, nonoverlapping, and contained within the cycle; gaps are idle time.
-- A window's task becomes pending at its start. Application context dispatches
-  it when polling observes pending work. Dispatch delay consumes the window's
-  budget; it does not move the deadline.
-- Early completion does not advance later windows. At a shared boundary, the
-  finishing window is checked before the next task is released. A deadline at
-  the cycle end is checked at slot zero of the following cycle.
+Tasks are allocated fixed execution windows within a predefined cyclic schedule. The cycle duration is divided into slots. A periodic timer (implemented by the port) generates a tick which defines the slot timing. The tick runs in its own execution context - expected to be an ISR context for most ports. The tick handles slot boundary conditions; driving the schedule timing. When a task's window begins its execution is marked as pending from the tick context but the task execution is from the application context.
 
-## Execution state
+### Task execution
 
-Only one task invocation is active at a time. Tasks execute sequentially and
-return normally; the scheduler does not switch between executing tasks.
+| State | Description |
+|-------|-------------|
+| Idle  | No task execution |
+| Pending | Task pending execution |
+| Running | Task execution in progress |
+| Completed | Task execution complete |
 
-| Transition | Condition |
-| --- | --- |
-| Idle → Pending | The window starts and no fault is active. |
-| Pending → Running | Application context claims the task and no fault is active. |
-| Running → Completed | The task returns and application context publishes completion. |
-| Completed → Idle | Tick processes the window's end boundary. |
+| Transition | Context | Condition |
+| --- | --- | --- |
+| Idle → Pending | Tick | There is a task window beginning at the newly entered slot |
+| Pending → Running | Application | There is a pending execution and the task has not yet been dispatched |
+| Running → Completed | Application | The task execution completes (task function returns) |
+| Completed → Idle | Tick | At the slot boundary following task completion, the task is returned to idle state |
 
-Completion must be published before the deadline check. Returning from the
-task and publishing completion are separate operations; critical-section
-ordering determines which state the deadline check observes.
+// Drawing here: normal task timing flow
 
-## Ownership and synchronisation
+## Scheduler timing
 
-Tick context owns timeline progression, task release, deadline checks, and fault
-notification. Application context owns dispatch and completion. It protects
-shared execution-state transitions using port critical sections, while task
-functions execute outside those sections. Task definitions remain immutable.
+### Scheduler initialisation
 
-Tick callbacks are non-reentrant and excluded from protected application-context
-transitions. Critical sections preserve prior exclusion state, support nesting,
-and provide memory ordering. Initialization requires quiescent tick delivery
-and no executing task. Failed initialization leaves tick and dispatch disabled.
+* Explain how the scheduler entry first enables the timer and then begins processing pending tasks
+* Cover the implications for the first slot: could be extra overhead if the timer fires early
+  * Concept of dead slots at the start of the schedule (not yet implemented)
 
-## Faults and shutdown
+### Task dispatch
 
-At a window's end, pending work raises a missed-dispatch fault; running work
-raises an execution-overrun fault. A non-idle state at a new window's release
-also raises an overrun defensively; valid state transitions should prevent it.
+* Maybe not needed if the 'normal' flow is covered aboive
 
-The first fault is retained and its optional handler is called once,
-synchronously in tick context. The snapshot identifies the task, window, and
-detection cycle/slot. Handlers must be bounded and nonblocking, must not call
-Zule APIs, and must copy the snapshot if retaining it.
+### Task deadline monitoring
 
-A fault prevents further window advancement, task release, dispatch, and
-slot/cycle advancement, including on the detecting tick. An executing task may
-still return and publish completion. Subsequent ticks can retire it to idle;
-this does not clear the fault or restart scheduling. Reinitialization resets it.
+* Explain the definitions of the two faults: late dispatch and overrun (with diagrams?)
 
-The core detects timing violations but does not forcibly terminate tasks or
-establish an application safe state. A task that never returns prevents the
-runner from returning, although tick-context fault notification can still occur
-if ticks continue. The application owns the fault response.
+### Fault handling
 
-The public runner stops and quiesces tick delivery before returning on failure.
-Initialization and port errors are reported by return code, without invoking the
-task-fault handler. Automatic recovery and a public termination API are not
-currently provided.
+* Explain that the scheduler halts (stops advancing the timeline) in case of a fault
+  * Explain that the tick will still run if there is a task running
+* Explain that the application can get immediate response via fault handlers **in tick context**
+* Once the offending task completes (returns) the tick will be disabled and the scheduler exits (returns)
+* Explain that the first encountered fault is latched: only the first fault reported
 
 ## Timing assumptions
 
-The port supplies periodic ticks using the schedule's slot period. The core
-counts delivered ticks; it does not independently measure elapsed time or detect
-lost ticks. A common policy for late or missed ticks remains to be specified;
-each port must document its delivery latency and failure behaviour.
-
-Window budgets must allow for dispatch, completion bookkeeping, scheduler work,
-and interrupt interference. Structural validation establishes neither execution
-time bounds nor correspondence between generated tables and source JSON.
+* Explain that the port is responsible for timer accuracy, reliability etc.
+* Should be checked by watchdog if necessary
+  * We should maybe add a tick hook to support that
