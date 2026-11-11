@@ -13,7 +13,10 @@ execution state, timing rules, and fault behaviour.
 
 ## Ownership
 
-There are two ownership domains: the user domain and the Zule domain. The **application** and application-specific **configuration** are owned by the user. The Zule **core** and **port** reside in the Zule ownership domain.
+There are two ownership domains: the user domain and the Zule domain. The
+**[application](#application)** and application-specific
+**[configuration](#configuration)** are owned by the user. The Zule
+**[core](#core)** and **[port](#port)** reside in the Zule ownership domain.
 
 ## Components
 
@@ -23,11 +26,14 @@ The configuration defines the set of tasks and the schedule as well as high-leve
 
 ### Application
 
-The application defines the implementation of the tasks and the high-level interactions with the scheduler (starting, stopping, fault handling).
+The application defines the implementation of the tasks and the high-level interactions with the scheduler (starting, stopping, [fault handling](scheduler_design.md#fault-handling)).
 
 ### Core
 
 The scheduler core dispatches tasks to be run according to the schedule and enforces schedule-defined timing constraints on task execution.
+
+See [scheduler design and intended behaviour](scheduler_design.md) for task
+execution and timing details.
 
 ### Port
 
@@ -35,7 +41,9 @@ Target-specific implementations of services to support the scheduler: timing and
 
 ## Execution Contexts
 
-There are two execution contexts that span the various components: **application context** and **tick context**.
+There are two execution contexts that span the various components:
+**[application context](#application-context)** and
+**[tick context](#tick-context)**.
 
 ### Application Context
 

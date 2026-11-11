@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="506" viewBox="0 0 1120 506" role="img" aria-labelledby="title description">
+  <title id="title">Execution-overrun detection</title>
+  <desc id="description">The task has been claimed and remains running when the deadline tick checks it. The fault is latched in tick context; the task may continue after the handler returns.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#64748b"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #172b4d; }
+    </style>
+  </defs>
+  <rect width="1120" height="506" rx="12" fill="#ffffff"/>
+  <text x="32" y="34" font-size="22" fill="#475569" text-anchor="start" font-weight="700">Execution-overrun detection</text>
+  <text x="32" y="62" font-size="14" fill="#475569" text-anchor="start" font-weight="400">The deadline check observes execution state; a fault is separate from that state.</text>
+  <line x1="180" y1="104" x2="1080" y2="104" stroke="#64748b" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="32" y="109" font-size="14" fill="#475569" text-anchor="start" font-weight="400">Time</text>
+  <text x="32" y="158" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Tick</text>
+  <text x="32" y="176" font-size="13" fill="#475569" text-anchor="start" font-weight="400">context</text>
+  <line x1="180" y1="163" x2="1080" y2="163" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="32" y="254" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Application</text>
+  <text x="32" y="272" font-size="13" fill="#475569" text-anchor="start" font-weight="400">context</text>
+  <line x1="180" y1="259" x2="1080" y2="259" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="32" y="346" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Execution</text>
+  <text x="32" y="364" font-size="13" fill="#475569" text-anchor="start" font-weight="400">state</text>
+  <line x1="180" y1="351" x2="1080" y2="351" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="32" y="437" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Fault</text>
+  <line x1="260" y1="112" x2="260" y2="456" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 5"/>
+  <line x1="300" y1="112" x2="300" y2="456" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 5"/>
+  <line x1="330" y1="112" x2="330" y2="456" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 5"/>
+  <line x1="820" y1="112" x2="820" y2="456" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 5"/>
+  <line x1="880" y1="112" x2="880" y2="456" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 5"/>
+  <line x1="940" y1="112" x2="940" y2="456" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 5"/>
+  <text x="260" y="88" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">Window start</text>
+  <text x="820" y="88" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">Deadline tick</text>
+  <rect x="260" y="112" width="560" height="20" fill="#ede9fe" stroke="#c4b5fd"/>
+  <text x="540.0" y="127.0" font-size="12" fill="#5b21b6" text-anchor="middle" font-weight="400">Configured execution window</text>
+  <rect x="260" y="144" width="70" height="38" fill="#ffedd5" stroke="#fdba74"/>
+  <text x="295.0" y="168.0" font-size="13" fill="#7c2d12" text-anchor="middle" font-weight="400">Tick</text>
+  <rect x="820" y="144" width="120" height="38" fill="#ffedd5" stroke="#fdba74"/>
+  <text x="880.0" y="168.0" font-size="13" fill="#7c2d12" text-anchor="middle" font-weight="400">Check / notify</text>
+  <rect x="180" y="240" width="80" height="38" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="220.0" y="264.0" font-size="13" fill="#475569" text-anchor="middle" font-weight="400">Poll</text>
+  <rect x="180" y="332" width="120" height="38" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="240.0" y="356.0" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">Idle</text>
+  <text x="300" y="318" font-size="13" fill="#475569" text-anchor="middle" font-weight="400">Released</text>
+  <line x1="390" y1="112" x2="390" y2="382" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 5"/>
+  <rect x="330" y="240" width="60" height="38" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="360.0" y="264.0" font-size="13" fill="#475569" text-anchor="middle" font-weight="400">Poll</text>
+  <rect x="390" y="240" width="430" height="38" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="605.0" y="264.0" font-size="14" fill="#1e40af" text-anchor="middle" font-weight="400">Task function</text>
+  <rect x="940" y="240" width="140" height="38" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="1010.0" y="264.0" font-size="13" fill="#1e40af" text-anchor="middle" font-weight="400">Task continues</text>
+  <rect x="300" y="332" width="90" height="38" fill="#fef3c7" stroke="#fcd34d"/>
+  <text x="345.0" y="356.0" font-size="13" fill="#78350f" text-anchor="middle" font-weight="400">Pending</text>
+  <rect x="390" y="332" width="690" height="38" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="735.0" y="356.0" font-size="14" fill="#1e40af" text-anchor="middle" font-weight="400">Running</text>
+  <text x="390" y="318" font-size="13" fill="#475569" text-anchor="middle" font-weight="400">Claimed</text>
+  <text x="880" y="401" font-size="13" fill="#991b1b" text-anchor="middle" font-weight="400">Fault raised</text>
+  <rect x="180" y="416" width="700" height="32" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="530.0" y="437.0" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">None</text>
+  <rect x="880" y="416" width="200" height="32" fill="#fee2e2" stroke="#fca5a5"/>
+  <text x="980.0" y="437.0" font-size="14" fill="#991b1b" text-anchor="middle" font-weight="400">Latched</text>
+  <text x="32" y="484" font-size="14" fill="#475569" text-anchor="start" font-weight="400">Deadline sees Running: the tick raises an overrun fault; returning from the handler does not stop the task.</text>
+</svg>

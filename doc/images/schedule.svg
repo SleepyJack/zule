@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="450" viewBox="0 0 1120 450" role="img" aria-labelledby="title description">
+  <title id="title">Example schedule · 10-slot cycle</title>
+  <desc id="description">Task 1 has window [0,4) and Task 2 has window [5,10). Both complete early and remain completed until their deadlines. Slot 4 is idle. The first two slots of the next cycle are also shown.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#64748b"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #172b4d; }
+    </style>
+  </defs>
+  <rect width="1120" height="450" rx="12" fill="#ffffff"/>
+  <text x="32" y="34" font-size="22" fill="#475569" text-anchor="start" font-weight="700">Example schedule · 10-slot cycle</text>
+  <text x="32" y="58" font-size="14" fill="#475569" text-anchor="start" font-weight="400">Reserved windows and execution state across a cycle boundary.</text>
+  <line x1="180" y1="92" x2="180" y2="82" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="180" y1="82" x2="900" y2="82" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="900" y1="82" x2="900" y2="92" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="540.0" y="75" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">Cycle 0 · 10 slots</text>
+  <line x1="900" y1="92" x2="900" y2="82" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="900" y1="82" x2="1044" y2="82" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="1044" y1="82" x2="1044" y2="92" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="972.0" y="75" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">Cycle 1</text>
+  <text x="32" y="135" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Slot</text>
+  <line x1="180" y1="145" x2="180" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="216" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">0</text>
+  <line x1="252" y1="145" x2="252" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="288" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">1</text>
+  <line x1="324" y1="145" x2="324" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="360" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">2</text>
+  <line x1="396" y1="145" x2="396" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="432" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">3</text>
+  <line x1="468" y1="145" x2="468" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="504" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">4</text>
+  <line x1="540" y1="145" x2="540" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="576" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">5</text>
+  <line x1="612" y1="145" x2="612" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="648" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">6</text>
+  <line x1="684" y1="145" x2="684" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="720" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">7</text>
+  <line x1="756" y1="145" x2="756" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="792" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">8</text>
+  <line x1="828" y1="145" x2="828" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="864" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">9</text>
+  <line x1="900" y1="145" x2="900" y2="370" stroke="#94a3b8" stroke-width="2"/>
+  <text x="936" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">0</text>
+  <line x1="972" y1="145" x2="972" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1008" y="135" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">1</text>
+  <line x1="1044" y1="145" x2="1044" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="32" y="179" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Task 1 window</text>
+  <text x="32" y="229" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Task 2 window</text>
+  <rect x="180" y="156" width="288" height="36" fill="#ede9fe" stroke="#c4b5fd"/>
+  <text x="324.0" y="179.0" font-size="14" fill="#5b21b6" text-anchor="middle" font-weight="400">Reserved window</text>
+  <rect x="900" y="156" width="144" height="36" fill="#ede9fe" stroke="#c4b5fd"/>
+  <text x="972.0" y="179.0" font-size="14" fill="#5b21b6" text-anchor="middle" font-weight="400">Continues →</text>
+  <rect x="540" y="206" width="360" height="36" fill="#ede9fe" stroke="#c4b5fd"/>
+  <text x="720.0" y="229.0" font-size="14" fill="#5b21b6" text-anchor="middle" font-weight="400">Reserved window</text>
+  <text x="32" y="287" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Tick</text>
+  <line x1="180" y1="292" x2="1044" y2="292" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="180" y1="292" x2="180" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="252" y1="292" x2="252" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="324" y1="292" x2="324" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="396" y1="292" x2="396" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="468" y1="292" x2="468" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="540" y1="292" x2="540" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="612" y1="292" x2="612" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="684" y1="292" x2="684" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="756" y1="292" x2="756" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="828" y1="292" x2="828" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="900" y1="292" x2="900" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="972" y1="292" x2="972" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <line x1="1044" y1="292" x2="1044" y2="266" stroke="#c2410c" stroke-width="2"/>
+  <text x="32" y="335" font-size="15" fill="#475569" text-anchor="start" font-weight="400">Execution</text>
+  <text x="32" y="353" font-size="13" fill="#475569" text-anchor="start" font-weight="400">state</text>
+  <rect x="180" y="320" width="162" height="38" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="261.0" y="344.0" font-size="14" fill="#1e40af" text-anchor="middle" font-weight="400">Running</text>
+  <rect x="342" y="320" width="126" height="38" fill="#dcfce7" stroke="#86efac"/>
+  <text x="405.0" y="344.0" font-size="14" fill="#166534" text-anchor="middle" font-weight="400">Completed</text>
+  <rect x="468" y="320" width="72" height="38" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="504.0" y="344.0" font-size="14" fill="#475569" text-anchor="middle" font-weight="400">Idle</text>
+  <rect x="540" y="320" width="252" height="38" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="666.0" y="344.0" font-size="14" fill="#1e40af" text-anchor="middle" font-weight="400">Running</text>
+  <rect x="792" y="320" width="108" height="38" fill="#dcfce7" stroke="#86efac"/>
+  <text x="846.0" y="344.0" font-size="14" fill="#166534" text-anchor="middle" font-weight="400">Completed</text>
+  <rect x="900" y="320" width="144" height="38" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="972.0" y="344.0" font-size="14" fill="#1e40af" text-anchor="middle" font-weight="400">Running</text>
+  <line x1="180" y1="390" x2="1080" y2="390" stroke="#64748b" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="32" y="395" font-size="14" fill="#475569" text-anchor="start" font-weight="400">Time</text>
+  <text x="32" y="426" font-size="14" fill="#475569" text-anchor="start" font-weight="400">Pending intervals and tick execution time are omitted at this scale.</text>
+</svg>
