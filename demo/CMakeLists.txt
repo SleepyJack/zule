@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.31)
 project(zule_demo LANGUAGES C)
 
 # Reference integration: the application and its configuration (user domain)

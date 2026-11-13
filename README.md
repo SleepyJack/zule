@@ -22,23 +22,34 @@ The layout follows the [ownership domains](doc/architecture.md#ownership):
   configuration (`config/`). Also the reference CMake integration.
 - `tools/format.py`: standalone C formatting utility for development.
 
-Set up the Python tools from the project root:
+Development needs a C compiler and Python 3.10 or later. Everything else is
+pinned in `requirements-dev.txt`: CMake, Ninja, clang-format, and the schedule
+tool's dependencies. Set up and activate a virtual environment from the project root:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r zule/tools/schedule/requirements.txt
+. .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+```
+
+The commands below assume the environment is active, so `python`, `cmake`, and
+`ctest` resolve to the pinned versions. Integrators need only CMake 3.31 or later,
+plus `zule/tools/schedule/requirements.txt` when generating schedules.
+
+To run the schedule tools and their tests:
+
+```sh
 cd zule/tools/schedule
-../../../.venv/bin/python -m zule_schedule validate tests/fixtures/valid/control-loop.json
-../../../.venv/bin/python -m unittest discover -s tests -v
+python -m zule_schedule validate tests/fixtures/valid/control-loop.json
+python -m unittest discover -s tests -v
 ```
 
 See [zule/tools/schedule/README.md](zule/tools/schedule/README.md) for the current format and tool behavior.
 
-Build the Ubuntu demo with a C compiler, CMake (3.16 or later), and the Python
-environment above. From the project root:
+Build the Ubuntu demo from the project root:
 
 ```sh
-cmake -S demo -B build/demo -DPython3_EXECUTABLE="$PWD/.venv/bin/python"
+cmake -S demo -B build/demo -G Ninja
 cmake --build build/demo
 ./build/demo/zule_demo
 ```
@@ -67,16 +78,14 @@ for the host port contract.
 To build and run the core and port tests, with `zule/` as the top-level project:
 
 ```sh
-cmake -S zule -B build/zule -DZULE_PORT=posix
+cmake -S zule -B build/zule -G Ninja -DZULE_PORT=posix
 cmake --build build/zule
 ctest --test-dir build/zule --output-on-failure
 ```
 
-For C development, install the pinned formatter into your virtual environment
-and invoke it independently of CMake:
+Format C sources with the pinned clang-format, independently of CMake:
 
 ```sh
-python -m pip install -r requirements-dev.txt
 python tools/format.py
 python tools/format.py --check
 ```

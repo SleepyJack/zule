@@ -1,2 +1,4 @@
 -r zule/tools/schedule/requirements.txt
 clang-format==18.1.8
+cmake==3.31.10
+ninja==1.13.2

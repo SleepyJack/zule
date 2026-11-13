@@ -74,7 +74,7 @@ Targets and functions:
 | Name | Use |
 | --- | --- |
 | `zule::core` | Link from the application. Carries the public API include path and the user configuration, so the application, core, port, and generated schedule share the same settings. |
-| `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time and links it into `<target>`, exposing `zule_task_ids.h`. Requires Python 3.10 or later with `zule/tools/schedule/requirements.txt`; select it with `Python3_EXECUTABLE`. Output defaults to `<target>_schedule/` in the calling binary directory. |
+| `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time and links it into `<target>`, exposing `zule_task_ids.h`. Requires Python 3.10 or later with `zule/tools/schedule/requirements.txt`. An active virtual environment is found automatically; otherwise select the interpreter with `Python3_EXECUTABLE`. Output defaults to `<target>_schedule/` in the calling binary directory. |
 | `zule::port_api` | Link from an external port: provides `zule_port.h` and the public API. |
 | `zule::port` | The selected port. An external port defines it as an alias, before or after adding Zule. The port's public include directories must supply `zule_port_types.h`. |
 
@@ -96,7 +96,7 @@ build without `zule_add_schedule()` needs no Python.
 To build Zule and its tests on their own:
 
 ```sh
-cmake -S zule -B build/zule -DZULE_PORT=posix
+cmake -S zule -B build/zule -G Ninja -DZULE_PORT=posix
 cmake --build build/zule
 ctest --test-dir build/zule --output-on-failure
 ```

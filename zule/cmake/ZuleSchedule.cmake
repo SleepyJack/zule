@@ -6,8 +6,6 @@
 # Requires Python 3.10 or later with zule/tools/schedule/requirements.txt installed;
 # set Python3_EXECUTABLE to select the interpreter.
 
-set_property(GLOBAL PROPERTY ZULE_SCHEDULE_TOOLS_DIR "${CMAKE_CURRENT_LIST_DIR}/../tools/schedule")
-
 function(zule_add_schedule target)
     cmake_parse_arguments(PARSE_ARGV 1 ZULE "" "SCHEDULE;OUTPUT_DIR" "")
     if(NOT ZULE_SCHEDULE)
@@ -29,7 +27,7 @@ function(zule_add_schedule target)
     endif()
 
     find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
-    get_property(tools_dir GLOBAL PROPERTY ZULE_SCHEDULE_TOOLS_DIR)
+    cmake_path(SET tools_dir NORMALIZE "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../tools/schedule")
     file(GLOB generator_sources CONFIGURE_DEPENDS "${tools_dir}/zule_schedule/*.py")
 
     add_custom_command(

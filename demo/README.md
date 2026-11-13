@@ -16,9 +16,9 @@ output, and idle time. These deliberately slow slots suit ordinary host scheduli
 
 To build and run the demo on Ubuntu, follow the CMake commands in the root
 README. `zule_add_schedule()` generates the schedule in
-`build/demo/zule_demo_schedule/` at build time, using the Python interpreter
-selected by `Python3_EXECUTABLE`; install `zule/tools/schedule/requirements.txt`
-into it first. CMake then compiles `main.c` and links the `zule::core` library
+`build/demo/zule_demo_schedule/` at build time, using the active virtual
+environment's Python (or `-DPython3_EXECUTABLE=<python>`), which needs
+`zule/tools/schedule/requirements.txt` installed. CMake then compiles `main.c` and links the `zule::core` library
 and selected port. Override the port with `-DZULE_PORT=<port>`. `main.c` provides the tasks, configures
 a fault handler, and calls the blocking public `zule_run()`; it has no timer code
 or scheduler-state access. Its handler only copies the fault snapshot. Main

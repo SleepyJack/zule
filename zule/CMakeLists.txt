@@ -1,20 +1,12 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.31)
 project(zule VERSION 0.1.0 LANGUAGES C)
 
 # Zule ownership domain: core, ports, and schedule tooling. Applications add this
 # directory, select a port, and link zule::core. See doc/build_configuration.md.
 
-if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    set(ZULE_IS_TOP_LEVEL ON)
-else()
-    set(ZULE_IS_TOP_LEVEL OFF)
-endif()
-
-option(ZULE_BUILD_TESTS "Build the core and port tests" ${ZULE_IS_TOP_LEVEL})
-if(NOT DEFINED ZULE_PORT)
-    set(ZULE_PORT "" CACHE STRING
-        "Port directory under ports/ (posix), or 'external' for an application-defined zule::port")
-endif()
+option(ZULE_BUILD_TESTS "Build the core and port tests" ${PROJECT_IS_TOP_LEVEL})
+set(ZULE_PORT "" CACHE STRING
+    "Port directory under ports/ (posix), or 'external' for an application-defined zule::port")
 
 set(CMAKE_C_EXTENSIONS OFF)
 
