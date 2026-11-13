@@ -5,13 +5,18 @@ decisions or a committed order of delivery.
 
 ## Development environment
 
-- Make CMake a persistent part of the documented development environment;
-  decide between system installation and a pinned development dependency.
-- Consider a Docker image or dev container for a reproducible compiler,
-  CMake, Python, and formatting toolchain.
-- Harmonise the existing requirements files, keeping schedule-tool runtime
-  dependencies distinct from development-only dependencies where useful.
-- Align local setup and CI so the same build and check commands work in both.
+- Consider a dev container for tools that `requirements-dev.txt` cannot pin,
+  such as the host and cross compilers. It should install `requirements-dev.txt`
+  rather than duplicate its versions.
+
+## Licence
+
+- The repository is public but deliberately unlicensed while pre-release. Add a
+  licence before promoting the project, accepting outside contributions, or
+  making a first release.
+- MIT is the provisional choice. Decide the copyright holder named in the notice.
+- Once added, the licence applies to everything published from then on, and
+  published versions remain available under it.
 
 ## Static analysis
 
