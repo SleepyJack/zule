@@ -1,2 +1,2 @@
--r tools/schedule/requirements.txt
+-r zule/tools/schedule/requirements.txt
 clang-format==18.1.8

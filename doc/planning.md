@@ -90,7 +90,7 @@ decisions or a committed order of delivery.
 
 ## Core and port configuration
 
-- Keep core defaults and validation in `core/api/zule_config.h`, with optional
+- Keep core defaults and validation in `zule/core/api/zule_config.h`, with optional
   application overrides in `zule_user_config.h`.
 - Let each port define its own `zule_port_config.h` for defaults and validation,
   with optional application overrides in `zule_user_port_config.h`. Introduce

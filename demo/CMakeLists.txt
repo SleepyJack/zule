@@ -1,31 +1,16 @@
-find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
+cmake_minimum_required(VERSION 3.16)
+project(zule_demo LANGUAGES C)
 
-set(ZULE_SCHEDULE_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tools/schedule")
-set(ZULE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/gen")
-file(GLOB ZULE_GENERATOR_SOURCES CONFIGURE_DEPENDS "${ZULE_SCHEDULE_TOOLS_DIR}/zule_schedule/*.py")
+# Reference integration: the application and its configuration (user domain)
+# consume Zule (Zule domain) through the variables, targets, and function below.
+set(ZULE_PORT posix CACHE STRING "Zule port")
+set(ZULE_USER_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
+add_subdirectory(../zule zule)
 
-add_custom_command(
-    OUTPUT "${ZULE_GENERATED_DIR}/zule_schedule_definition.c"
-           "${ZULE_GENERATED_DIR}/zule_task_ids.h"
-    COMMAND "${Python3_EXECUTABLE}" -m zule_schedule generate
-            "${CMAKE_CURRENT_SOURCE_DIR}/control-loop.json" "${ZULE_GENERATED_DIR}"
-    WORKING_DIRECTORY "${ZULE_SCHEDULE_TOOLS_DIR}"
-    DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/control-loop.json"
-        "${ZULE_SCHEDULE_TOOLS_DIR}/zule_schedule/schedule.schema.json"
-        ${ZULE_GENERATOR_SOURCES}
-    COMMENT "Generating the Zule demo schedule"
-    VERBATIM
-)
-
-add_executable(zule_demo main.c "${ZULE_GENERATED_DIR}/zule_schedule_definition.c"
-    "${ZULE_GENERATED_DIR}/zule_task_ids.h")
-target_include_directories(zule_demo PRIVATE "${ZULE_GENERATED_DIR}")
-# Only generated configuration needs the scheduler's internal schedule types.
-set_source_files_properties("${ZULE_GENERATED_DIR}/zule_schedule_definition.c" PROPERTIES
-    INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/../core/inc")
-target_link_libraries(zule_demo PRIVATE zule::core)
+add_executable(zule_demo main.c)
 set_target_properties(zule_demo PROPERTIES C_EXTENSIONS OFF)
+target_link_libraries(zule_demo PRIVATE zule::core)
+zule_add_schedule(zule_demo SCHEDULE config/control-loop.json)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(zule_demo PRIVATE -Wall -Wextra -Wpedantic)

@@ -28,7 +28,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             requirements-dev.txt
-            tools/schedule/requirements.txt
+            zule/tools/schedule/requirements.txt
 
       - name: Install Python dependencies and formatter
         run: python -m pip install -r requirements-dev.txt
@@ -37,29 +37,35 @@ jobs:
         run: python tools/format.py --check
 
       - name: Run Python unit tests
-        working-directory: tools/schedule
+        working-directory: zule/tools/schedule
         run: python -m unittest discover -s tests -v
 
-      - name: Configure C tests and demo
+      - name: Configure Zule and C tests
         run: >-
-          cmake -S . -B build
+          cmake -S zule -B build/zule
           -DCMAKE_BUILD_TYPE=Release
-          -DZULE_BUILD_TESTS=ON
-          -DZULE_BUILD_DEMO=ON
           -DZULE_PORT=posix
-          -DPython3_EXECUTABLE="${{ steps.python.outputs.python-path }}"
 
-      - name: Build C tests and demo
-        run: cmake --build build --parallel
+      - name: Build Zule and C tests
+        run: cmake --build build/zule --parallel
 
       - name: Run C unit tests
-        run: ctest --test-dir build --output-on-failure --no-tests=error
+        run: ctest --test-dir build/zule --output-on-failure --no-tests=error
+
+      - name: Configure demo
+        run: >-
+          cmake -S demo -B build/demo
+          -DCMAKE_BUILD_TYPE=Release
+          -DPython3_EXECUTABLE="${{ steps.python.outputs.python-path }}"
+
+      - name: Build demo
+        run: cmake --build build/demo --parallel
 
       - name: Check generated C formatting
         run: >-
           python tools/format.py --check
-          build/demo/gen/zule_schedule_definition.c
-          build/demo/gen/zule_task_ids.h
+          build/demo/zule_demo_schedule/zule_schedule_definition.c
+          build/demo/zule_demo_schedule/zule_task_ids.h
 
       - name: Run demo
         run: |

@@ -27,7 +27,7 @@ to entries in this array; repeated invocations share the same task definition.
 The `zule_task_t` type includes a `name` member only when task names are enabled.
 The scheduler's private `zule_task_execution_t` tracks mutable execution state.
 `zule_task_name_get()` provides public lookup
-by ID; see [build configuration](../doc/build_configuration.md).
+by ID; see [build configuration](../../doc/build_configuration.md).
 `zule_schedule_validate()` in `src/zule_schedule.c` checks pointers, nonzero
 slot periods, counts and budgets, task functions, unique task IDs, window task
 references, window bounds, ordering, and overlap.
@@ -54,13 +54,15 @@ an excluded native timer thread; it does not depend on scheduler internals.
 Initialization precedes tick delivery. A task that never returns still prevents
 the runner from returning; there is no forced task termination.
 
-Integrators can use `add_subdirectory(path/to/zule)` and link `zule::core`.
-The demo is disabled by default, and building only the core requires no Python.
-Select a port through `ZULE_PORT` or provide a `zule::port` target before adding
-Zule. Its usage requirements supply the selected `zule_port_types.h` and library.
+Integrators use `add_subdirectory(path/to/zule)` and link `zule::core`; see
+[CMake integration](../../doc/build_configuration.md#cmake-integration). Building
+only the core requires no Python. Select a port through `ZULE_PORT`, or set it to
+`external` and define a `zule::port` target. The port's usage requirements supply
+the selected `zule_port_types.h` and library.
 
-Enable `ZULE_BUILD_TESTS` to build the standalone core API tests and run them
-with CTest. They supply their own schedule and deterministic test port, with no
+`ZULE_BUILD_TESTS` builds the standalone core API tests, defined in
+`tests/CMakeLists.txt`, for CTest. It defaults to `ON` only when `zule/` is the
+top-level CMake project. They supply their own schedule and deterministic test port, with no
 timer threads or Python tools. Runner lifecycle tests use that same port to
 exercise startup failures, faults, shutdown, and retries. The POSIX mutex and
 timer lifecycle are tested separately.

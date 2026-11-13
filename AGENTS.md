@@ -30,12 +30,13 @@ Use the project's Python environment and the commands documented in
 - For C changes, run `python tools/format.py --check` and compile the affected
   targets. The formatter is independent of CMake.
 - For schedule-tool changes, run `python -m unittest discover -s tests -v`
-  from `tools/schedule/`.
-- For generator or API changes, regenerate the schedule, check generated C
-  formatting, and build/run the demo. Keep the public headers, generator,
+  from `zule/tools/schedule/`.
+- For CMake changes, configure and build both `zule/` (with tests) and `demo/`.
+- For generator or API changes, rebuild the demo (CMake regenerates its
+  schedule), check generated C formatting, and run the demo. Keep the public headers, generator,
   example JSON, and demo consistent.
-- Fix generated-code issues in `tools/schedule/zule_schedule/generation.py`,
-  not in `demo/gen/` or build output.
+- Fix generated-code issues in `zule/tools/schedule/zule_schedule/generation.py`,
+  not in build output.
 - Documentation-only changes need reference and consistency checks rather
   than a full build or test run.
 
