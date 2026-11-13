@@ -120,8 +120,3 @@ decisions or a committed order of delivery.
 
 - Improve the top-level README with a clear project introduction, current
   capabilities and limitations, architecture overview, and quick-start steps.
-- Add a porting guide covering port selection, required types and functions,
-  critical-section semantics, tick callbacks, idle behavior, errors, and
-  shutdown/quiescence requirements.
-- Explain application integration, generated schedule compilation, and the
-  distinction between the public API, internal interfaces, and port API.

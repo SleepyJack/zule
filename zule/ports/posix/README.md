@@ -1,5 +1,8 @@
 # POSIX development port
 
+This port implements the [port contract](../../../doc/port.md) for native
+development on POSIX hosts.
+
 Select this port with `ZULE_PORT=posix`. It uses a lazily initialized recursive
 pthread mutex. Each enter locks once and each exit unlocks once, preserving
 outer critical sections. The saved token records the owning thread; restore it
