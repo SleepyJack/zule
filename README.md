@@ -116,7 +116,7 @@ The documentation follows the components of the [architecture](doc/architecture.
 | [Architecture](doc/architecture.md) | Components, ownership, and execution contexts. |
 | [Configuration](doc/configuration.md) | Schedule format, task names and IDs, and build settings. |
 | [Application](doc/application.md) | Tasks, the public API, fault handling, and integrating Zule into a build. |
-| [Core](doc/core.md) | Scheduler behaviour, timing, faults, and implementation notes. |
+| [Core](doc/core.md) | Scheduler behaviour, timing, and faults. |
 | [Port](doc/port.md) | The port contract, and creating and linking a custom port. |
 
 To work on Zule itself, see [CONTRIBUTING.md](CONTRIBUTING.md).

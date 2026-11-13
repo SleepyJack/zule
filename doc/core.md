@@ -2,8 +2,8 @@
 
 The core is the scheduler: it dispatches tasks according to the schedule and
 enforces the schedule's timing. This document describes its intended behaviour
-and timing model, followed by [implementation notes](#implementation). See the
-[architecture overview](architecture.md) for components and execution contexts.
+and timing model. See the [architecture overview](architecture.md) for
+components and execution contexts.
 
 ## Scheduling overview
 
@@ -114,53 +114,3 @@ monitoring, such as a watchdog.
 
 Task budgets must account for scheduler overhead and interrupt interference as
 well as task execution time.
-
-## Implementation
-
-The core lives in `zule/core/`:
-
-| Path | Contents |
-| --- | --- |
-| `api/` | Public headers: `zule.h` and the settings header `zule_config.h`. |
-| `inc/` | Internal headers, visible only to the core, its tests, and generated schedules. |
-| `src/zule.c` | Public API: configuration, task-name lookup, and the `zule_run()` loop. |
-| `src/zule_scheduler.c` | Tick processing, dispatch, execution state, and fault latching. |
-| `src/zule_schedule.c` | Schedule validation. |
-| `tests/` | Unit tests, built against a deterministic, single-threaded test port. |
-
-### Schedule data
-
-`inc/zule_schedule.h` defines the schedule types, and
-`inc/zule_schedule_definition.h` declares the getter `zule_schedule_get()`, which
-the generated schedule implements. A schedule holds `slot_us`, the cycle length,
-an immutable task array, and a window array. Each task entry holds its ID and
-function pointer, plus a name when [task names](configuration.md#task-names) are
-enabled. Windows point into the task array, so repeated windows share one entry.
-Mutable execution state is private to `src/zule_scheduler.c`.
-
-Handwritten schedules are possible; they supply their own unique task IDs.
-
-### Validation
-
-Initialization validates the schedule before ticks start, whether it was
-generated or handwritten. `zule_schedule_validate()` checks:
-
-- pointers, a nonzero slot period, counts, and budgets;
-- task functions and unique task IDs;
-- window task references, bounds, ordering, and overlap.
-
-End-bound checks avoid unsigned overflow. On failure, initialization returns
-`ZULE_RESULT_INVALID_SCHEDULE` and leaves tick and dispatch disabled. Validation
-checks structural timing consistency only: whether tasks finish within their
-budgets, and whether schedule storage remains valid, need evidence from outside
-the core.
-
-### Runner
-
-`zule_run()` initializes the scheduler, passes `zule_scheduler_tick()` to
-`zule_port_tick_init()` as the tick callback, then alternates
-`zule_scheduler_run()` with `zule_port_idle()`. Each scheduler run attempts one
-dispatch, protecting the task handoff and completion with port critical
-sections. A scheduler fault or port error ends the loop, after which the runner
-stops the tick. The core has no clock source of its own and does not depend on
-how the port delivers ticks.
