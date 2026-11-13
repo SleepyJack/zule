@@ -3,8 +3,5 @@
 __pycache__/
 *.py[cod]
 
-# Generated demo schedule
-/demo/gen/
-
 # CMake build output
 /build/

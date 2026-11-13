@@ -1,6 +1,6 @@
 # POSIX development port
 
-Select this port with `-DZULE_PORT=posix`. It uses a lazily initialized recursive
+Select this port with `ZULE_PORT=posix`. It uses a lazily initialized recursive
 pthread mutex. Each enter locks once and each exit unlocks once, preserving
 outer critical sections. The saved token records the owning thread; restore it
 on that thread, in reverse entry order. Initialization or mutex errors abort,

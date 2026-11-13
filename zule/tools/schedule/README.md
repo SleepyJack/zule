@@ -5,9 +5,9 @@ A small Python package for offline schedule validation and C table generation.
 From this directory:
 
 ```sh
-python3 -m venv ../../.venv
-../../.venv/bin/python -m pip install -r requirements.txt
-../../.venv/bin/python -m zule_schedule validate tests/fixtures/valid/control-loop.json
+python3 -m venv ../../../.venv
+../../../.venv/bin/python -m pip install -r requirements.txt
+../../../.venv/bin/python -m zule_schedule validate tests/fixtures/valid/control-loop.json
 ```
 
 Alternatively, with dependencies installed, run from this directory:
@@ -77,6 +77,8 @@ without colliding with C keywords. The generated file includes `zule_schedule_de
 from `core/inc`; the internal scheduler initialization obtains the schedule through the getter.
 Compile generated definitions with both `core/inc` and `core/api` on the include
 path. Application-only sources need just the public `core/api` directory.
+CMake applications call `zule_add_schedule()`, which runs this tool at build
+time and sets these paths; see [build configuration](../../../doc/build_configuration.md#cmake-integration).
 Only one generated schedule is intended per application at this stage.
 
 Task definitions and names are emitted in task-key order, independently of JSON
@@ -95,7 +97,7 @@ for runtime schedules, including handwritten definitions.
 Names are compiled only when
 `ZULE_CONFIG_TASK_NAMES=1`, with no generator option or regeneration required.
 `zule_task_name_get(id)` returns the diagnostic name or `NULL` when unavailable.
-See [build configuration](../../doc/build_configuration.md) for defaults and
+See [build configuration](../../../doc/build_configuration.md) for defaults and
 the optional `zule_user_config.h` override mechanism.
 
 Generation requires all timing fields to fit `uint32_t`; validation alone has
