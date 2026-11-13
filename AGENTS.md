@@ -25,7 +25,7 @@ routine convention fixes within the requested scope.
 ## Validation
 
 Use the project's Python environment and the commands documented in
-[README.md](README.md). Choose checks appropriate to the change:
+[CONTRIBUTING.md](CONTRIBUTING.md). Choose checks appropriate to the change:
 
 - For C changes, run `python tools/format.py --check` and compile the affected
   targets. The formatter is independent of CMake.

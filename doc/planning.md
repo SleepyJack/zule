@@ -115,8 +115,3 @@ decisions or a committed order of delivery.
 - Verify nesting, ordering barriers, timer start/stop behavior, and bounded
   execution and interrupt latency on the selected target.
 - Provide an embedded example and document assumptions specific to the port.
-
-## Documentation
-
-- Improve the top-level README with a clear project introduction, current
-  capabilities and limitations, architecture overview, and quick-start steps.

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="902" height="240" viewBox="0 0 902 240" role="img" aria-labelledby="title description">
+  <title id="title">Zule demo schedule</title>
+  <desc id="description">A repeating cycle of ten slots. Task sense runs in slots 0 and 1, control in slots 2 to 4, and output in slots 5 and 6. Slots 7 to 9 are idle. The cycle then repeats.</desc>
+  <defs>
+    <style>
+      text { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .task { font-size: 16px; font-weight: 700; }
+      .note { font-size: 14px; fill: #475569; }
+      .slot { font-size: 12px; fill: #94a3b8; }
+    </style>
+    <linearGradient id="fade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="901" height="239" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <path d="M 150 50 V 42 H 664 V 50" fill="none" stroke="#cbd5e1"/>
+  <text x="407" y="32" text-anchor="middle" class="note">One cycle · 10 slots</text>
+  <text x="771" y="32" text-anchor="middle" class="note">Next cycle</text>
+  <text x="173" y="70" text-anchor="middle" class="slot">0</text>
+  <text x="225" y="70" text-anchor="middle" class="slot">1</text>
+  <text x="277" y="70" text-anchor="middle" class="slot">2</text>
+  <text x="329" y="70" text-anchor="middle" class="slot">3</text>
+  <text x="381" y="70" text-anchor="middle" class="slot">4</text>
+  <text x="433" y="70" text-anchor="middle" class="slot">5</text>
+  <text x="485" y="70" text-anchor="middle" class="slot">6</text>
+  <text x="537" y="70" text-anchor="middle" class="slot">7</text>
+  <text x="589" y="70" text-anchor="middle" class="slot">8</text>
+  <text x="641" y="70" text-anchor="middle" class="slot">9</text>
+  <text x="693" y="70" text-anchor="middle" class="slot">0</text>
+  <text x="745" y="70" text-anchor="middle" class="slot">1</text>
+  <text x="797" y="70" text-anchor="middle" class="slot">2</text>
+  <text x="849" y="70" text-anchor="middle" class="slot">3</text>
+  <text x="134" y="109" text-anchor="end" class="task" fill="#1e40af">sense</text>
+  <rect x="150" y="84" width="46" height="38" rx="6" fill="#bfdbfe" stroke="#60a5fa"/>
+  <rect x="202" y="84" width="46" height="38" rx="6" fill="#bfdbfe" stroke="#60a5fa"/>
+  <rect x="254" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="306" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="358" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="410" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="462" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="514" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="566" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="618" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="670" y="84" width="46" height="38" rx="6" fill="#bfdbfe" stroke="#60a5fa"/>
+  <rect x="722" y="84" width="46" height="38" rx="6" fill="#bfdbfe" stroke="#60a5fa"/>
+  <rect x="774" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="826" y="84" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="134" y="155" text-anchor="end" class="task" fill="#5b21b6">control</text>
+  <rect x="150" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="202" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="254" y="130" width="46" height="38" rx="6" fill="#ddd6fe" stroke="#a78bfa"/>
+  <rect x="306" y="130" width="46" height="38" rx="6" fill="#ddd6fe" stroke="#a78bfa"/>
+  <rect x="358" y="130" width="46" height="38" rx="6" fill="#ddd6fe" stroke="#a78bfa"/>
+  <rect x="410" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="462" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="514" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="566" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="618" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="670" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="722" y="130" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="774" y="130" width="46" height="38" rx="6" fill="#ddd6fe" stroke="#a78bfa"/>
+  <rect x="826" y="130" width="46" height="38" rx="6" fill="#ddd6fe" stroke="#a78bfa"/>
+  <text x="134" y="201" text-anchor="end" class="task" fill="#166534">output</text>
+  <rect x="150" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="202" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="254" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="306" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="358" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="410" y="176" width="46" height="38" rx="6" fill="#bbf7d0" stroke="#4ade80"/>
+  <rect x="462" y="176" width="46" height="38" rx="6" fill="#bbf7d0" stroke="#4ade80"/>
+  <rect x="514" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="566" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="618" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="670" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="722" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="774" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="826" y="176" width="46" height="38" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="668" y="56" width="233" height="182" fill="url(#fade)"/>
+  <line x1="667" y1="42" x2="667" y2="228" stroke="#94a3b8" stroke-dasharray="4 4"/>
+</svg>

@@ -16,7 +16,7 @@ The schedule is a 500 ms cycle of ten 50 ms slots: `sense`, `control`, and
 
 ## Running
 
-With the development environment from the [root README](../README.md) active:
+With the development environment from [Getting started](../README.md#getting-started) active:
 
 ```sh
 cmake -S demo -B build/demo -G Ninja
