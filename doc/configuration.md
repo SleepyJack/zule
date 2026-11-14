@@ -4,8 +4,9 @@ Configuration is owned by the user (see [ownership](architecture.md#ownership)).
 It consists of:
 
 - the [schedule](#schedule): tasks, budgets, and window timing, in JSON;
-- [build settings](#build-settings): compile-time options in `zule_user_config.h`
-  or compiler definitions.
+- [build settings](#build-settings): compile-time options for the core in
+  `zule_user_config.h`, and for the selected port in `zule_user_port_config.h`,
+  or as compiler definitions.
 
 Keep both in an application-owned directory, such as the demo's
 [`demo/config/`](../demo/config). Runtime settings, such as the fault handler,
@@ -129,5 +130,21 @@ recompiling every component, but no schedule regeneration.
 
 ### Port settings
 
-Ports currently have no configurable settings. Port-specific settings are
-planned; each port will document its own in its README.
+Each port supplies its own `zule_port_config.h`, which documents the port's
+settings, applies defaults, validates them, and fails compilation if a required
+setting is missing rather than guessing it, for example a timer clock frequency
+that depends on the board. For overrides, create `zule_user_port_config.h` next
+to `zule_user_config.h`:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `ZULE_USE_USER_PORT_CONFIG` | `0` | Set to `1` to include an integrator-supplied `zule_user_port_config.h`. |
+
+With CMake, `ZULE_USER_CONFIG_DIR` detects either header, or both, and defines
+the matching `ZULE_USE_USER_...` setting. Other build systems define
+`ZULE_USE_USER_PORT_CONFIG=1` for every component when the header is present.
+Like core settings, port settings must be the same for every component.
+
+The port's README lists its settings. A port also declares its
+[capabilities](port.md#capabilities) in `zule_port_config.h`; these describe what
+the port provides and cannot be overridden. The POSIX port has no settings yet.

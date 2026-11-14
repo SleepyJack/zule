@@ -40,11 +40,13 @@ decisions or a committed order of delivery.
 
 ## Timebase and tick timing checks
 
-- Add a port API for a monotonic timebase with sub-tick resolution, usable from
-  both application and tick contexts. Define units, resolution, wraparound,
-  safe reads, and bounded read overhead. It must continue advancing while tick
-  interrupts are delayed or masked.
-- Use the timebase for core timing checks and task profiling. Keep timing policy
+- The port timebase API is defined: an optional capability
+  (`ZULE_PORT_CONFIG_TIME`) providing a wrapping 32-bit count and its frequency.
+  See [timebase](port.md#timebase). The POSIX port implements it.
+- Use the timebase for core timing checks and task profiling, as core settings
+  that fail compilation with a port lacking the capability. At initialization,
+  check that each slot is a whole number of counts and that one cycle is
+  shorter than 2^31 counts. Keep timing policy
   and fault detection in the core, with clock and timer implementation in the port.
 - Establish the first expected tick boundary and compare subsequent ticks with
   expected deadlines, accounting for accumulated drift as well as individual
@@ -128,10 +130,12 @@ decisions or a committed order of delivery.
 
 - Keep core defaults and validation in `zule/core/api/zule_config.h`, with optional
   application overrides in `zule_user_config.h`.
-- Let each port define its own `zule_port_config.h` for defaults and validation,
-  with optional application overrides in `zule_user_port_config.h`. Introduce
-  port configuration headers when settings are needed; keep the core independent
-  of port-specific settings.
+- Each port defines its own `zule_port_config.h` for capabilities, defaults,
+  and validation, with optional application overrides in
+  `zule_user_port_config.h`, found through `ZULE_USER_CONFIG_DIR`. Keep the core
+  independent of port-specific settings; it reads only generic capabilities.
+  The Cortex-M port will add the first required setting, the timer clock
+  frequency.
 - Use these Zule-owned headers to document supported settings, defaults,
   constraints, and required values in one place for each scope.
 - Apply sensible defaults, but fail compilation for missing required hardware
@@ -155,6 +159,8 @@ decisions or a committed order of delivery.
 - Add a Cortex-M port, choosing an initial core and board/toolchain to target.
 - Implement saved-state critical sections, periodic timer delivery, and the
   atomic idle wait against the generic port contract.
+- Provide the timebase from SysTick, and require the timer clock frequency as a
+  port setting in `zule_user_port_config.h`.
 - Verify nesting, ordering barriers, timer start/stop behavior, and bounded
   execution and interrupt latency on the selected target.
 - Provide an embedded example and document assumptions specific to the port.
