@@ -21,7 +21,7 @@ There are two ownership domains: the user domain and the Zule domain. The
 
 ### Configuration
 
-The configuration defines the set of tasks and the schedule as well as high-level configuration settings for the application.
+The configuration defines the set of tasks and the schedule, and the build settings for the core and the selected port. Port settings supply target information that only the application knows, such as a timer clock frequency, so configuration feeds both the core and the port.
 
 See [configuration](configuration.md).
 
@@ -39,7 +39,7 @@ See [core](core.md) for task execution and timing details.
 
 ### Port
 
-Target-specific implementations of services to support the scheduler: timing and data synchronisation.
+Target-specific implementations of services to support the scheduler: the periodic tick, an optional sub-slot timebase, and data synchronisation. The port reads its settings from the configuration and declares its capabilities, such as whether it provides the timebase.
 
 See [port](port.md).
 

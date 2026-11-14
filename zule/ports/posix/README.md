@@ -3,7 +3,10 @@
 This port implements the [port contract](../../../doc/port.md) for native
 development on POSIX hosts.
 
-Select this port with `ZULE_PORT=posix`. It uses a lazily initialized recursive
+Select this port with `ZULE_PORT=posix`. It has no
+[port settings](../../../doc/configuration.md#port-settings) yet; its
+`zule_port_config.h` declares the timebase capability, which applications
+cannot override. It uses a lazily initialized recursive
 pthread mutex. Each enter locks once and each exit unlocks once, preserving
 outer critical sections. The saved token records the owning thread; restore it
 on that thread, in reverse entry order. Initialization or mutex errors abort,
@@ -36,6 +39,13 @@ stops are safe, and a stopped timer can be restarted. Lifecycle calls have one
 main-loop caller and cannot run from the callback. They require stopped delivery
 before initialization; timer creation failures leave no live worker.
 
+The [timebase](../../../doc/port.md#timebase) reads `CLOCK_MONOTONIC` in
+microseconds, so `zule_port_time_hz()` returns 1 000 000 and the count wraps
+about every 71 minutes. It is valid at any time, not only while ticks run,
+and advances during sleeps and critical sections. A clock read failure aborts,
+since the timebase has no error return. Reads use the host clock and have no
+bounded-latency guarantee.
+
 Timer errors return `ZULE_PORT_RESULT_ERROR`; synchronization failures or an
 unrecoverable join failure abort rather than falsely report exclusion or
 quiescence. Neither this development port nor the demo provides hard real-time
@@ -45,5 +55,6 @@ Core unit tests compile against a separate, single-threaded test port that
 checks critical-section nesting. A POSIX port test separately exercises nested
 locking and mutual exclusion across four threads, plus callback delivery,
 restart, and shutdown of a timer with a long period. It also checks that idle
-waits for ticks rather than polling, and that a tick delayed by the caller's
-critical section still ends the wait.
+waits for ticks rather than polling, that a tick delayed by the caller's
+critical section still ends the wait, and that the timebase reports microseconds
+and advances inside a critical section.

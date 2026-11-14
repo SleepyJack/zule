@@ -3,7 +3,7 @@ if(NOT UNIX)
 endif()
 
 find_package(Threads REQUIRED)
-add_library(zule_port_posix STATIC zule_port.c zule_port_tick.c)
+add_library(zule_port_posix STATIC zule_port.c zule_port_tick.c zule_port_time.c)
 add_library(zule::port ALIAS zule_port_posix)
 target_include_directories(zule_port_posix PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(zule_port_posix PRIVATE _POSIX_C_SOURCE=200809L)

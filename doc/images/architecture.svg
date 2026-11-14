@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="840" viewBox="0 0 1120 840" role="img" aria-labelledby="title description">
   <title id="title">Zule component architecture</title>
-  <desc id="description">The user domain contains configuration and application code. Configuration supplies the task list and schedule to the core. The application controls the scheduler, which calls tasks in application context and fault handlers in tick context. In the Zule domain, the core uses port services and the port delivers ticks to the core.</desc>
+  <desc id="description">The user domain contains configuration and application code. Configuration supplies the task list, schedule, and core settings to the core, and port settings to the port. The application controls the scheduler, which calls tasks in application context and fault handlers in tick context. In the Zule domain, the core uses port services and the port delivers ticks to the core.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 Z" fill="#475569"/>
@@ -28,6 +28,7 @@
   <text x="80" y="138" class="heading">Configuration</text>
   <text x="80" y="177" class="body">Task list definition</text>
   <text x="80" y="205" class="body">Schedule definition</text>
+  <text x="80" y="233" class="body">Core and port settings</text>
 
   <rect x="56" y="300" width="316" height="290" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
   <text x="80" y="335" class="heading">Application</text>
@@ -53,7 +54,9 @@
   <text x="752" y="725" class="context">Tick context</text>
   <text x="752" y="756" class="body">Timer implementation</text>
   <path d="M 372 175 H 890 V 300" class="link"/>
-  <text x="546" y="150" class="label" text-anchor="middle">Schedule and configuration</text>
+  <text x="546" y="150" class="label" text-anchor="middle">Schedule and core settings</text>
+  <path d="M 56 225 H 40 V 760 H 720" class="link"/>
+  <text x="546" y="748" class="label" text-anchor="middle">Port settings</text>
   <path d="M 372 365 H 720" class="link"/>
   <text x="546" y="342" class="label" text-anchor="middle">Start/stop scheduler</text>
   <path d="M 720 425 H 372" class="link"/>

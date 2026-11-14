@@ -90,6 +90,22 @@ int main(void) {
     }
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
 
+    /* The timebase counts microseconds and keeps advancing inside a critical
+     * section, while the tick is excluded. */
+    assert(ZULE_PORT_CONFIG_TIME == 1);
+    assert(zule_port_time_hz() == 1000000U);
+    assert(zule_port_tick_init(200000U, tick_callback) == ZULE_PORT_RESULT_OK);
+    {
+        const zule_port_critical_state_t state = zule_port_critical_enter();
+        const uint32_t start = zule_port_time_get();
+        const struct timespec pause = {0, 20000000L};
+        assert(nanosleep(&pause, NULL) == 0);
+        const uint32_t elapsed = zule_port_time_get() - start;
+        zule_port_critical_exit(state);
+        assert(elapsed >= 20000U && elapsed < 5000000U);
+    }
+    assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
+
     /* Stop must wake the timer rather than wait for a very long period. */
     assert(zule_port_tick_init(UINT32_MAX, tick_callback) == ZULE_PORT_RESULT_OK);
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
