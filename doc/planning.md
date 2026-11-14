@@ -89,37 +89,40 @@ decisions or a committed order of delivery.
   and select one per run. Keep the change in the JSON schema and generator; the
   core still runs one validated schedule at a time.
 - Decide the JSON shape. A shared task set keeps task functions and IDs
-  consistent across schedules; decide whether `slot_us` is shared or set per
-  schedule. Validate every schedule offline.
-- Select the schedule through `zule_configure()`, using a generated schedule
-  identifier, with a defined default. Decide whether init validates only the
-  selected schedule or all of them.
+  consistent across schedules, and a single `slot_us` applies to all of them
+  (required for switching, below). Validate every schedule offline.
+- Select the initial schedule through `zule_configure()`, using a generated
+  schedule identifier, with a defined default.
 - Switch initially by [termination](#scheduler-termination-api), then
   `zule_configure()` and `zule_run()`. This uses existing and planned APIs, but
   restarts tick delivery, so each switch has the same first-cycle latency as
   startup.
 - Fault information should identify the active schedule, since window indexes
   are per schedule.
-- Open: whether to add a switching API that keeps tick delivery running and
-  changes schedule at a defined point, such as a cycle boundary. If so, a
-  startup idle schedule followed by a switch could replace a dedicated
-  [startup delay](#startup-delay). If not, startup delay remains a separate
-  feature, and also applies after each restart.
+- Add a switching API that keeps tick delivery running. A task requests the
+  next schedule from application context; tick context applies the request at
+  the next cycle boundary, so a switch takes effect within one cycle. At that
+  boundary, retire the old schedule's final window, then switch, then start the
+  new schedule's first window. Apply a switch only while no fault is latched.
+- Require a shared `slot_us`, so a switch never reprograms the port timer, and
+  validate every schedule at init, so tick context never validates.
 
-## Startup delay
+### Startup delay as a pattern
 
-- Allow a configurable startup delay of `n` slots. Tick delivery runs during
-  this delay, but tick processing must not inspect the window schedule or mark
-  tasks pending.
-- Begin the first schedule cycle at slot zero after the delay; a delay of zero
-  retains immediate startup behavior.
-- Use the delay to accommodate latency between enabling ticks and entering the
-  task polling loop, making first-cycle behavior more similar to later cycles.
-- Define where the setting belongs and test zero delay, delay countdown, and
-  the transition into normal schedule processing.
-- May be superseded by a startup idle schedule if
-  [multiple schedules](#multiple-schedules) gains switching that keeps tick
-  delivery running.
+- Handle startup latency with a startup schedule rather than a dedicated core
+  feature: idle slots followed by a window for an application-owned
+  mode-manager task, which requests the operational schedule. The startup
+  cycle length sets the delay, and the operational schedule starts at slot zero
+  of the following cycle. The mode manager can also perform startup checks and
+  choose the initial mode.
+- Until switching exists, leave the first slots of the schedule idle, as
+  described in [scheduler initialisation](core.md#scheduler-initialisation).
+  This absorbs startup latency at the cost of those slots in every cycle.
+- Cover the pattern with a demo example: a startup schedule, a mode-manager
+  task, and a switch to the operational schedule.
+- If switching is deferred indefinitely, reconsider a dedicated startup delay:
+  a countdown of `n` slots in tick processing, without marking tasks pending,
+  before the first cycle begins at slot zero.
 
 ## Core and port configuration
 
