@@ -80,6 +80,31 @@ decisions or a committed order of delivery.
 - Stop and quiesce tick delivery before returning. Define allowed caller
   contexts, treatment of an executing task, and precedence between termination
   requests and faults.
+- Termination followed by `zule_configure()` and `zule_run()` is the initial way
+  to [switch schedules](#multiple-schedules).
+
+## Multiple schedules
+
+- Allow an application to define several schedules, such as operating modes,
+  and select one per run. Keep the change in the JSON schema and generator; the
+  core still runs one validated schedule at a time.
+- Decide the JSON shape. A shared task set keeps task functions and IDs
+  consistent across schedules; decide whether `slot_us` is shared or set per
+  schedule. Validate every schedule offline.
+- Select the schedule through `zule_configure()`, using a generated schedule
+  identifier, with a defined default. Decide whether init validates only the
+  selected schedule or all of them.
+- Switch initially by [termination](#scheduler-termination-api), then
+  `zule_configure()` and `zule_run()`. This uses existing and planned APIs, but
+  restarts tick delivery, so each switch has the same first-cycle latency as
+  startup.
+- Fault information should identify the active schedule, since window indexes
+  are per schedule.
+- Open: whether to add a switching API that keeps tick delivery running and
+  changes schedule at a defined point, such as a cycle boundary. If so, a
+  startup idle schedule followed by a switch could replace a dedicated
+  [startup delay](#startup-delay). If not, startup delay remains a separate
+  feature, and also applies after each restart.
 
 ## Startup delay
 
@@ -92,6 +117,9 @@ decisions or a committed order of delivery.
   task polling loop, making first-cycle behavior more similar to later cycles.
 - Define where the setting belongs and test zero delay, delay countdown, and
   the transition into normal schedule processing.
+- May be superseded by a startup idle schedule if
+  [multiple schedules](#multiple-schedules) gains switching that keeps tick
+  delivery running.
 
 ## Core and port configuration
 
