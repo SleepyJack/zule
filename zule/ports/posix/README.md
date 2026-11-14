@@ -25,8 +25,11 @@ and handled by the core runner, independently of timer failures.
 Tick delivery at least one slot late is reported as a port
 error rather than replaying missed ticks in a burst.
 
-`zule_port_idle()` sleeps for up to approximately 1 ms plus host scheduling delay
-and reports timer errors. It must be called outside the critical section.
+`zule_port_idle()` waits on a condition variable bound to the critical mutex,
+which the timer thread signals after each tick and on failure. It is called
+inside the critical section, which the wait releases. A condition wait releases
+only one level of the recursive mutex, so idle aborts if called nested. Timer
+errors are reported before and after the wait.
 `zule_port_tick_stop()` signals a monotonic-clock condition variable and joins
 the thread, so stopping does not wait for the next timer deadline. Repeated
 stops are safe, and a stopped timer can be restarted. Lifecycle calls have one
@@ -41,4 +44,6 @@ guarantees.
 Core unit tests compile against a separate, single-threaded test port that
 checks critical-section nesting. A POSIX port test separately exercises nested
 locking and mutual exclusion across four threads, plus callback delivery,
-restart, and shutdown of a timer with a long period.
+restart, and shutdown of a timer with a long period. It also checks that idle
+waits for ticks rather than polling, and that a tick delayed by the caller's
+critical section still ends the wait.

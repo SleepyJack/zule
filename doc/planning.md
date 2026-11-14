@@ -112,11 +112,18 @@ decisions or a committed order of delivery.
   and generated code receive consistent settings. Keep `slot_us` in the schedule
   JSON; the port converts it to timer settings and checks representability.
 
+## Application critical sections
+
+- Fault handlers run in tick context, so data shared between a fault handler and
+  application context needs exclusion. Consider public wrappers for the port's
+  critical section, with the same nesting and short-duration rules.
+- Have the demo use them to protect the state its fault handler writes.
+
 ## Additional ports
 
 - Add a Cortex-M port, choosing an initial core and board/toolchain to target.
-- Implement saved-state critical sections and periodic timer delivery against
-  the generic port contract.
+- Implement saved-state critical sections, periodic timer delivery, and the
+  atomic idle wait against the generic port contract.
 - Verify nesting, ordering barriers, timer start/stop behavior, and bounded
   execution and interrupt latency on the selected target.
 - Provide an embedded example and document assumptions specific to the port.

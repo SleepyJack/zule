@@ -49,8 +49,8 @@ zule_result_t zule_run(void) {
         } else {
             while (result == ZULE_RESULT_OK) {
                 result = zule_scheduler_run();
-                if (result == ZULE_RESULT_OK && zule_port_idle() != ZULE_PORT_RESULT_OK) {
-                    result = ZULE_RESULT_PORT_ERROR;
+                if (result == ZULE_RESULT_OK) {
+                    result = zule_scheduler_idle();
                 }
             }
             if (zule_port_tick_stop() != ZULE_PORT_RESULT_OK) {

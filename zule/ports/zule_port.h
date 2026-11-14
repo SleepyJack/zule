@@ -40,7 +40,7 @@ void zule_port_critical_exit(zule_port_critical_state_t previous_state);
  * callback non-null. The scheduler is initialized before this call. A callback
  * may run before init returns, but never concurrently with itself or another
  * scheduler-state writer. Failure leaves delivery stopped and quiescent.
- * Lifecycle functions have one main-loop caller and must run outside critical
+ * Tick init and stop have one main-loop caller and must run outside critical
  * sections; they must not be called by the tick callback. */
 zule_port_result_t zule_port_tick_init(uint32_t slot_us, zule_port_tick_callback_t callback);
 
@@ -48,9 +48,13 @@ zule_port_result_t zule_port_tick_init(uint32_t slot_us, zule_port_tick_callback
  * stop calls are safe. Even an error return must leave delivery quiescent. */
 zule_port_result_t zule_port_tick_stop(void);
 
-/* Yield or sleep in the dispatch loop. Must not lose pending work or hold the
- * scheduler critical section while waiting. Report asynchronous timer failures
- * through ERROR. The port determines the idle strategy and wake-up mechanism. */
+/* Wait for tick delivery. The core calls this only from the dispatch loop, inside
+ * exactly one level of critical section, after finding no pending task. Release
+ * exclusion while waiting and restore it before returning. The release and wait
+ * must be atomic, so a tick that becomes due after the core's check still ends the
+ * wait: for example, WFI with interrupts masked, or a condition wait signalled by
+ * the tick. Returning early is allowed. Report asynchronous timer failures through
+ * ERROR, including failures that occur while waiting. */
 zule_port_result_t zule_port_idle(void);
 
 #endif
