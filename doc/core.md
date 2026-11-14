@@ -71,6 +71,11 @@ The scheduler records completion after the task function returns. At the
 window's end, tick context returns the execution state to idle before processing
 the next window.
 
+Only tick context makes a task pending, so when no task is pending the dispatch
+loop waits for the next tick through the port's [idle](port.md#idle). The check
+and the wait share one critical section, so a tick that makes a task pending
+cannot be missed between them.
+
 The detailed diagrams illustrate an ISR interrupting application execution and
 are not to scale. The POSIX port instead uses a timer thread.
 

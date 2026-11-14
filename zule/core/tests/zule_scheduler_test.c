@@ -91,6 +91,7 @@ const zule_schedule_t *zule_schedule_get(void) {
 int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_scheduler_run() == ZULE_RESULT_NOT_INITIALIZED);
+    assert(zule_scheduler_idle() == ZULE_RESULT_NOT_INITIALIZED);
     assert(first_calls == 0U && second_calls == 0U);
 
     schedule_definition = NULL;
@@ -246,5 +247,41 @@ int main(void) {
     assert(last_fault.cycle_count == 1U);
     assert(last_fault.window_index == 1U && last_fault.slot == 0U);
     assert(last_fault.task_id == 20U);
+
+    /* Idle waits in the port, inside the critical section, only without pending work. */
+    schedule_definition = &schedule;
+    zule_test_port_reset();
+    zule_test_port_control.idle_limit = UINT32_MAX;
+    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_port_tick_init(schedule.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
+    const uint32_t first_before = first_calls;
+    assert(zule_scheduler_idle() == ZULE_RESULT_OK);
+    assert(zule_test_port_control.idle_calls == 1U);
+    /* The slot-zero tick made the first task pending, so idle must not wait. */
+    assert(zule_scheduler_idle() == ZULE_RESULT_OK);
+    assert(zule_test_port_control.idle_calls == 1U);
+    assert(zule_scheduler_run() == ZULE_RESULT_OK);
+    assert(first_calls == first_before + 1U);
+    assert(zule_scheduler_idle() == ZULE_RESULT_OK);
+    assert(zule_test_port_control.idle_calls == 2U);
+    assert(!zule_test_port_is_critical());
+
+    zule_test_port_control.idle_result = ZULE_PORT_RESULT_ERROR;
+    assert(zule_scheduler_idle() == ZULE_RESULT_PORT_ERROR);
+    assert(zule_test_port_control.idle_calls == 3U);
+    assert(!zule_test_port_is_critical());
+    zule_test_port_control.idle_result = ZULE_PORT_RESULT_OK;
+
+    /* Slot 2 makes the second task pending; leaving it undispatched latches a fault. */
+    assert(zule_scheduler_idle() == ZULE_RESULT_OK);
+    assert(zule_scheduler_idle() == ZULE_RESULT_OK);
+    assert(zule_test_port_control.idle_calls == 4U);
+    zule_test_port_fire_tick();
+    assert(fault_calls == 7U);
+    assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
+    assert(last_fault.task_id == 20U);
+    assert(zule_scheduler_idle() == ZULE_RESULT_DISPATCH_MISSED);
+    assert(zule_test_port_control.idle_calls == 4U);
+    assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
     return 0;
 }

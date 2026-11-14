@@ -21,7 +21,7 @@ model they share.
 | `zule_port_critical_exit()` | Application context | Restore the state returned by the matching enter. |
 | `zule_port_tick_init()` | Application context | Start delivering the tick callback every `slot_us` microseconds. |
 | `zule_port_tick_stop()` | Application context | Stop delivery and wait for any in-flight callback. |
-| `zule_port_idle()` | Application context | Wait or yield between dispatch attempts. |
+| `zule_port_idle()` | Application context, in a critical section | Wait for the next tick when no task is pending. |
 
 ### Execution contexts
 
@@ -32,9 +32,9 @@ targets it is normally a timer ISR; the POSIX port uses a thread. Either way:
   critical section;
 - the callback may run before `zule_port_tick_init()` returns, because the
   scheduler is initialized first;
-- the lifecycle functions (`tick_init`, `tick_stop`, `idle`) have a single
-  application-context caller, run outside critical sections, and are never
-  called from the callback.
+- `tick_init`, `tick_stop`, and `idle` have a single application-context
+  caller and are never called from the callback. `tick_init` and `tick_stop`
+  run outside critical sections; `idle` runs inside one (see [idle](#idle)).
 
 ### Critical sections
 
@@ -61,6 +61,30 @@ The core keeps critical sections short and never runs tasks inside them.
   and must not be reported as a port error.
 - The port reports its own timer failures, such as late delivery, through
   `ZULE_PORT_RESULT_ERROR` from `zule_port_idle()`.
+
+### Idle
+
+The core decides when to wait. After each dispatch attempt it enters a critical
+section and checks for a pending task or a latched fault. If there is neither,
+it calls `zule_port_idle()` without leaving the critical section, so no tick can
+run between the check and the wait.
+
+The port supplies only the wait:
+
+- Release exclusion while waiting and restore it before returning, atomically,
+  so that a tick that becomes due after the core's check still ends the wait.
+- The core calls idle at exactly one level of nesting.
+- Returning early is allowed; the core checks again.
+- Report timer failures through `ZULE_PORT_RESULT_ERROR`, including failures
+  that occur while waiting, rather than waiting indefinitely.
+
+On a Cortex-M core with PRIMASK-based critical sections, `WFI` meets this
+directly: a pending interrupt wakes it even while masked, and the tick handler
+runs when the core exits the critical section. Interrupts masked through BASEPRI
+do not wake `WFI`, so a BASEPRI-based port must mask with PRIMASK and lift
+BASEPRI around the `WFI`. A native port can use a condition wait on its
+critical-section lock, signalled after each tick. A low-power mode must keep the
+tick timer running and able to wake the core.
 
 ### Types
 
@@ -117,6 +141,8 @@ each port on its target for:
 - nested critical sections, restoring pre-existing exclusion;
 - mutual exclusion between the tick callback and critical sections;
 - tick delivery at the configured period, including start, stop, and restart;
+- idle waiting until a tick, including one that becomes due while the caller
+  holds the critical section, and returning an error on timer failure;
 - quiescence after `zule_port_tick_stop()`, including with a long period;
 - error reporting for invalid arguments and late delivery;
 - bounded entry, exit, and interrupt latency on embedded targets.

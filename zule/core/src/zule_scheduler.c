@@ -143,3 +143,21 @@ zule_result_t zule_scheduler_run(void) {
     }
     return result;
 }
+
+zule_result_t zule_scheduler_idle(void) {
+    if (!scheduler.initialized) {
+        return ZULE_RESULT_NOT_INITIALIZED;
+    }
+    zule_result_t result = ZULE_RESULT_OK;
+    const zule_port_critical_state_t critical_state = zule_port_critical_enter();
+    /* Only tick context makes a task pending or latches a fault, and it cannot run between
+     * this check and the port's atomic wait. */
+    if (scheduler.exec.fault != ZULE_RESULT_OK) {
+        result = scheduler.exec.fault;
+    } else if (scheduler.exec.state != ZULE_TASK_PENDING &&
+               zule_port_idle() != ZULE_PORT_RESULT_OK) {
+        result = ZULE_RESULT_PORT_ERROR;
+    }
+    zule_port_critical_exit(critical_state);
+    return result;
+}

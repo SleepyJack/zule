@@ -67,7 +67,8 @@ zule_port_result_t zule_port_tick_stop(void) {
 }
 
 zule_port_result_t zule_port_idle(void) {
-    if (depth != 0U || !zule_test_port_control.active) {
+    /* The core must call idle inside exactly one critical-section level. */
+    if (depth != 1U || !zule_test_port_control.active) {
         abort();
     }
     ++zule_test_port_control.idle_calls;
@@ -75,8 +76,11 @@ zule_port_result_t zule_port_idle(void) {
         zule_test_port_control.idle_calls >= zule_test_port_control.idle_limit) {
         return ZULE_PORT_RESULT_ERROR;
     }
+    /* Model a wait that releases exclusion while ticks are delivered. */
+    depth = 0U;
     for (uint32_t tick = 0U; tick < zule_test_port_control.ticks_per_idle; ++tick) {
         zule_test_port_fire_tick();
     }
+    depth = 1U;
     return ZULE_PORT_RESULT_OK;
 }

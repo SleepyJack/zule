@@ -1,4 +1,5 @@
 #include "zule_port.h"
+#include "zule_port_posix.h"
 
 #include <errno.h>
 #include <stdbool.h>
@@ -32,10 +33,23 @@ static void initialize_condition(void) {
     check_result(pthread_condattr_destroy(&attributes));
 }
 
+/* Called only from the timer thread, outside the critical section. */
 static void record_failure(void) {
     check_result(pthread_mutex_lock(&timer_mutex));
     timer.failed = true;
     check_result(pthread_mutex_unlock(&timer_mutex));
+    /* Wake an idle wait. Idle checks for failure inside the critical section, so this
+     * notification cannot fall between that check and the wait. */
+    const zule_port_critical_state_t state = zule_port_critical_enter();
+    zule_port_posix_critical_notify();
+    zule_port_critical_exit(state);
+}
+
+static bool timer_unavailable(void) {
+    check_result(pthread_mutex_lock(&timer_mutex));
+    const bool unavailable = !timer.active || timer.failed;
+    check_result(pthread_mutex_unlock(&timer_mutex));
+    return unavailable;
 }
 
 static void advance_deadline(struct timespec *deadline, uint32_t slot_us) {
@@ -70,8 +84,8 @@ static void *timer_thread(void *argument) {
                 break;
             }
             if (result != 0) {
-                timer.failed = true;
                 check_result(pthread_mutex_unlock(&timer_mutex));
+                record_failure();
                 return NULL;
             }
         }
@@ -91,6 +105,7 @@ static void *timer_thread(void *argument) {
             (now.tv_sec == following_deadline.tv_sec && now.tv_nsec >= following_deadline.tv_nsec);
         if (!failed) {
             (void)callback();
+            zule_port_posix_critical_notify();
         }
         zule_port_critical_exit(state);
         if (failed) {
@@ -145,21 +160,11 @@ zule_port_result_t zule_port_tick_stop(void) {
 }
 
 zule_port_result_t zule_port_idle(void) {
-    check_result(pthread_mutex_lock(&timer_mutex));
-    bool failed = !timer.active || timer.failed;
-    check_result(pthread_mutex_unlock(&timer_mutex));
-    if (failed) {
+    /* Called inside one level of the critical section. The wait releases it, letting the
+     * timer thread deliver a tick or record a failure, either of which notifies. */
+    if (timer_unavailable()) {
         return ZULE_PORT_RESULT_ERROR;
     }
-    struct timespec pause = {0, 1000000L};
-    while (nanosleep(&pause, &pause) != 0) {
-        if (errno != EINTR) {
-            record_failure();
-            return ZULE_PORT_RESULT_ERROR;
-        }
-    }
-    check_result(pthread_mutex_lock(&timer_mutex));
-    failed = !timer.active || timer.failed;
-    check_result(pthread_mutex_unlock(&timer_mutex));
-    return failed ? ZULE_PORT_RESULT_ERROR : ZULE_PORT_RESULT_OK;
+    zule_port_posix_critical_wait();
+    return timer_unavailable() ? ZULE_PORT_RESULT_ERROR : ZULE_PORT_RESULT_OK;
 }

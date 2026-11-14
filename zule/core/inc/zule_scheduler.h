@@ -17,4 +17,10 @@ zule_result_t zule_scheduler_tick(void);
  * Task identity stays stable; callbacks execute outside the critical section. */
 zule_result_t zule_scheduler_run(void);
 
+/* Wait for the next tick from the main loop when no task is pending. The check and the port's
+ * idle wait share one critical section, so a tick that marks a task pending cannot be lost
+ * between them. Returns a latched fault without waiting, PORT_ERROR if the port wait fails,
+ * NOT_INITIALIZED before successful initialization, and otherwise OK. */
+zule_result_t zule_scheduler_idle(void);
+
 #endif
