@@ -57,9 +57,10 @@ zule_port_result_t zule_port_tick_stop(void);
  * exactly one level of critical section, after finding no pending task. Release
  * exclusion while waiting and restore it before returning. The release and wait
  * must be atomic, so a tick that becomes due after the core's check still ends the
- * wait: for example, WFI with interrupts masked, or a condition wait signalled by
- * the tick. Returning early is allowed. Report asynchronous timer failures through
- * ERROR, including failures that occur while waiting. */
+ * wait: for example, sleeping with interrupts masked on hardware that wakes on
+ * a pending interrupt, or a condition wait signalled by the tick. Returning
+ * early is allowed. Report asynchronous timer failures through ERROR, including
+ * failures that occur while waiting. */
 zule_port_result_t zule_port_idle(void);
 
 /* Optional timebase, declared when the application enables ZULE_CONFIG_TIMEBASE.

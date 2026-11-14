@@ -81,11 +81,8 @@ The port supplies only the wait:
 - Report timer failures through `ZULE_PORT_RESULT_ERROR`, including failures
   that occur while waiting, rather than waiting indefinitely.
 
-On a Cortex-M core with PRIMASK-based critical sections, `WFI` meets this
-directly: a pending interrupt wakes it even while masked, and the tick handler
-runs when the core exits the critical section. Interrupts masked through BASEPRI
-do not wake `WFI`, so a BASEPRI-based port must mask with PRIMASK and lift
-BASEPRI around the `WFI`. A native port can use a condition wait on its
+For example, a port can sleep with interrupts masked on hardware where a
+pending interrupt still ends the sleep, or use a condition wait on its
 critical-section lock, signalled after each tick. A low-power mode must keep the
 tick timer running and able to wake the core.
 
@@ -125,21 +122,17 @@ counts per second.
 Core features using the timebase require each slot to be a whole number of
 counts, so expected tick times do not drift, and one cycle to be shorter than
 2^31 counts, so lateness can be compared as a signed difference. They check this
-at initialization. A port chooses its frequency with this in mind: a lower
-frequency allows longer cycles at coarser resolution.
-
-On Cortex-M, SysTick can provide both the tick and the timebase: the tick count
-times the reload period, plus the elapsed part of the current period read from
-the SysTick counter. A read must account for a counter wrap whose interrupt is
-still pending. The DWT cycle counter is optional in the architecture and often
-stops during `WFI`, so it is not suitable as the timebase.
+at initialization. The frequency, whether fixed by the port or derived from port
+settings, trades range for resolution: a lower frequency allows longer cycles at
+coarser resolution.
 
 ### Types
 
 A port provides `zule_port_types.h`, which defines `zule_port_critical_state_t`
 completely. Its size and contents are up to the port; the core only stores the
-value returned by enter and passes it to exit. For example, a Cortex-M port
-might store the previous `PRIMASK`, and the POSIX port stores the owning thread.
+value returned by enter and passes it to exit. For example, a port that masks
+interrupts might store the previous mask, and the POSIX port stores the owning
+thread.
 
 ## Creating a port
 
@@ -147,10 +140,9 @@ A port consists of:
 
 - `zule_port_config.h`, handling port settings: it includes
   `zule_user_port_config.h` when `ZULE_USE_USER_PORT_CONFIG` is `1`, applies
-  defaults, and fails compilation for missing required settings. Core settings
-  are already defined when it is included, so a setting can be required only
-  when an optional feature needs it. A port without settings may leave it
-  empty;
+  defaults, and fails compilation for missing required settings. It may depend
+  on core settings, for example to require a setting only when an optional
+  feature needs it. A port without settings may leave it empty;
 - `zule_port_types.h`;
 - sources implementing every function in `zule_port.h`, including those of
   enabled [optional features](#optional-features), and failing compilation for
@@ -158,9 +150,6 @@ A port consists of:
 - a README describing target assumptions, timing limits, and any blocking or
   latency behaviour;
 - tests, where the target allows.
-
-Port sources include `zule_port.h`, which in turn includes `zule.h` (and the core
-settings), `zule_port_config.h`, and `zule_port_types.h`.
 
 ### Linking a custom port
 

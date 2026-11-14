@@ -159,8 +159,18 @@ decisions or a committed order of delivery.
 - Add a Cortex-M port, choosing an initial core and board/toolchain to target.
 - Implement saved-state critical sections, periodic timer delivery, and the
   atomic idle wait against the generic port contract.
+- For idle, `WFI` inside a PRIMASK critical section meets the contract: a
+  pending interrupt wakes it even while masked, and the tick handler runs when
+  the core exits the critical section. Interrupts masked through BASEPRI do not
+  wake `WFI`, so a BASEPRI-based port must mask with PRIMASK and lift BASEPRI
+  around the `WFI`.
 - Provide the timebase from SysTick, and require the timer clock frequency as a
-  port setting in `zule_user_port_config.h` when the timebase is enabled.
+  port setting in `zule_user_port_config.h` when the timebase is enabled. The
+  count is the tick count times the reload period, plus the elapsed part of the
+  current period from the SysTick counter. A read must account for a counter
+  wrap whose interrupt is still pending. SysTick is 24 bits, so check that the
+  slot period fits. The DWT cycle counter is optional in the architecture and
+  often stops during `WFI`, so it is not suitable as the timebase.
 - Verify nesting, ordering barriers, timer start/stop behavior, and bounded
   execution and interrupt latency on the selected target.
 - Provide an embedded example and document assumptions specific to the port.

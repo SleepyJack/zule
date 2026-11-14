@@ -42,20 +42,15 @@ When `ZULE_CONFIG_TIMEBASE` is `1`, the
 [timebase](../../../doc/port.md#timebase) reads `CLOCK_MONOTONIC` in
 microseconds, so `zule_port_time_hz()` returns 1 000 000 and the count wraps
 about every 71 minutes. It is valid at any time, not only while ticks run,
-and advances during sleeps and critical sections. A clock read failure aborts,
-since the timebase has no error return. Reads use the host clock and have no
-bounded-latency guarantee.
+and advances during sleeps and critical sections. Reads use the host clock and
+have no bounded-latency guarantee. `CLOCK_MONOTONIC` is mandatory in POSIX and
+a read fails only on a broken host, so a failure aborts, like a mutex failure.
 
 Timer errors return `ZULE_PORT_RESULT_ERROR`; synchronization failures or an
 unrecoverable join failure abort rather than falsely report exclusion or
 quiescence. Neither this development port nor the demo provides hard real-time
 guarantees.
 
-Core unit tests compile against a separate, single-threaded test port that
-checks critical-section nesting. A POSIX port test separately exercises nested
-locking and mutual exclusion across four threads, plus callback delivery,
-restart, and shutdown of a timer with a long period. It also checks that idle
-waits for ticks rather than polling, that a tick delayed by the caller's
-critical section still ends the wait, and that the timebase reports microseconds
-and advances inside a critical section. The test compiles its own copy of the
-port with the timebase enabled, whatever the shared configuration selects.
+The tests in `tests/` cover critical-section nesting and exclusion, tick
+delivery, restart and shutdown, idle waiting, and the timebase. They build their
+own copy of the port with the timebase enabled.
