@@ -14,16 +14,26 @@ if(ZULE_BUILD_TESTS)
     enable_testing()
 endif()
 
-# Settings shared by every component that includes zule_config.h: the core,
-# port, generated schedule, and application.
+# Settings shared by every component that includes zule_config.h or the port's
+# zule_port_config.h: the core, port, generated schedule, and application.
 add_library(zule_config INTERFACE)
 if(DEFINED ZULE_USER_CONFIG_DIR)
-    if(NOT IS_ABSOLUTE "${ZULE_USER_CONFIG_DIR}"
-       OR NOT EXISTS "${ZULE_USER_CONFIG_DIR}/zule_user_config.h")
-        message(FATAL_ERROR
-            "ZULE_USER_CONFIG_DIR must be an absolute directory containing zule_user_config.h")
+    if(NOT IS_ABSOLUTE "${ZULE_USER_CONFIG_DIR}" OR NOT IS_DIRECTORY "${ZULE_USER_CONFIG_DIR}")
+        message(FATAL_ERROR "ZULE_USER_CONFIG_DIR must be an absolute directory")
     endif()
-    target_compile_definitions(zule_config INTERFACE ZULE_USE_USER_CONFIG=1)
+    set(zule_user_config_found OFF)
+    if(EXISTS "${ZULE_USER_CONFIG_DIR}/zule_user_config.h")
+        target_compile_definitions(zule_config INTERFACE ZULE_USE_USER_CONFIG=1)
+        set(zule_user_config_found ON)
+    endif()
+    if(EXISTS "${ZULE_USER_CONFIG_DIR}/zule_user_port_config.h")
+        target_compile_definitions(zule_config INTERFACE ZULE_USE_USER_PORT_CONFIG=1)
+        set(zule_user_config_found ON)
+    endif()
+    if(NOT zule_user_config_found)
+        message(FATAL_ERROR "ZULE_USER_CONFIG_DIR must contain zule_user_config.h, "
+                            "zule_user_port_config.h, or both")
+    endif()
     target_include_directories(zule_config INTERFACE "${ZULE_USER_CONFIG_DIR}")
 endif()
 

@@ -119,7 +119,7 @@ Set these variables before `add_subdirectory()`:
 | Variable | Meaning |
 | --- | --- |
 | `ZULE_PORT` | Required. A directory under `zule/ports/` (currently `posix`), or `external` for a [custom port](port.md#creating-a-port). |
-| `ZULE_USER_CONFIG_DIR` | Optional absolute path of the directory holding [`zule_user_config.h`](configuration.md#build-settings). |
+| `ZULE_USER_CONFIG_DIR` | Optional absolute path of the directory holding [`zule_user_config.h`](configuration.md#build-settings), [`zule_user_port_config.h`](configuration.md#port-settings), or both. |
 | `ZULE_BUILD_TESTS` | Build Zule's own tests. Defaults to `ON` only when `zule/` is the top-level project. |
 
 Zule provides:
@@ -148,7 +148,8 @@ Without CMake, compile and link:
 - the application.
 
 Every component needs `zule/core/api/` on its include path, plus the
-[build settings](configuration.md#build-settings). The core and generated
+[build settings](configuration.md#build-settings) and
+[port settings](configuration.md#port-settings). The core and generated
 schedule also need `zule/core/inc/`. The core and port need `zule/ports/` and the
 port's own directory. Apply any definitions the port's README requires. Generate
 the schedule from `zule/tools/schedule/`:

@@ -18,4 +18,14 @@
 #error "ZULE_CONFIG_TASK_NAMES must be 0 or 1"
 #endif
 
+/* Optional feature: the port timebase, for sub-slot timing. The selected port
+ * must provide it when enabled. */
+#ifndef ZULE_CONFIG_TIMEBASE
+#define ZULE_CONFIG_TIMEBASE 0
+#endif
+
+#if ZULE_CONFIG_TIMEBASE != 0 && ZULE_CONFIG_TIMEBASE != 1
+#error "ZULE_CONFIG_TIMEBASE must be 0 or 1"
+#endif
+
 #endif

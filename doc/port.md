@@ -1,8 +1,9 @@
 # Port
 
 A port supplies the target-specific services the core needs: a periodic tick,
-exclusion between tick and application contexts, and idle behaviour in the
-dispatch loop. Ports shipped in `zule/ports/` are owned by Zule; a port written
+exclusion between tick and application contexts, idle behaviour in the dispatch
+loop, and optionally a sub-slot timebase. It reads its settings from the
+application's [configuration](configuration.md#port-settings). Ports shipped in `zule/ports/` are owned by Zule; a port written
 by an integrator is owned by the user (see [ownership](architecture.md#ownership)).
 
 | Port | Target |
@@ -22,6 +23,8 @@ model they share.
 | `zule_port_tick_init()` | Application context | Start delivering the tick callback every `slot_us` microseconds. |
 | `zule_port_tick_stop()` | Application context | Stop delivery and wait for any in-flight callback. |
 | `zule_port_idle()` | Application context, in a critical section | Wait for the next tick when no task is pending. |
+| `zule_port_time_hz()` | Any | Timebase frequency, when the [timebase](#timebase) is enabled. |
+| `zule_port_time_get()` | Application and tick context | Current timebase count, when the timebase is enabled. |
 
 ### Execution contexts
 
@@ -78,33 +81,75 @@ The port supplies only the wait:
 - Report timer failures through `ZULE_PORT_RESULT_ERROR`, including failures
   that occur while waiting, rather than waiting indefinitely.
 
-On a Cortex-M core with PRIMASK-based critical sections, `WFI` meets this
-directly: a pending interrupt wakes it even while masked, and the tick handler
-runs when the core exits the critical section. Interrupts masked through BASEPRI
-do not wake `WFI`, so a BASEPRI-based port must mask with PRIMASK and lift
-BASEPRI around the `WFI`. A native port can use a condition wait on its
+For example, a port can sleep with interrupts masked on hardware where a
+pending interrupt still ends the sleep, or use a condition wait on its
 critical-section lock, signalled after each tick. A low-power mode must keep the
 tick timer running and able to wake the core.
+
+### Optional features
+
+Some contract functions belong to optional core features. The application
+enables a feature in the core [build settings](configuration.md#build-settings);
+`zule_port.h` declares its functions only when it is enabled. A port implements
+each enabled feature, or fails compilation with a clear `#error` if it cannot
+provide it. A disabled feature costs nothing: no declarations, code, or hardware.
+
+| Setting | Port functions |
+| --- | --- |
+| `ZULE_CONFIG_TIMEBASE` | `zule_port_time_hz()` and `zule_port_time_get()`; see [timebase](#timebase). |
+
+Core features built on the timebase, such as planned task profiling and tick
+timing checks, will require `ZULE_CONFIG_TIMEBASE`.
+
+### Timebase
+
+The timebase measures time within and across slots, for task profiling and
+tick timing checks. It is a free-running 32-bit count at `zule_port_time_hz()`
+counts per second.
+
+- **Wrapping.** The count wraps modulo 2^32. Unsigned subtraction measures any
+  interval shorter than one wrap period.
+- **Lifetime.** The frequency is constant and can be read at any time. The count
+  is valid from a successful `zule_port_tick_init()` until
+  `zule_port_tick_stop()`, so a port can derive it from its tick timer.
+- **Contexts.** Reads are allowed from application and tick context, including
+  inside critical sections, and never change the exclusion state. Embedded ports
+  read in bounded time.
+- **Continuity.** The count keeps advancing while the tick is delayed or masked,
+  and during idle. A port documents any limit, such as masking for longer than
+  one tick period.
+
+Core features using the timebase require each slot to be a whole number of
+counts, so expected tick times do not drift, and one cycle to be shorter than
+2^31 counts, so lateness can be compared as a signed difference. They check this
+at initialization. The frequency, whether fixed by the port or derived from port
+settings, trades range for resolution: a lower frequency allows longer cycles at
+coarser resolution.
 
 ### Types
 
 A port provides `zule_port_types.h`, which defines `zule_port_critical_state_t`
 completely. Its size and contents are up to the port; the core only stores the
-value returned by enter and passes it to exit. For example, a Cortex-M port
-might store the previous `PRIMASK`, and the POSIX port stores the owning thread.
+value returned by enter and passes it to exit. For example, a port that masks
+interrupts might store the previous mask, and the POSIX port stores the owning
+thread.
 
 ## Creating a port
 
 A port consists of:
 
+- `zule_port_config.h`, handling port settings: it includes
+  `zule_user_port_config.h` when `ZULE_USE_USER_PORT_CONFIG` is `1`, applies
+  defaults, and fails compilation for missing required settings. It may depend
+  on core settings, for example to require a setting only when an optional
+  feature needs it. A port without settings may leave it empty;
 - `zule_port_types.h`;
-- sources implementing every function in `zule_port.h`;
+- sources implementing every function in `zule_port.h`, including those of
+  enabled [optional features](#optional-features), and failing compilation for
+  enabled features the port cannot provide;
 - a README describing target assumptions, timing limits, and any blocking or
   latency behaviour;
 - tests, where the target allows.
-
-Port sources include `zule_port.h`, which in turn includes `zule.h` and
-`zule_port_types.h`.
 
 ### Linking a custom port
 
@@ -116,14 +161,15 @@ set(ZULE_PORT external)
 add_subdirectory(path/to/zule zule)
 
 add_library(my_port STATIC my_port/my_port.c)
-target_include_directories(my_port PUBLIC my_port)   # zule_port_types.h
+target_include_directories(my_port PUBLIC my_port)   # zule_port_config.h, zule_port_types.h
 target_link_libraries(my_port PUBLIC zule::port_api)
 add_library(zule::port ALIAS my_port)
 ```
 
 `zule::port_api` provides `zule_port.h`, the public API, and the shared
-[build settings](configuration.md#build-settings). The port's public include
-directories must supply `zule_port_types.h`. The core links the port privately,
+[build settings](configuration.md#build-settings), including the application's
+[port settings](configuration.md#port-settings). The port's public include
+directories must supply `zule_port_config.h` and `zule_port_types.h`. The core links the port privately,
 so applications do not see the port's headers.
 
 ### Adding a port to Zule
@@ -145,4 +191,6 @@ each port on its target for:
   holds the critical section, and returning an error on timer failure;
 - quiescence after `zule_port_tick_stop()`, including with a long period;
 - error reporting for invalid arguments and late delivery;
+- with the timebase enabled: its frequency, advance across sleeps and critical
+  sections, and correct reads across counter wraps;
 - bounded entry, exit, and interrupt latency on embedded targets.

@@ -3,6 +3,10 @@
 
 #include <stdlib.h>
 
+#if ZULE_CONFIG_TIMEBASE
+#error "The core test port does not provide the timebase"
+#endif
+
 static size_t depth;
 static zule_port_tick_callback_t tick_callback;
 zule_test_port_control_t zule_test_port_control;

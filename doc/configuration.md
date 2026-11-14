@@ -4,8 +4,9 @@ Configuration is owned by the user (see [ownership](architecture.md#ownership)).
 It consists of:
 
 - the [schedule](#schedule): tasks, budgets, and window timing, in JSON;
-- [build settings](#build-settings): compile-time options in `zule_user_config.h`
-  or compiler definitions.
+- [build settings](#build-settings): compile-time options for the core in
+  `zule_user_config.h`, and for the selected port in `zule_user_port_config.h`,
+  or as compiler definitions.
 
 Keep both in an application-owned directory, such as the demo's
 [`demo/config/`](../demo/config). Runtime settings, such as the fault handler,
@@ -97,7 +98,9 @@ same settings.
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `ZULE_USE_USER_CONFIG` | `0` | Set to `1` to include an integrator-supplied `zule_user_config.h`. |
+| `ZULE_USE_USER_PORT_CONFIG` | `0` | Set to `1` to have the port include an integrator-supplied `zule_user_port_config.h`; see [port settings](#port-settings). |
 | `ZULE_CONFIG_TASK_NAMES` | `0` | Set to `1` to compile diagnostic task names into the schedule. Must be `0` or `1`. |
+| `ZULE_CONFIG_TIMEBASE` | `0` | Set to `1` to enable the optional [port timebase](port.md#timebase) for sub-slot timing. The selected port must provide it. Must be `0` or `1`. |
 
 The default build needs no user header. Individual settings can be supplied as
 compiler definitions, for example `-DZULE_CONFIG_TASK_NAMES=1`. For a group of
@@ -129,5 +132,19 @@ recompiling every component, but no schedule regeneration.
 
 ### Port settings
 
-Ports currently have no configurable settings. Port-specific settings are
-planned; each port will document its own in its README.
+Each port supplies its own `zule_port_config.h`, which documents the port's
+settings, applies defaults, validates them, and fails compilation if a required
+setting is missing rather than guessing it, for example a timer clock frequency
+that depends on the board. For overrides, create `zule_user_port_config.h` in an
+application-owned directory. Each user header is optional, and when both are
+used they can share a directory.
+
+With CMake, `ZULE_USER_CONFIG_DIR` detects either header, or both, and defines
+the matching `ZULE_USE_USER_...` setting. Other build systems define
+`ZULE_USE_USER_PORT_CONFIG=1` for every component when the header is present.
+Like core settings, port settings must be the same for every component.
+
+The port's README lists its settings. Which optional features the port must
+provide, such as the timebase, is a core build setting, not a port setting. A
+port can require settings only when a feature needs them, for example a clock
+frequency only with the timebase enabled. The POSIX port has no settings yet.

@@ -1,11 +1,16 @@
 #ifndef ZULE_PORT_H
 #define ZULE_PORT_H
 
+/* The public API and core settings come first, so port settings can depend on
+ * enabled core features. */
+#include "zule.h"
+/* The selected port supplies its settings in this header, including any
+ * application overrides it accepts. */
+#include "zule_port_config.h"
 /* The selected port supplies this header and a complete definition of
  * zule_port_critical_state_t. Its size and representation are port-defined;
  * callers only save the returned token and pass it back to exit. */
 #include "zule_port_types.h"
-#include "zule.h"
 
 #include <stdint.h>
 
@@ -52,9 +57,27 @@ zule_port_result_t zule_port_tick_stop(void);
  * exactly one level of critical section, after finding no pending task. Release
  * exclusion while waiting and restore it before returning. The release and wait
  * must be atomic, so a tick that becomes due after the core's check still ends the
- * wait: for example, WFI with interrupts masked, or a condition wait signalled by
- * the tick. Returning early is allowed. Report asynchronous timer failures through
- * ERROR, including failures that occur while waiting. */
+ * wait: for example, sleeping with interrupts masked on hardware that wakes on
+ * a pending interrupt, or a condition wait signalled by the tick. Returning
+ * early is allowed. Report asynchronous timer failures through ERROR, including
+ * failures that occur while waiting. */
 zule_port_result_t zule_port_idle(void);
+
+/* Optional timebase, declared when the application enables ZULE_CONFIG_TIMEBASE.
+ * A port that cannot provide it fails compilation when it is enabled. */
+#if ZULE_CONFIG_TIMEBASE
+/* Return the timebase frequency in counts per second. It is nonzero, constant
+ * for the life of the program, and callable at any time. */
+uint32_t zule_port_time_hz(void);
+
+/* Return a free-running timebase count that wraps modulo 2^32, so unsigned
+ * subtraction measures intervals shorter than one wrap period. Valid from a
+ * successful tick init until tick stop. Callable from application and tick
+ * context, including inside critical sections, without changing the exclusion
+ * state. Embedded ports read in bounded time. The count keeps advancing while
+ * the tick is delayed or masked and during idle; a port documents any limit,
+ * such as masking for longer than one tick period. */
+uint32_t zule_port_time_get(void);
+#endif
 
 #endif
