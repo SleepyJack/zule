@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <time.h>
 
+/* The timebase is an optional core feature; compile it only when enabled. */
+#if ZULE_CONFIG_TIMEBASE
+
 static const uint32_t microseconds_per_second = 1000000U;
 static const uint32_t nanoseconds_per_microsecond = 1000U;
 
@@ -22,3 +25,5 @@ uint32_t zule_port_time_get(void) {
                                   (uint64_t)now.tv_nsec / nanoseconds_per_microsecond;
     return (uint32_t)microseconds;
 }
+
+#endif

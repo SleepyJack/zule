@@ -1,25 +1,18 @@
 #ifndef ZULE_PORT_H
 #define ZULE_PORT_H
 
-/* The selected port supplies its settings and capabilities in this header,
- * including any application overrides it accepts. */
+/* The public API and core settings come first, so port settings can depend on
+ * enabled core features. */
+#include "zule.h"
+/* The selected port supplies its settings in this header, including any
+ * application overrides it accepts. */
 #include "zule_port_config.h"
 /* The selected port supplies this header and a complete definition of
  * zule_port_critical_state_t. Its size and representation are port-defined;
  * callers only save the returned token and pass it back to exit. */
 #include "zule_port_types.h"
-#include "zule.h"
 
 #include <stdint.h>
-
-/* Capability: 1 if the port provides the timebase functions below, otherwise 0. */
-#ifndef ZULE_PORT_CONFIG_TIME
-#define ZULE_PORT_CONFIG_TIME 0
-#endif
-
-#if ZULE_PORT_CONFIG_TIME != 0 && ZULE_PORT_CONFIG_TIME != 1
-#error "ZULE_PORT_CONFIG_TIME must be 0 or 1"
-#endif
 
 typedef enum {
     ZULE_PORT_RESULT_OK,
@@ -69,7 +62,9 @@ zule_port_result_t zule_port_tick_stop(void);
  * ERROR, including failures that occur while waiting. */
 zule_port_result_t zule_port_idle(void);
 
-#if ZULE_PORT_CONFIG_TIME
+/* Optional timebase, declared when the application enables ZULE_CONFIG_TIMEBASE.
+ * A port that cannot provide it fails compilation when it is enabled. */
+#if ZULE_CONFIG_TIMEBASE
 /* Return the timebase frequency in counts per second. It is nonzero, constant
  * for the life of the program, and callable at any time. */
 uint32_t zule_port_time_hz(void);

@@ -40,11 +40,11 @@ decisions or a committed order of delivery.
 
 ## Timebase and tick timing checks
 
-- The port timebase API is defined: an optional capability
-  (`ZULE_PORT_CONFIG_TIME`) providing a wrapping 32-bit count and its frequency.
+- The port timebase API is defined: an optional core feature
+  (`ZULE_CONFIG_TIMEBASE`) providing a wrapping 32-bit count and its frequency.
   See [timebase](port.md#timebase). The POSIX port implements it.
 - Use the timebase for core timing checks and task profiling, as core settings
-  that fail compilation with a port lacking the capability. At initialization,
+  that require `ZULE_CONFIG_TIMEBASE`. At initialization,
   check that each slot is a whole number of counts and that one cycle is
   shorter than 2^31 counts. Keep timing policy
   and fault detection in the core, with clock and timer implementation in the port.
@@ -130,10 +130,10 @@ decisions or a committed order of delivery.
 
 - Keep core defaults and validation in `zule/core/api/zule_config.h`, with optional
   application overrides in `zule_user_config.h`.
-- Each port defines its own `zule_port_config.h` for capabilities, defaults,
-  and validation, with optional application overrides in
-  `zule_user_port_config.h`, found through `ZULE_USER_CONFIG_DIR`. Keep the core
-  independent of port-specific settings; it reads only generic capabilities.
+- Each port defines its own `zule_port_config.h` for defaults and validation,
+  with optional application overrides in `zule_user_port_config.h`, found
+  through `ZULE_USER_CONFIG_DIR`. Keep the core independent of port-specific
+  settings. Optional features are core settings that ports implement or reject.
   The Cortex-M port will add the first required setting, the timer clock
   frequency.
 - Use these Zule-owned headers to document supported settings, defaults,
@@ -160,7 +160,7 @@ decisions or a committed order of delivery.
 - Implement saved-state critical sections, periodic timer delivery, and the
   atomic idle wait against the generic port contract.
 - Provide the timebase from SysTick, and require the timer clock frequency as a
-  port setting in `zule_user_port_config.h`.
+  port setting in `zule_user_port_config.h` when the timebase is enabled.
 - Verify nesting, ordering barriers, timer start/stop behavior, and bounded
   execution and interrupt latency on the selected target.
 - Provide an embedded example and document assumptions specific to the port.

@@ -92,7 +92,7 @@ int main(void) {
 
     /* The timebase counts microseconds and keeps advancing inside a critical
      * section, while the tick is excluded. */
-    assert(ZULE_PORT_CONFIG_TIME == 1);
+    assert(ZULE_CONFIG_TIMEBASE == 1);
     assert(zule_port_time_hz() == 1000000U);
     assert(zule_port_tick_init(200000U, tick_callback) == ZULE_PORT_RESULT_OK);
     {

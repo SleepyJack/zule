@@ -23,8 +23,8 @@ model they share.
 | `zule_port_tick_init()` | Application context | Start delivering the tick callback every `slot_us` microseconds. |
 | `zule_port_tick_stop()` | Application context | Stop delivery and wait for any in-flight callback. |
 | `zule_port_idle()` | Application context, in a critical section | Wait for the next tick when no task is pending. |
-| `zule_port_time_hz()` | Any | Timebase frequency, if the port provides the [timebase](#timebase). |
-| `zule_port_time_get()` | Application and tick context | Current timebase count, if the port provides the timebase. |
+| `zule_port_time_hz()` | Any | Timebase frequency, when the [timebase](#timebase) is enabled. |
+| `zule_port_time_get()` | Application and tick context | Current timebase count, when the timebase is enabled. |
 
 ### Execution contexts
 
@@ -89,18 +89,20 @@ BASEPRI around the `WFI`. A native port can use a condition wait on its
 critical-section lock, signalled after each tick. A low-power mode must keep the
 tick timer running and able to wake the core.
 
-### Capabilities
+### Optional features
 
-`zule_port_config.h` declares what the port provides, as `0` or `1`. Capabilities
-are fixed by the port, not set by the application, and `zule_port.h` defaults an
-undeclared capability to `0`.
+Some contract functions belong to optional core features. The application
+enables a feature in the core [build settings](configuration.md#build-settings);
+`zule_port.h` declares its functions only when it is enabled. A port implements
+each enabled feature, or fails compilation with a clear `#error` if it cannot
+provide it. A disabled feature costs nothing: no declarations, code, or hardware.
 
-| Capability | Meaning |
+| Setting | Port functions |
 | --- | --- |
-| `ZULE_PORT_CONFIG_TIME` | The port provides the [timebase](#timebase). |
+| `ZULE_CONFIG_TIMEBASE` | `zule_port_time_hz()` and `zule_port_time_get()`; see [timebase](#timebase). |
 
-Core features that need a capability, such as planned task profiling and tick
-timing checks, fail compilation when enabled with a port that lacks it.
+Core features built on the timebase, such as planned task profiling and tick
+timing checks, will require `ZULE_CONFIG_TIMEBASE`.
 
 ### Timebase
 
@@ -143,17 +145,22 @@ might store the previous `PRIMASK`, and the POSIX port stores the owning thread.
 
 A port consists of:
 
-- `zule_port_config.h`, declaring capabilities and handling port settings: it
-  includes `zule_user_port_config.h` when `ZULE_USE_USER_PORT_CONFIG` is `1`,
-  applies defaults, and fails compilation for missing required settings;
+- `zule_port_config.h`, handling port settings: it includes
+  `zule_user_port_config.h` when `ZULE_USE_USER_PORT_CONFIG` is `1`, applies
+  defaults, and fails compilation for missing required settings. Core settings
+  are already defined when it is included, so a setting can be required only
+  when an optional feature needs it. A port without settings may leave it
+  empty;
 - `zule_port_types.h`;
-- sources implementing every function in `zule_port.h`;
+- sources implementing every function in `zule_port.h`, including those of
+  enabled [optional features](#optional-features), and failing compilation for
+  enabled features the port cannot provide;
 - a README describing target assumptions, timing limits, and any blocking or
   latency behaviour;
 - tests, where the target allows.
 
-Port sources include `zule_port.h`, which in turn includes `zule_port_config.h`,
-`zule_port_types.h`, and `zule.h`.
+Port sources include `zule_port.h`, which in turn includes `zule.h` (and the core
+settings), `zule_port_config.h`, and `zule_port_types.h`.
 
 ### Linking a custom port
 
@@ -195,6 +202,6 @@ each port on its target for:
   holds the critical section, and returning an error on timer failure;
 - quiescence after `zule_port_tick_stop()`, including with a long period;
 - error reporting for invalid arguments and late delivery;
-- if the port provides the timebase: its frequency, advance across sleeps and
-  critical sections, and correct reads across counter wraps;
+- with the timebase enabled: its frequency, advance across sleeps and critical
+  sections, and correct reads across counter wraps;
 - bounded entry, exit, and interrupt latency on embedded targets.

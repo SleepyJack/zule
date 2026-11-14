@@ -99,6 +99,7 @@ same settings.
 | --- | --- | --- |
 | `ZULE_USE_USER_CONFIG` | `0` | Set to `1` to include an integrator-supplied `zule_user_config.h`. |
 | `ZULE_CONFIG_TASK_NAMES` | `0` | Set to `1` to compile diagnostic task names into the schedule. Must be `0` or `1`. |
+| `ZULE_CONFIG_TIMEBASE` | `0` | Set to `1` to enable the optional [port timebase](port.md#timebase) for sub-slot timing. The selected port must provide it. Must be `0` or `1`. |
 
 The default build needs no user header. Individual settings can be supplied as
 compiler definitions, for example `-DZULE_CONFIG_TASK_NAMES=1`. For a group of
@@ -145,6 +146,7 @@ the matching `ZULE_USE_USER_...` setting. Other build systems define
 `ZULE_USE_USER_PORT_CONFIG=1` for every component when the header is present.
 Like core settings, port settings must be the same for every component.
 
-The port's README lists its settings. A port also declares its
-[capabilities](port.md#capabilities) in `zule_port_config.h`; these describe what
-the port provides and cannot be overridden. The POSIX port has no settings yet.
+The port's README lists its settings. Which optional features the port must
+provide, such as the timebase, is a core build setting, not a port setting. A
+port can require settings only when a feature needs them, for example a clock
+frequency only with the timebase enabled. The POSIX port has no settings yet.
