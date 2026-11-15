@@ -43,11 +43,12 @@ decisions or a committed order of delivery.
 - The port timebase API is defined: an optional core feature
   (`ZULE_CONFIG_TIMEBASE`) providing a wrapping 32-bit count and its frequency.
   See [timebase](port.md#timebase). The POSIX port implements it.
-- Use the timebase for core timing checks and task profiling, as core settings
-  that require `ZULE_CONFIG_TIMEBASE`. At initialization,
-  check that each slot is a whole number of counts and that one cycle is
-  shorter than 2^31 counts. Keep timing policy
-  and fault detection in the core, with clock and timer implementation in the port.
+- Use the timebase for core tick timing checks, as a core setting that requires
+  `ZULE_CONFIG_TIMEBASE`, and for [hook](#hooks-and-modules) timestamps used by
+  profiling modules. At initialization, check that each slot is a whole number
+  of counts and that one cycle is shorter than 2^31 counts. Keep timing policy
+  and fault detection in the core, with clock and timer implementation in the
+  port.
 - Establish the first expected tick boundary and compare subsequent ticks with
   expected deadlines, accounting for accumulated drift as well as individual
   delays. Define acceptable lateness and the fault response for missed periods.
@@ -66,10 +67,56 @@ decisions or a committed order of delivery.
 - Document the application's responsibility for watchdog configuration and
   servicing policy, including detection of lost ticks or a stalled scheduler.
 
+## Hooks and modules
+
+- Split observation from enforcement. The core enforces the schedule: deadline
+  checks, tick timing checks, and faults. Optional modules observe it: they run
+  on target, consume core hooks, and cannot affect scheduling. Modules shipped
+  with Zule live in the Zule domain outside the core; applications can write
+  their own against the same hooks.
+- Add hooks as an optional core feature, compiled away when disabled. Define the
+  events, such as tick start and end, dispatch, task end, fault, and possibly
+  idle start and end; the context and critical-section state of each; and
+  ordering guarantees, such as dispatch before the matching task end. When the
+  timebase is enabled, the core reads it once per event and passes the
+  timestamp, so all consumers see consistent times.
+- Handlers can run in tick context, so they must be bounded and nonblocking and
+  must not call Zule APIs, like the fault handler. One slow handler delays the
+  tick for every consumer.
+- Open: how handlers combine when several modules are used. Prefer build-time,
+  plain C that static analysis can follow, such as a dispatch function owned by
+  the application that calls Zule and user modules in order. Avoid run-time
+  registration, and macro-generated handler lists that conflict with
+  MISRA-style rules.
+- Add a modules component to the architecture documentation and diagram,
+  receiving events from the core and read by the application, with its own
+  document.
+
 ## Task profiling and benchmarking
 
-- Add tooling to measure task execution times and compare them with configured
-  budgets, reporting observed maxima, variation, and remaining margin.
+- Provide per-task statistics as the first module: execution time minimum,
+  maximum, and count, and worst dispatch latency from window start to task
+  start, which also consumes budget. Also record the maximum tick handler
+  duration, since budgets must cover scheduler overhead. Size storage from a
+  task count in the generated task-ID header.
+- Keep monotonically increasing totals, such as busy time and cycle count, plus
+  the busiest single cycle. Readers choose their own interval by subtracting two
+  snapshots, so the module needs no measurement window. Idle time and slack
+  within windows follow from the schedule; only running time is measured.
+- Expose a snapshot copied under a critical section, and a reset. Keep the data
+  in plain static structures that a debugger can also read.
+- Open: statistics per task or per window, a mean (needing a 64-bit total), and
+  whether statistics reset at each run or only on request.
+- Add host tooling that reads the statistics with the schedule JSON and reports
+  each task's measured maximum, budget, and margin, suggesting `budget_slots`.
+- Consider a trace module: a ring buffer of fixed-size timestamped events,
+  frozen on a fault or on request to keep the lead-up. Offload it through a
+  debugger or the application, and decode it on the host for timeline viewers,
+  such as Perfetto or VCD. Consider sharing a timeline renderer with
+  [schedule definition tooling](#schedule-definition-tooling), showing planned
+  and actual timing together.
+- Simple modules, such as GPIO toggles per event, support measurement with a
+  logic analyser.
 - Benchmark scheduler overhead, dispatch latency, and tick jitter on supported
   targets, accounting for instrumentation overhead and interrupt interference.
 - Define reproducible workloads and record target, clock, compiler, and build
