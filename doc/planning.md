@@ -23,6 +23,19 @@ decisions or a committed order of delivery.
 - Once added, the licence applies to everything published from then on, and
   published versions remain available under it.
 
+## Continuous integration
+
+- Add CI jobs, run in parallel, that build and run the existing tests under:
+  ThreadSanitizer, including a short demo run, since the POSIX port shares
+  state between real threads; AddressSanitizer and UndefinedBehaviorSanitizer;
+  Clang as a second compiler; and GCC with `-Wconversion -Wshadow
+  -Wstrict-prototypes`. All have been clean in local runs, so no existing
+  findings need fixing first.
+- Treat warnings as errors in the existing CI build and in each new job.
+- With the Cortex-M port, add a cross-compiled build of the core, port, and demo
+  for the Armv6-M subset (`-mcpu=cortex-m0plus`), optionally running tests in
+  QEMU.
+
 ## Static analysis
 
 - Evaluate the free, open-source edition of Cppcheck, previously considered
