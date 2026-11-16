@@ -104,7 +104,8 @@ Press Ctrl-C to stop. See the [demo README](demo/README.md) for what it shows.
    ```
 
 Next, add a [fault handler](doc/application.md#fault-handler) and, optionally,
-[task names](doc/configuration.md#task-names) for diagnostics. The
+[task names](doc/configuration.md#task-names) for diagnostics, or
+[hooks](doc/application.md#hooks) to measure task timing. The
 [demo](demo/) puts all of this together.
 
 ## Design documentation
@@ -117,6 +118,7 @@ The documentation follows the components of the [architecture](doc/architecture.
 | [Configuration](doc/configuration.md) | Schedule format, task names and IDs, and build settings. |
 | [Application](doc/application.md) | Tasks, the public API, fault handling, and integrating Zule into a build. |
 | [Core](doc/core.md) | Scheduler behaviour, timing, and faults. |
+| [Modules](doc/modules.md) | Optional on-target consumers of scheduler events. |
 | [Port](doc/port.md) | The port contract, and creating and linking a custom port. |
 
 To work on Zule itself, see [CONTRIBUTING.md](CONTRIBUTING.md).

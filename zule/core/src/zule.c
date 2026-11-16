@@ -25,16 +25,21 @@ const char *zule_task_name_get(uint32_t task_id) {
     if (schedule == NULL || schedule->tasks == NULL) {
         return NULL;
     }
-    for (size_t index = 0U; index < schedule->task_count; ++index) {
-        if (schedule->tasks[index].id == task_id) {
-            return schedule->tasks[index].name;
-        }
+    /* Task IDs are task array indexes; check the entry in case the schedule is invalid. */
+    if ((size_t)task_id < schedule->task_count && schedule->tasks[task_id].id == task_id) {
+        return schedule->tasks[task_id].name;
     }
 #else
     (void)task_id;
 #endif
     return NULL;
 }
+
+#if ZULE_CONFIG_TIMEBASE
+uint32_t zule_timebase_hz(void) {
+    return zule_port_time_hz();
+}
+#endif
 
 zule_result_t zule_run(void) {
     if (running) {

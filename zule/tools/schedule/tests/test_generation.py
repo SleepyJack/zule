@@ -65,7 +65,7 @@ int main(void) {
 ''')
             executable = Path(directory) / "test"
             core_dir = Path(__file__).resolve().parents[3] / "core"
-            command = [compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"), str(harness), str(output), str(core_dir / "src/zule_schedule.c"), str(core_dir / "src/zule.c"), str(core_dir / "src/zule_scheduler.c"), str(core_dir / "tests/port/zule_port.c"), "-I", str(core_dir / "tests/port"), "-I", str(core_dir.parent / "ports"), "-o", str(executable)]
+            command = [compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"), str(harness), str(output), str(core_dir / "src/zule_schedule.c"), str(core_dir / "src/zule.c"), str(core_dir / "src/zule_scheduler.c"), str(core_dir / "tests/port/zule_port.c"), "-I", str(core_dir / "tests/port"), "-I", str(core_dir.parent / "ports"), "-I", str(core_dir.parent / "modules"), str(core_dir.parent / "modules/zule_modules.c"), "-o", str(executable)]
             (Path(directory) / "zule_user_config.h").write_text("#define ZULE_CONFIG_TASK_NAMES 1\n")
             empty_config = Path(directory) / "empty_config"
             empty_config.mkdir()
@@ -132,7 +132,7 @@ int main(void) {
     assert(zule_schedule_validate(schedule) == ZULE_RESULT_OK);
 ''' + "\n".join(checks) + "\n    return 0;\n}\n")
                 executable = Path(directory) / "test"
-                subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-DZULE_CONFIG_TASK_NAMES=1", "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"), str(harness), str(output), str(core_dir / "src/zule_schedule.c"), str(core_dir / "src/zule.c"), str(core_dir / "src/zule_scheduler.c"), str(core_dir / "tests/port/zule_port.c"), "-I", str(core_dir / "tests/port"), "-I", str(core_dir.parent / "ports"), "-o", str(executable)], check=True, capture_output=True, text=True)
+                subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-DZULE_CONFIG_TASK_NAMES=1", "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"), str(harness), str(output), str(core_dir / "src/zule_schedule.c"), str(core_dir / "src/zule.c"), str(core_dir / "src/zule_scheduler.c"), str(core_dir / "tests/port/zule_port.c"), "-I", str(core_dir / "tests/port"), "-I", str(core_dir.parent / "ports"), "-I", str(core_dir.parent / "modules"), str(core_dir.parent / "modules/zule_modules.c"), "-o", str(executable)], check=True, capture_output=True, text=True)
                 subprocess.run([str(executable)], check=True, capture_output=True, text=True)
 
     def test_invalid_input_preserves_existing_output(self):

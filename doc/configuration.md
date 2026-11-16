@@ -86,6 +86,8 @@ Names must have distinct uppercase forms, so that the constants cannot collide.
 The `zule_task_` prefix lets names such as `switch` avoid C keywords.
 
 IDs start at zero in sorted task-name order, including tasks without windows.
+Each ID is the task's index in the generated task table; the core validates
+this, so tools and [modules](modules.md) can index per-task data by ID.
 They are specific to a build: adding, removing, or renaming a task may change
 other IDs. Interpret saved fault logs against the matching build or schedule.
 
@@ -101,6 +103,7 @@ same settings.
 | `ZULE_USE_USER_PORT_CONFIG` | `0` | Set to `1` to have the port include an integrator-supplied `zule_user_port_config.h`; see [port settings](#port-settings). |
 | `ZULE_CONFIG_TASK_NAMES` | `0` | Set to `1` to compile diagnostic task names into the schedule. Must be `0` or `1`. |
 | `ZULE_CONFIG_TIMEBASE` | `0` | Set to `1` to enable the optional [port timebase](port.md#timebase) for sub-slot timing. The selected port must provide it. Must be `0` or `1`. |
+| `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`. Must be `0` or `1`. |
 
 The default build needs no user header. Individual settings can be supplied as
 compiler definitions, for example `-DZULE_CONFIG_TASK_NAMES=1`. For a group of

@@ -3,7 +3,7 @@ add_library(zule::core ALIAS zule_core)
 
 target_link_libraries(zule_core
     PUBLIC zule_api
-    PRIVATE zule_schedule_internal zule_port_api zule::port zule_warnings)
+    PRIVATE zule_schedule_internal zule_port_api zule::port zule_modules zule_warnings)
 
 if(ZULE_BUILD_TESTS)
     add_subdirectory(tests)

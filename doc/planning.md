@@ -71,84 +71,39 @@ decisions or a committed order of delivery.
 
 ## Hooks and modules
 
-- Split observation from enforcement. The core enforces the schedule: deadline
-  checks, tick timing checks, and faults. Hooks report scheduler events, and
-  their consumers observe without affecting scheduling. There are two kinds of
-  consumer: user hooks, defined by the application, and modules, shipped with
-  Zule.
-- Hooks require `ZULE_CONFIG_TIMEBASE`; enabling a user hook or a module without
-  it fails compilation. Every hook therefore has a fixed signature that includes
-  a timestamp.
-- **User hooks** are a core feature, like the fault handler. A core setting per
-  hook, such as `ZULE_CONFIG_USER_HOOK_TASK_END`, makes the core call an
-  application-defined function, such as `zule_user_hook_task_end()`. They do not
-  depend on modules. An application with several consumers of its own combines
-  them in its hook functions.
-- **Modules** are enabled by one setting each, such as
-  `ZULE_CONFIG_MODULE_STATS`, and are wired automatically: the application never
-  calls module hook handlers. A module fails compilation if a feature it needs,
-  such as the timebase, is disabled. Modules expose their own read APIs to the
-  application.
-- The modules layer provides, for each hook, a condition that is true when any
-  enabled module needs it, and one entry point that calls each enabled module in
-  a fixed order. The core knows modules only through these entry points and
-  conditions, never individual modules, so adding a module does not change the
-  core. The core includes the modules header as it includes `zule_port.h`.
-- The core invokes each hook through a `static inline` wrapper in an internal
-  core header, keeping call sites unconditional. The wrapper reads the timebase
-  once, inside its enabled branch, then calls the modules entry point and the
-  user hook, in that order. An unused hook compiles to nothing, including the
-  time read; the time is read inside the wrapper rather than passed as an
-  argument so that a disabled hook cannot still read the timer.
-- Proposed layout, mirroring the ports: the public hook settings and user hook
-  declarations in `zule/core/api/`, the inline wrappers in `zule/core/inc/`, and
-  the modules header and entry points at the top of `zule/modules/`, with each
-  module in its own subdirectory. A `zule_modules` library holds every module,
-  each guarded by its setting, and the core links it privately.
-- Guarantees: hooks never run concurrently with each other or with the tick.
-  Tick-context hooks run in the tick, and application-context hooks run inside
-  the core's critical section, so consumers need no locking of their own, and a
-  read API only needs a critical section for a consistent snapshot. Hook run
-  time therefore adds to critical sections and to measured tick duration.
-- Hooks can run in tick context, so consumers must be bounded and nonblocking
-  and must not call Zule APIs, like the fault handler. One slow consumer delays
-  the tick for every other.
-- Define the events, their arguments, contexts, and ordering. A starting point:
-  run start (application context, before ticks), tick start and end, dispatch
-  (just before the task call), task end (just after return), fault, and run
-  stop (application context, after ticks are quiescent). Lifecycle events let
-  modules reset or flush without separate init calls. Guarantee, for example,
-  run start first, dispatch before the matching task end, fault at most once,
-  and run stop last. Leave idle start and end out until a consumer needs them,
-  since they fire on every loop.
-- Give the core test port a deterministic fake timebase, so tests can check
-  hook order, arguments, and timestamps exactly. Prove the design with a
-  recording consumer in the core tests and a user hook in the demo; the
-  statistics module then proves the module path.
+- Hooks and the modules layer are in place: see [hooks](application.md#hooks)
+  and [modules](modules.md). The core reports tick start and end, task release,
+  and task start and end; user hooks and modules both require the timebase.
+  No modules exist yet.
+- The statistics module (below) is the first module, and proves the module
+  path: its setting, the hook conditions, the entry points, and a read API.
+- Add a fault event, for modules only, with the trace module. The application
+  already receives faults through its fault handler, so there is no user fault
+  hook.
+- Add idle start and end events only when a consumer needs them, since they
+  fire on every dispatch loop iteration.
 - Deferred: equal treatment for several separate user modules. That needs a
   registry, most cleanly a generated dispatcher built from a list of modules and
-  the hooks each needs. Only the dispatcher and the conditions would change;
-  the core's wrappers and the module interface stay the same.
-- Add the modules component to the architecture documentation and diagram,
-  receiving events from the core and read by the application, with its own
-  document. Show user hooks as an application extension point beside the fault
-  handler.
+  the hooks each needs. Only the modules layer would change; the core's
+  wrappers and the hooks stay the same.
 
 ## Task profiling and benchmarking
 
 - Provide per-task statistics as the first module: execution time minimum,
   maximum, and count, and worst dispatch latency from window start to task
   start, which also consumes budget. Also record the maximum tick handler
-  duration, since budgets must cover scheduler overhead. Size storage from a
-  task count in the generated task-ID header.
+  duration, since budgets must cover scheduler overhead. Index storage by task
+  ID, which equals the task's table index; size it from a task count to be
+  added to the generated task-ID header.
 - Keep monotonically increasing totals, such as busy time and cycle count, plus
   the busiest single cycle. Readers choose their own interval by subtracting two
   snapshots, so the module needs no measurement window. Idle time and slack
   within windows follow from the schedule; only running time is measured.
-- Expose a snapshot copied under a critical section, and a reset. Keep the data
-  in plain static structures that a debugger can also read.
-- Open: statistics per task or per window, a mean (needing a 64-bit total), and
-  whether statistics reset at each run or only on request.
+- Expose a snapshot copied under a critical section, and a reset that the
+  application calls when it wants, for example before `zule_run()`. Keep the
+  data in plain static structures that a debugger can also read.
+- Open: statistics per task or per window, and a mean (needing a 64-bit
+  total).
 - Add host tooling that reads the statistics with the schedule JSON and reports
   each task's measured maximum, budget, and margin, suggesting `budget_slots`.
 - Consider a trace module: a ring buffer of fixed-size timestamped events,

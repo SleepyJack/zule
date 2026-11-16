@@ -14,6 +14,7 @@ typedef struct {
     uint32_t idle_calls;
     uint32_t idle_limit;
     uint32_t ticks_per_idle;
+    uint32_t time_counts;
     bool active;
 } zule_test_port_control_t;
 

@@ -53,8 +53,8 @@ static void second_task(void) {
 }
 
 static const zule_task_t tasks[] = {
-    {.id = 10U, .function = first_task},
-    {.id = 20U, .function = second_task},
+    {.id = 0U, .function = first_task},
+    {.id = 1U, .function = second_task},
 };
 
 static const zule_window_t windows[] = {{&tasks[0], 0U, 2U}, {&tasks[1], 2U, 1U}};
@@ -83,12 +83,18 @@ int main(void) {
     definition = NULL;
     assert(zule_task_name_get(UINT32_MAX) == NULL);
 #if ZULE_CONFIG_TASK_NAMES
-    const zule_task_t named_tasks[] = {{UINT32_MAX, first_task, "sample"}};
+    const zule_task_t named_tasks[] = {{0U, first_task, "sample"}};
     const zule_window_t named_window[] = {{&named_tasks[0], 0U, 1U}};
     const zule_schedule_t named = {100U, 1U, named_window, 1U, named_tasks, 1U};
     assert(zule_schedule_validate(&named) == ZULE_RESULT_OK);
     definition = &named;
-    assert(strcmp(zule_task_name_get(UINT32_MAX), "sample") == 0);
+    assert(strcmp(zule_task_name_get(0U), "sample") == 0);
+    assert(zule_task_name_get(1U) == NULL);
+    assert(zule_task_name_get(UINT32_MAX) == NULL);
+    /* An entry whose ID does not match its index is never returned. */
+    const zule_task_t mismatched_tasks[] = {{1U, first_task, "mismatched"}};
+    const zule_schedule_t mismatched = {100U, 1U, named_window, 1U, mismatched_tasks, 1U};
+    definition = &mismatched;
     assert(zule_task_name_get(0U) == NULL);
 #endif
     definition = &schedule;
@@ -129,7 +135,7 @@ int main(void) {
     assert(fault_calls == 1U);
     assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
-    assert(last_fault.task_id == 10U);
+    assert(last_fault.task_id == 0U);
     assert(last_fault.cycle_count == 0U);
     assert(!fault_during_task);
     check_stopped();
@@ -144,7 +150,7 @@ int main(void) {
     assert(fault_calls == 2U);
     assert(last_fault.reason == ZULE_RESULT_EXECUTION_OVERRUN);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
-    assert(last_fault.task_id == 10U);
+    assert(last_fault.task_id == 0U);
     assert(last_fault.cycle_count == 0U);
     assert(fault_during_task);
     check_stopped();

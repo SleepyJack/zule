@@ -1,4 +1,5 @@
 #include "zule_scheduler.h"
+#include "zule_hook_points.h"
 #include "zule_port.h"
 #include "zule_schedule_definition.h"
 
@@ -68,6 +69,7 @@ zule_result_t zule_scheduler_tick(void) {
     if (!scheduler.initialized) {
         return ZULE_RESULT_NOT_INITIALIZED;
     }
+    zule_hook_tick_start(scheduler.slot, scheduler.cycle_count);
     const zule_window_t *active_window = &scheduler.schedule->windows[scheduler.active_window_ind];
 
     // Check for end of the current active window
@@ -101,6 +103,7 @@ zule_result_t zule_scheduler_tick(void) {
             if (scheduler.exec.state == ZULE_TASK_IDLE) {
                 scheduler.exec.task = active_window->task;
                 scheduler.exec.state = ZULE_TASK_PENDING;
+                zule_hook_tick_task_release(scheduler.exec.task->id, scheduler.active_window_ind);
             } else {
                 // This should be unreachable - overrun already detected at end of the previous
                 // window and fault raised. Below call to raise_fault is defensive only.
@@ -117,6 +120,7 @@ zule_result_t zule_scheduler_tick(void) {
             ++scheduler.cycle_count;
         }
     }
+    zule_hook_tick_end();
     return scheduler.exec.fault;
 }
 
@@ -130,10 +134,15 @@ zule_result_t zule_scheduler_run(void) {
         if ((scheduler.exec.fault == ZULE_RESULT_OK) &&
             (scheduler.exec.state == ZULE_TASK_PENDING)) {
             scheduler.exec.state = ZULE_TASK_RUNNING;
-            zule_task_function_t task_function = scheduler.exec.task->function;
+            const zule_task_t *task = scheduler.exec.task;
+            /* The window cannot advance while its task runs, but capture it so start
+             * and end report the same window. */
+            const size_t window_index = scheduler.active_window_ind;
+            zule_hook_task_start(task->id, window_index);
             zule_port_critical_exit(critical_state);
-            task_function();
+            task->function();
             critical_state = zule_port_critical_enter();
+            zule_hook_task_end(task->id, window_index);
             if (scheduler.exec.state == ZULE_TASK_RUNNING) {
                 scheduler.exec.state = ZULE_TASK_COMPLETED;
             }

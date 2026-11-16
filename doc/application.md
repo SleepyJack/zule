@@ -85,6 +85,45 @@ task; the application supplies any safe-state response.
 The demo copies the snapshot in the handler and prints it after `zule_run()`
 returns, when tick delivery is quiescent.
 
+## Hooks
+
+Hooks report scheduler events to the application, for measurement and
+diagnostics. Each is enabled by its own
+[build setting](configuration.md#build-settings), and requires the
+[timebase](configuration.md#build-settings) (`ZULE_CONFIG_TIMEBASE`). Define a
+function for each enabled hook; the declarations are in
+[`zule_hooks.h`](../zule/core/api/zule_hooks.h), included by `zule.h`.
+
+| Hook | Setting | Context | Called |
+| --- | --- | --- | --- |
+| `zule_user_hook_tick_start(time_counts, slot, cycle_count)` | `ZULE_CONFIG_USER_HOOK_TICK_START` | Tick | Before each tick processes its slot. |
+| `zule_user_hook_tick_task_release(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE` | Tick | When a window starts and its task becomes pending. |
+| `zule_user_hook_tick_end(time_counts)` | `ZULE_CONFIG_USER_HOOK_TICK_END` | Tick | After each tick's processing. |
+| `zule_user_hook_task_start(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TASK_START` | Application | Immediately before a task function is called. |
+| `zule_user_hook_task_end(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TASK_END` | Application | Immediately after a task function returns, including after an overrun. |
+
+`time_counts` is a timebase count, read once per event. Convert counts with
+`zule_timebase_hz()`, and measure intervals by unsigned subtraction, which
+handles the count wrapping. For example, `task_end` minus `task_start` is a
+task's execution time, and `task_start` minus `tick_task_release` is its
+dispatch latency.
+
+Hooks never run concurrently with each other or with the tick: `tick_` hooks
+run in tick context, and the others run in application context inside the
+scheduler's critical section. Data that only application-context hooks write
+can therefore be read by tasks without synchronization; data written by
+`tick_` hooks needs the same care as fault handler data. Like the fault
+handler, hooks must be bounded and nonblocking and must not call Zule or port
+functions. Their run time adds to the tick and to the critical section.
+
+Within each tick, `tick_start` comes first and `tick_end` last. A window's
+`tick_task_release` comes before its `task_start`, which comes before its
+`task_end`; ticks can occur between a task's start and end. Hooks continue for
+ticks after a fault. Enabled [modules](modules.md) receive the same events
+before the application's hooks.
+
+The demo uses `task_start` and `task_end` to report the longest task.
+
 ## Task names and IDs
 
 The generated header `zule_task_ids.h` defines `zule_task_id_t` and constants
@@ -144,6 +183,7 @@ Without CMake, compile and link:
 
 - the sources in `zule/core/src/`;
 - the selected port's sources, for example `zule/ports/posix/*.c`;
+- `zule/modules/zule_modules.c`, which holds the enabled [modules](modules.md);
 - the generated `zule_schedule_definition.c`;
 - the application.
 
@@ -151,7 +191,7 @@ Every component needs `zule/core/api/` on its include path, plus the
 [build settings](configuration.md#build-settings) and
 [port settings](configuration.md#port-settings). The core and generated
 schedule also need `zule/core/inc/`. The core and port need `zule/ports/` and the
-port's own directory. Apply any definitions the port's README requires. Generate
+port's own directory, and the core also needs `zule/modules/`. Apply any definitions the port's README requires. Generate
 the schedule from `zule/tools/schedule/`:
 
 ```sh

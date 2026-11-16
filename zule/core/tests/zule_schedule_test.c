@@ -9,11 +9,14 @@
 static void task(void) {
 }
 
-static const zule_task_t tasks[] = {{.id = UINT32_MAX, .function = task}};
+static const zule_task_t tasks[] = {{.id = 0U, .function = task}};
 static const zule_task_t duplicate_tasks[] = {{.id = 0U, .function = task},
                                               {.id = 0U, .function = task}};
+static const zule_task_t swapped_tasks[] = {{.id = 1U, .function = task},
+                                            {.id = 0U, .function = task}};
+static const zule_task_t offset_task[] = {{.id = 1U, .function = task}};
 static const zule_task_t null_function[] = {{.id = 0U, .function = NULL}};
-static const zule_task_t foreign_task = {.id = UINT32_MAX, .function = task};
+static const zule_task_t foreign_task = {.id = 0U, .function = task};
 static const zule_window_t adjacent[] = {
     {&tasks[0], 0U, 2U},
     {&tasks[0], 2U, 1U},
@@ -44,6 +47,8 @@ static const zule_window_t equal_starts[] = {
 
 static const zule_window_t foreign_window[] = {{&foreign_task, 0U, 1U}};
 static const zule_window_t duplicate_window[] = {{&duplicate_tasks[0], 0U, 1U}};
+static const zule_window_t swapped_window[] = {{&swapped_tasks[0], 0U, 1U}};
+static const zule_window_t offset_window[] = {{&offset_task[0], 0U, 1U}};
 
 int main(void) {
     const zule_schedule_t valid[] = {
@@ -80,6 +85,11 @@ int main(void) {
     assert(zule_schedule_validate(&missing_tasks) == ZULE_RESULT_INVALID_SCHEDULE);
     const zule_schedule_t duplicates = {100U, 4U, duplicate_window, 1U, duplicate_tasks, 2U};
     assert(zule_schedule_validate(&duplicates) == ZULE_RESULT_INVALID_SCHEDULE);
+    /* Unique IDs are not enough: each ID must equal its task index. */
+    const zule_schedule_t swapped = {100U, 4U, swapped_window, 1U, swapped_tasks, 2U};
+    assert(zule_schedule_validate(&swapped) == ZULE_RESULT_INVALID_SCHEDULE);
+    const zule_schedule_t offset = {100U, 4U, offset_window, 1U, offset_task, 1U};
+    assert(zule_schedule_validate(&offset) == ZULE_RESULT_INVALID_SCHEDULE);
     const zule_schedule_t foreign = {100U, 4U, foreign_window, 1U, tasks, 1U};
     assert(zule_schedule_validate(&foreign) == ZULE_RESULT_INVALID_SCHEDULE);
 

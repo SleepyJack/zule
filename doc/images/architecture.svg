@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="840" viewBox="0 0 1120 840" role="img" aria-labelledby="title description">
   <title id="title">Zule component architecture</title>
-  <desc id="description">The user domain contains configuration and application code. Configuration supplies the task list, schedule, and core settings to the core, and port settings to the port. The application controls the scheduler, which calls tasks in application context and fault handlers in tick context. In the Zule domain, the core uses port services and the port delivers ticks to the core.</desc>
+  <desc id="description">The user domain contains configuration and application code. Configuration supplies the task list, schedule, and core settings to the core, and port settings to the port. The application controls the scheduler, which calls tasks and user hooks in application context, and fault handlers and user hooks in tick context. The core sends hook events to optional modules, whose results the application reads. In the Zule domain, the core uses port services and the port delivers ticks to the core.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 Z" fill="#475569"/>
@@ -32,13 +32,15 @@
 
   <rect x="56" y="300" width="316" height="290" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
   <text x="80" y="335" class="heading">Application</text>
-  <rect x="72" y="350" width="284" height="100" rx="8" class="application-context"/>
+  <rect x="72" y="350" width="284" height="120" rx="8" class="application-context"/>
   <text x="88" y="375" class="context">Application context</text>
   <text x="88" y="407" class="body">Scheduler invocation</text>
   <text x="88" y="434" class="body">Task implementations</text>
-  <rect x="72" y="480" width="284" height="86" rx="8" class="tick-context"/>
-  <text x="88" y="505" class="context">Tick context</text>
-  <text x="88" y="539" class="body">Fault handling</text>
+  <text x="88" y="461" class="body">User hooks</text>
+  <rect x="72" y="482" width="284" height="96" rx="8" class="tick-context"/>
+  <text x="88" y="506" class="context">Tick context</text>
+  <text x="88" y="536" class="body">Fault handling</text>
+  <text x="88" y="562" class="body">User hooks</text>
   <rect x="720" y="300" width="344" height="290" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
   <text x="744" y="335" class="heading">Core</text>
   <rect x="736" y="350" width="312" height="90" rx="8" class="application-context"/>
@@ -55,14 +57,21 @@
   <text x="752" y="756" class="body">Timer implementation</text>
   <path d="M 372 175 H 890 V 300" class="link"/>
   <text x="546" y="150" class="label" text-anchor="middle">Schedule and core settings</text>
+  <rect x="470" y="615" width="220" height="100" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="494" y="650" class="heading">Modules</text>
+  <text x="494" y="684" class="body">Hook event consumers</text>
+  <path d="M 720 570 H 640 V 615" class="link"/>
+  <text x="630" y="602" class="label" text-anchor="end">Hook events</text>
+  <path d="M 372 575 H 520 V 615" class="link"/>
+  <text x="446" y="567" class="label" text-anchor="middle">Read results</text>
   <path d="M 56 225 H 40 V 760 H 720" class="link"/>
   <text x="546" y="748" class="label" text-anchor="middle">Port settings</text>
   <path d="M 372 365 H 720" class="link"/>
   <text x="546" y="342" class="label" text-anchor="middle">Start/stop scheduler</text>
   <path d="M 720 425 H 372" class="link"/>
-  <text x="546" y="402" class="label" text-anchor="middle">Dispatch task</text>
+  <text x="546" y="402" class="label" text-anchor="middle">Dispatch task, user hooks</text>
   <path d="M 720 520 H 372" class="link"/>
-  <text x="546" y="497" class="label" text-anchor="middle">Notify fault</text>
+  <text x="546" y="497" class="label" text-anchor="middle">Notify fault, user hooks</text>
   <path d="M 800 590 V 650" class="link"/>
   <text x="782" y="625" class="label" text-anchor="end">Port services</text>
   <path d="M 1000 650 V 590" class="link"/>

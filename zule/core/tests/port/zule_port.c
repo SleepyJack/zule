@@ -3,10 +3,6 @@
 
 #include <stdlib.h>
 
-#if ZULE_CONFIG_TIMEBASE
-#error "The core test port does not provide the timebase"
-#endif
-
 static size_t depth;
 static zule_port_tick_callback_t tick_callback;
 zule_test_port_control_t zule_test_port_control;
@@ -69,6 +65,18 @@ zule_port_result_t zule_port_tick_stop(void) {
     tick_callback = NULL;
     return zule_test_port_control.stop_result;
 }
+
+#if ZULE_CONFIG_TIMEBASE
+uint32_t zule_port_time_hz(void) {
+    return 1000000U;
+}
+
+/* Deterministic: each read returns the current count and then advances it by
+ * one, so tests can check both the values passed on and how many reads occur. */
+uint32_t zule_port_time_get(void) {
+    return zule_test_port_control.time_counts++;
+}
+#endif
 
 zule_port_result_t zule_port_idle(void) {
     /* The core must call idle inside exactly one critical-section level. */

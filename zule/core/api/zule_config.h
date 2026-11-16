@@ -28,4 +28,54 @@
 #error "ZULE_CONFIG_TIMEBASE must be 0 or 1"
 #endif
 
+/* User hooks: set to 1 to have the core call the matching zule_user_hook_...()
+ * function, which the application defines. See zule_hooks.h. */
+#ifndef ZULE_CONFIG_USER_HOOK_TICK_START
+#define ZULE_CONFIG_USER_HOOK_TICK_START 0
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TICK_START != 0 && ZULE_CONFIG_USER_HOOK_TICK_START != 1
+#error "ZULE_CONFIG_USER_HOOK_TICK_START must be 0 or 1"
+#endif
+
+#ifndef ZULE_CONFIG_USER_HOOK_TICK_END
+#define ZULE_CONFIG_USER_HOOK_TICK_END 0
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TICK_END != 0 && ZULE_CONFIG_USER_HOOK_TICK_END != 1
+#error "ZULE_CONFIG_USER_HOOK_TICK_END must be 0 or 1"
+#endif
+
+#ifndef ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE
+#define ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE 0
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE != 0 && ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE != 1
+#error "ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE must be 0 or 1"
+#endif
+
+#ifndef ZULE_CONFIG_USER_HOOK_TASK_START
+#define ZULE_CONFIG_USER_HOOK_TASK_START 0
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TASK_START != 0 && ZULE_CONFIG_USER_HOOK_TASK_START != 1
+#error "ZULE_CONFIG_USER_HOOK_TASK_START must be 0 or 1"
+#endif
+
+#ifndef ZULE_CONFIG_USER_HOOK_TASK_END
+#define ZULE_CONFIG_USER_HOOK_TASK_END 0
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TASK_END != 0 && ZULE_CONFIG_USER_HOOK_TASK_END != 1
+#error "ZULE_CONFIG_USER_HOOK_TASK_END must be 0 or 1"
+#endif
+
+/* Every hook passes a timestamp, so hooks require the timebase. */
+#if (ZULE_CONFIG_USER_HOOK_TICK_START || ZULE_CONFIG_USER_HOOK_TICK_END ||                         \
+     ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE || ZULE_CONFIG_USER_HOOK_TASK_START ||                \
+     ZULE_CONFIG_USER_HOOK_TASK_END) &&                                                            \
+    !ZULE_CONFIG_TIMEBASE
+#error "User hooks require ZULE_CONFIG_TIMEBASE"
+#endif
+
 #endif

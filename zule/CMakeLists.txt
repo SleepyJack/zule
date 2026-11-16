@@ -70,6 +70,7 @@ else()
                         "(posix), or to 'external' and define a zule::port target")
 endif()
 
+add_subdirectory(modules)
 add_subdirectory(core)
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ZuleSchedule.cmake")
