@@ -24,8 +24,11 @@ callback. It uses absolute `CLOCK_MONOTONIC` deadlines and invokes the callback
 under the critical mutex. The thread knows nothing about schedules, task states,
 or demo duration. Callback results are discarded: scheduler faults are latched
 and handled by the core runner, independently of timer failures.
-Tick delivery at least one slot late is reported as a port
-error rather than replaying missed ticks in a burst.
+Deadlines stay on a fixed grid, so after a host delay the
+overdue ticks arrive back to back. The port does not judge tick timing; enable
+the core's [tick timing check](../../../doc/core.md#tick-timing-check) to detect
+late ticks. Without it, compressed slots usually surface as missed-dispatch or
+overrun faults.
 
 `zule_port_idle()` waits on a condition variable bound to the critical mutex,
 which the timer thread signals after each tick and on failure. It is called

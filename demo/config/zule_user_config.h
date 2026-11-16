@@ -19,4 +19,14 @@
 #define ZULE_CONFIG_USER_HOOK_TASK_END 1
 #endif
 
+/* Fault if a tick is more than half a 50 ms slot early or late. Generous,
+ * because host thread scheduling is not real-time. */
+#ifndef ZULE_CONFIG_TICK_CHECK
+#define ZULE_CONFIG_TICK_CHECK 1
+#endif
+
+#ifndef ZULE_CONFIG_TICK_TOLERANCE_US
+#define ZULE_CONFIG_TICK_TOLERANCE_US 25000
+#endif
+
 #endif

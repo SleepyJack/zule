@@ -58,21 +58,15 @@ decisions or a committed order of delivery.
 
 ## Timebase and tick timing checks
 
-- The port timebase API is defined: an optional core feature
-  (`ZULE_CONFIG_TIMEBASE`) providing a wrapping 32-bit count and its frequency.
-  See [timebase](port.md#timebase). The POSIX port implements it.
-- Use the timebase for core tick timing checks, as a core setting that requires
-  `ZULE_CONFIG_TIMEBASE`, and for [hook](#hooks-and-modules) timestamps used by
-  profiling modules. At initialization, check that each slot is a whole number
-  of counts and that one cycle is shorter than 2^31 counts. Keep timing policy
-  and fault detection in the core, with clock and timer implementation in the
-  port.
-- Establish the first expected tick boundary and compare subsequent ticks with
-  expected deadlines, accounting for accumulated drift as well as individual
-  delays. Define acceptable lateness and the fault response for missed periods.
-- Test delayed ticks, missed periods, timebase wraparound, and startup timing.
-  Tick timing checks cannot detect a complete loss of execution on their own;
-  retain independent watchdog monitoring where required.
+- Done: the port timebase (`ZULE_CONFIG_TIMEBASE`) and the core's
+  [tick timing check](core.md#tick-timing-check) (`ZULE_CONFIG_TICK_CHECK`),
+  with initialization checks for the limits each feature relies on.
+- Measure tick lateness in the statistics module, so the tolerance can be set
+  from observed behaviour. Open: whether `tick_start` passes the deviation the
+  core already computes when the check is enabled, or the module computes its
+  own; passing it makes the hook signature depend on a setting.
+- The check cannot detect a complete loss of ticks; retain independent watchdog
+  monitoring where required.
 
 ## Watchdog integration
 
@@ -113,6 +107,14 @@ decisions or a committed order of delivery.
   duration, since budgets must cover scheduler overhead. Index storage by task
   ID, which equals the task's table index; size it from a task count to be
   added to the generated task-ID header.
+- Add module initialization with the statistics module, its first user: a
+  `zule_modules_init()` entry point, declared when any module is enabled and
+  called from scheduler initialization after the core's own checks. Each
+  module validates and prepares there, for example checking that its storage
+  matches the schedule's task count, and failure stops `zule_run()` with
+  `ZULE_RESULT_INVALID_CONFIG`. Init must not discard accumulated results unless
+  the module documents it. Intervals up to a cycle are already guaranteed by the
+  core's hook checks.
 - Keep monotonically increasing totals, such as busy time and cycle count, plus
   the busiest single cycle. Readers choose their own interval by subtracting two
   snapshots, so the module needs no measurement window. Idle time and slack

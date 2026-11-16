@@ -14,7 +14,11 @@ typedef struct {
     uint32_t idle_calls;
     uint32_t idle_limit;
     uint32_t ticks_per_idle;
+    /* Scripted timebase: each read returns time_counts, then adds time_step. */
     uint32_t time_counts;
+    uint32_t time_step;
+    uint32_t time_hz;
+    uint32_t time_reads;
     bool active;
 } zule_test_port_control_t;
 

@@ -33,8 +33,10 @@ delivery, and returns the reason:
 | Result | Cause |
 | --- | --- |
 | `ZULE_RESULT_INVALID_SCHEDULE` | The linked schedule failed validation. |
+| `ZULE_RESULT_INVALID_CONFIG` | The timebase cannot represent what enabled [hooks](#hooks) or the [tick timing check](core.md#tick-timing-check) measure for this schedule. |
 | `ZULE_RESULT_DISPATCH_MISSED` | A task was not dispatched within its window. |
 | `ZULE_RESULT_EXECUTION_OVERRUN` | A task was still running at the end of its window. |
+| `ZULE_RESULT_TICK_TIMING` | A tick deviated from its expected time by more than the tolerance; see the [tick timing check](core.md#tick-timing-check). |
 | `ZULE_RESULT_PORT_ERROR` | The port failed to start, deliver, or stop ticks. |
 | `ZULE_RESULT_ALREADY_RUNNING` | `zule_run()` was called recursively, for example from a task. |
 
@@ -59,17 +61,18 @@ handler disables notification; faults still latch. A null configuration returns
 `ZULE_RESULT_INVALID_CONFIG` and keeps the previous settings. Calling it while
 running returns `ZULE_RESULT_ALREADY_RUNNING`.
 
-The handler is called once, on the first missed-dispatch or overrun fault. It is
-not called for invalid schedules or port errors, which are reported only through
-the `zule_run()` result. It receives a snapshot:
+The handler is called once, on the first missed-dispatch, overrun, or tick
+timing fault. It is not called for invalid schedules or configurations, or port
+errors, which are reported only through the `zule_run()` result. It receives a snapshot:
 
 | Member | Meaning |
 | --- | --- |
-| `reason` | `ZULE_RESULT_DISPATCH_MISSED` or `ZULE_RESULT_EXECUTION_OVERRUN`. |
-| `task_id` | ID of the faulting task; see [task names and IDs](#task-names-and-ids). |
-| `window_index` | Index of the faulting window in the schedule. |
+| `reason` | `ZULE_RESULT_DISPATCH_MISSED`, `ZULE_RESULT_EXECUTION_OVERRUN`, or `ZULE_RESULT_TICK_TIMING`. |
+| `task_id` | ID of the active window's task: the faulting task, or for a tick timing fault, the task whose window is in progress or next to start; see [task names and IDs](#task-names-and-ids). |
+| `window_index` | Index of the active window in the schedule. |
 | `slot` | Slot at which the fault was detected. |
 | `cycle_count` | Zero-based cycle count, reset at initialization. Wraps modulo 2^32. |
+| `tick_deviation_counts` | With the [tick timing check](core.md#tick-timing-check) only: the deviation of the detecting tick from its expected time, in timebase counts, positive when late. |
 
 Together, `cycle_count` and `slot` identify when the fault was detected. A fault
 detected at slot zero reports the new cycle, even if the faulting window started
@@ -104,7 +107,9 @@ function for each enabled hook; the declarations are in
 
 `time_counts` is a timebase count, read once per event. Convert counts with
 `zule_timebase_hz()`, and measure intervals by unsigned subtraction, which
-handles the count wrapping. For example, `task_end` minus `task_start` is a
+handles the count wrapping. Any interval up to one cycle can be measured this
+way: with hooks enabled, initialization checks that a cycle is shorter than
+2^32 counts, and `zule_run()` returns `ZULE_RESULT_INVALID_CONFIG` otherwise. For example, `task_end` minus `task_start` is a
 task's execution time, and `task_start` minus `tick_task_release` is its
 dispatch latency.
 

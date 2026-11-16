@@ -119,11 +119,17 @@ counts per second.
   and during idle. A port documents any limit, such as masking for longer than
   one tick period.
 
-Core features using the timebase require each slot to be a whole number of
-counts, so expected tick times do not drift, and one cycle to be shorter than
-2^31 counts, so lateness can be compared as a signed difference. They check this
-at initialization. The frequency, whether fixed by the port or derived from port
-settings, trades range for resolution: a lower frequency allows longer cycles at
+Core features using the timebase limit what a schedule may need, and check it
+at initialization:
+
+- [Hooks](application.md#hooks): one cycle must be shorter than 2^32 counts, so
+  any interval up to a cycle can be measured.
+- The [tick timing check](core.md#tick-timing-check): each slot must be a whole
+  number of counts, so expected tick times do not drift, and shorter than 2^31
+  counts, so deviations compare as signed differences.
+
+The frequency, whether fixed by the port or derived from port settings, trades
+range for resolution: a lower frequency allows longer slots and cycles at
 coarser resolution.
 
 ### Types

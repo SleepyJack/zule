@@ -35,11 +35,23 @@ target_compile_definitions(zule_hook_tests PRIVATE
     ZULE_CONFIG_USER_HOOK_TASK_START=1
     ZULE_CONFIG_USER_HOOK_TASK_END=1)
 
-foreach(ZULE_TEST_TARGET IN ITEMS zule_core_tests zule_runner_tests zule_hook_tests)
+# The tick timing check, with a 10 us tolerance and the tick start hook, which
+# shares the check's time read.
+add_executable(zule_tick_check_tests zule_tick_check_test.c "${ZULE_CORE_SOURCE_DIR}/zule.c"
+    "${ZULE_CORE_SOURCE_DIR}/zule_scheduler.c" "${ZULE_CORE_SOURCE_DIR}/zule_schedule.c")
+target_link_libraries(zule_tick_check_tests PRIVATE zule_test_port)
+target_compile_definitions(zule_tick_check_tests PRIVATE
+    ZULE_CONFIG_TIMEBASE=1
+    ZULE_CONFIG_TICK_CHECK=1
+    ZULE_CONFIG_TICK_TOLERANCE_US=10
+    ZULE_CONFIG_USER_HOOK_TICK_START=1)
+
+foreach(ZULE_TEST_TARGET IN ITEMS
+        zule_core_tests zule_runner_tests zule_hook_tests zule_tick_check_tests)
     target_link_libraries(${ZULE_TEST_TARGET} PRIVATE zule_test_modules)
 endforeach()
-foreach(ZULE_TEST_TARGET IN ITEMS
-        zule_core_tests zule_schedule_tests zule_runner_tests zule_hook_tests)
+foreach(ZULE_TEST_TARGET IN ITEMS zule_core_tests zule_schedule_tests zule_runner_tests
+        zule_hook_tests zule_tick_check_tests)
     target_link_libraries(${ZULE_TEST_TARGET} PRIVATE zule_schedule_internal zule_warnings)
 endforeach()
 
@@ -47,4 +59,6 @@ add_test(NAME zule_core COMMAND zule_core_tests)
 add_test(NAME zule_schedule COMMAND zule_schedule_tests)
 add_test(NAME zule_runner COMMAND zule_runner_tests)
 add_test(NAME zule_hooks COMMAND zule_hook_tests)
-set_tests_properties(zule_core zule_schedule zule_runner zule_hooks PROPERTIES TIMEOUT 10)
+add_test(NAME zule_tick_check COMMAND zule_tick_check_tests)
+set_tests_properties(zule_core zule_schedule zule_runner zule_hooks zule_tick_check
+    PROPERTIES TIMEOUT 10)

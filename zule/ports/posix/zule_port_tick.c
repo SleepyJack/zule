@@ -95,23 +95,12 @@ static void *timer_thread(void *argument) {
             return NULL;
         }
 
+        /* Deadlines stay on the start + n * period grid, so overdue ticks are
+         * delivered back to back. Timing checks belong to the core. */
         const zule_port_critical_state_t state = zule_port_critical_enter();
-        struct timespec now;
-        struct timespec following_deadline = deadline;
-        advance_deadline(&following_deadline, slot_us);
-        /* Report a full missed period instead of replaying stale ticks. */
-        const bool failed =
-            clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec > following_deadline.tv_sec ||
-            (now.tv_sec == following_deadline.tv_sec && now.tv_nsec >= following_deadline.tv_nsec);
-        if (!failed) {
-            (void)callback();
-            zule_port_posix_critical_notify();
-        }
+        (void)callback();
+        zule_port_posix_critical_notify();
         zule_port_critical_exit(state);
-        if (failed) {
-            record_failure();
-            return NULL;
-        }
     }
 }
 

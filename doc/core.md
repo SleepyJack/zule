@@ -94,6 +94,41 @@ terminate the task function.
 
 ![A task is running at its deadline; the tick raises an overrun fault while the task remains running.](images/execution_overrun.svg)
 
+### Tick timing check
+
+The optional tick timing check (`ZULE_CONFIG_TICK_CHECK`, with
+`ZULE_CONFIG_TICK_TOLERANCE_US`; see [build settings](configuration.md#build-settings))
+compares each tick's time with when it should have arrived, using the
+[timebase](port.md#timebase). The first tick of a run is the reference, and each
+later tick is expected one slot after the previous expected time. Because the
+expectation is absolute, the check catches slow drift as well as single late
+ticks, and a lost tick appears as a deviation of a whole slot.
+
+A tick that deviates from its expected time by more than the tolerance, early or
+late, raises a **tick timing** fault (`ZULE_RESULT_TICK_TIMING`) before the tick
+does any other processing. The fault reports the deviation in timebase counts.
+Expected times wrap with the timebase, so the check is exact for the life of a
+run.
+
+Choose the tolerance with the budgets. A late release tick shortens the
+released task's window, and an early end tick cuts the running task's window
+short, so budgets must allow for the tolerance. It must also exceed what the
+target really does: interrupt latency, the longest interrupt-masked section,
+higher-priority interrupts, and [hook](#hooks) run time. Measured tick timing
+can guide it.
+
+Initialization checks that the timebase can support the check, returning
+`ZULE_RESULT_INVALID_CONFIG` otherwise: each slot must be a whole number of
+timebase counts and shorter than 2^31 counts, and the tolerance, rounded down to
+whole counts, must be at least one count and less than one slot. The tolerance
+resolution is therefore one timebase count.
+
+The check has limits. A late first tick shifts the reference unnoticed. With no
+ticks at all, nothing is checked; that needs independent monitoring, such as a
+watchdog. If the port derives the timebase from its tick timer, a lost tick is
+invisible to both, and the check measures only how late each tick is handled
+within its period.
+
 ## Fault handling
 
 A fault halts schedule progression and prevents further task dispatch. The
@@ -124,8 +159,9 @@ scheduling. Unused hooks compile to nothing.
 
 The port is responsible for timer accuracy, reliable tick delivery, and
 synchronization between tick and application contexts. Scheduler timing depends
-on delivered ticks, so detecting timer failure may require independent
-monitoring, such as a watchdog.
+on delivered ticks. The [tick timing check](#tick-timing-check) detects late,
+early, and lost ticks against the timebase, but detecting a complete loss of
+ticks requires independent monitoring, such as a watchdog.
 
 Task budgets must account for scheduler overhead and interrupt interference as
 well as task execution time.

@@ -4,7 +4,9 @@
 #include "zule.h"
 
 /* Internal API. Init requires quiescent tick delivery and no executing task.
- * Validation failure leaves tick and run disabled. Capture the supplied handler
+ * Returns INVALID_SCHEDULE for a schedule that fails validation, and
+ * INVALID_CONFIG when the timebase cannot represent what enabled hooks or the tick
+ * check measure. Any failure leaves tick and run disabled. Capture the supplied handler
  * for this run; NULL disables notification. */
 zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault);
 

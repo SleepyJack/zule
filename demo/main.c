@@ -78,6 +78,10 @@ int main(void) {
                       (unsigned int)last_fault.task_id, name != NULL ? name : "unnamed",
                       (unsigned int)last_fault.reason, last_fault.window_index,
                       (unsigned int)last_fault.slot, (unsigned int)last_fault.cycle_count);
+#if ZULE_CONFIG_TICK_CHECK
+        (void)fprintf(stderr, "Detecting tick deviation: %ld counts\n",
+                      (long)last_fault.tick_deviation_counts);
+#endif
     }
     print_longest_task(stderr);
     return result == ZULE_RESULT_OK ? 0 : 1;
