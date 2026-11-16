@@ -10,6 +10,9 @@
 #include "zule_user_config.h"
 #endif
 
+/* UINT32_MAX, usable in #if, for range checks below. */
+#include <stdint.h>
+
 #ifndef ZULE_CONFIG_TASK_NAMES
 #define ZULE_CONFIG_TASK_NAMES 0
 #endif
@@ -99,8 +102,8 @@
 #ifndef ZULE_CONFIG_TICK_TOLERANCE_US
 #error "ZULE_CONFIG_TICK_CHECK requires ZULE_CONFIG_TICK_TOLERANCE_US"
 #endif
-#if ZULE_CONFIG_TICK_TOLERANCE_US < 1 || ZULE_CONFIG_TICK_TOLERANCE_US > 4294967295
-#error "ZULE_CONFIG_TICK_TOLERANCE_US must be from 1 to 4294967295"
+#if ZULE_CONFIG_TICK_TOLERANCE_US < 1 || ZULE_CONFIG_TICK_TOLERANCE_US > UINT32_MAX
+#error "ZULE_CONFIG_TICK_TOLERANCE_US must be from 1 to UINT32_MAX"
 #endif
 #endif
 

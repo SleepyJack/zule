@@ -110,12 +110,8 @@ does any other processing. The fault reports the deviation in timebase counts.
 Expected times wrap with the timebase, so the check is exact for the life of a
 run.
 
-Choose the tolerance with the budgets. A late release tick shortens the
-released task's window, and an early end tick cuts the running task's window
-short, so budgets must allow for the tolerance. It must also exceed what the
-target really does: interrupt latency, the longest interrupt-masked section,
-higher-priority interrupts, and [hook](#hooks) run time. Measured tick timing
-can guide it.
+See [tick timing tolerance](configuration.md#tick-timing-tolerance) for choosing
+the tolerance.
 
 Initialization checks that the timebase can support the check, returning
 `ZULE_RESULT_INVALID_CONFIG` otherwise: each slot must be a whole number of

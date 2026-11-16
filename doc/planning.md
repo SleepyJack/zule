@@ -71,17 +71,20 @@ decisions or a committed order of delivery.
 - Reuse the existing schema and validator for feedback on bounds, overlaps,
   and task references, and save definitions in the existing JSON format.
 
-## Timebase and tick timing checks
+## Tick timing reporting module
 
-- Done: the port timebase (`ZULE_CONFIG_TIMEBASE`) and the core's
-  [tick timing check](core.md#tick-timing-check) (`ZULE_CONFIG_TICK_CHECK`),
-  with initialization checks for the limits each feature relies on.
-- Measure tick lateness in the statistics module, so the tolerance can be set
-  from observed behaviour. Open: whether `tick_start` passes the deviation the
-  core already computes when the check is enabled, or the module computes its
-  own; passing it makes the hook signature depend on a setting.
-- The check cannot detect a complete loss of ticks; retain independent watchdog
-  monitoring where required.
+- Add a module that reports tick timing, so the tick tolerance can be chosen
+  from observed behaviour: the worst early and late deviation from the expected
+  tick time, and possibly a distribution of deviations. It should work without
+  the tick timing check enabled, so the tolerance can be measured before the
+  check is turned on.
+- Open: whether `tick_start` passes the deviation the core already computes
+  when the check is enabled, or the module computes its own expected times from
+  the first tick and the slot length in counts. Passing it makes the hook
+  signature depend on a setting; computing it needs the slot length, through
+  module initialization.
+- Expose a snapshot copied under a critical section and a reset, like the
+  statistics module.
 
 ## Watchdog integration
 
@@ -98,10 +101,6 @@ decisions or a committed order of delivery.
 
 ## Hooks and modules
 
-- Hooks and the modules layer are in place: see [hooks](application.md#hooks)
-  and [modules](modules.md). The core reports tick start and end, task release,
-  and task start and end; user hooks and modules both require the timebase.
-  No modules exist yet.
 - The statistics module (below) is the first module, and proves the module
   path: its setting, the hook conditions, the entry points, and a read API.
 - Add a fault event, for modules only, with the trace module. The application
@@ -122,7 +121,8 @@ decisions or a committed order of delivery.
   duration, since budgets must cover scheduler overhead. Index storage by task
   ID, which equals the task's table index; size it from a task count to be
   added to the generated task-ID header.
-- Add module initialization with the statistics module, its first user: a
+- Add module initialization with the first module that needs it, likely the
+  statistics or tick timing reporting module: a
   `zule_modules_init()` entry point, declared when any module is enabled and
   called from scheduler initialization after the core's own checks. Each
   module validates and prepares there, for example checking that its storage

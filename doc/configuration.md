@@ -135,6 +135,17 @@ With names disabled, both the member and its strings are excluded. The setting
 changes the layout of the schedule's task type, so changing it requires
 recompiling every component, but no schedule regeneration.
 
+### Tick timing tolerance
+
+`ZULE_CONFIG_TICK_TOLERANCE_US` sets how far a tick may deviate from its
+expected time, early or late, before the [tick timing check](core.md#tick-timing-check)
+faults. Choose it with the schedule's budgets. A late release tick shortens the
+released task's window, and an early end tick cuts the running task's window
+short, so budgets must allow for the tolerance. It must also exceed what the
+target really does: interrupt latency, the longest interrupt-masked section,
+higher-priority interrupts, and [hook](application.md#hooks) run time. Measured
+tick timing can guide it. The effective resolution is one timebase count.
+
 ### Port settings
 
 Each port supplies its own `zule_port_config.h`, which documents the port's
