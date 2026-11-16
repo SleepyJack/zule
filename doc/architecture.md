@@ -35,7 +35,7 @@ See [application](application.md).
 
 The scheduler core dispatches tasks to be run according to the schedule and enforces schedule-defined timing constraints on task execution.
 
-The core reports scheduler events through hooks, to enabled modules and then to the application's hooks. It never names individual modules.
+The core can optionally report scheduler events through hooks, to enabled modules and to the application.
 
 See [core](core.md) for task execution and timing details.
 
