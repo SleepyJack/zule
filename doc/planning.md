@@ -8,6 +8,11 @@ decisions or a committed order of delivery.
 - Consider a dev container for tools that `requirements-dev.txt` cannot pin,
   such as the host and cross compilers. It should install `requirements-dev.txt`
   rather than duplicate its versions.
+- Keep the core, modules, and port source lists in one place. They are
+  currently listed in the CMake targets, the core tests' CMake, and the
+  schedule tool's generation tests, so a new source file must be added to
+  each. Consider deriving the test lists from the CMake targets or a shared
+  list.
 
 ## Licence
 
