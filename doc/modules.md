@@ -30,8 +30,10 @@ neither.
 Modules consume the core's hook interface the same way the application's hooks
 do: the core defines the interface, and modules implement it.
 
-- [`zule_hooks.h`](../zule/core/api/zule_hooks.h) declares, for each hook, a
-  module entry point, `zule_modules_<hook>()`, alongside the user hook.
+- [`zule_module_hooks.h`](../zule/core/inc/zule_module_hooks.h), an internal
+  core header, declares for each hook a module entry point,
+  `zule_modules_<hook>()`. Only the core library, which also builds the modules,
+  can include it; applications see only the user hooks in `zule_hooks.h`.
 - [`zule_modules_config.h`](../zule/modules/zule_modules_config.h) holds the
   module settings and derives, for each hook, a condition,
   `ZULE_MODULES_HOOK_<HOOK>`, that is `1` when any enabled module consumes it.

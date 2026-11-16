@@ -7,7 +7,7 @@
  *
  * For each hook, ZULE_MODULES_HOOK_... is 1 when any enabled module consumes
  * it. The core reads only these derived conditions, to decide whether to call
- * the module entry points declared in zule_hooks.h; it never names a module. A
+ * the module entry points declared in the core's zule_module_hooks.h; it never names a module. A
  * module adds its setting to the condition of each hook it consumes. */
 #define ZULE_MODULES_HOOK_TICK_START 0
 #define ZULE_MODULES_HOOK_TICK_END 0
