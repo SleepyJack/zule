@@ -23,6 +23,21 @@ decisions or a committed order of delivery.
 - Once added, the licence applies to everything published from then on, and
   published versions remain available under it.
 
+## Demos
+
+- Split the demo by feature set as features grow. Keep a minimal POSIX demo
+  (tasks and a fault handler only) for the CI smoke test, with no timing
+  sensitivity to host load.
+- Add a fully featured demo for the Cortex-M port, running in QEMU on the
+  `mps2-an385` (Cortex-M3) machine: the timebase, hooks, the tick timing check,
+  and modules as they arrive. Run it in CI with `-icount`, so guest time follows
+  executed instructions and timing, including the tick check, is deterministic
+  regardless of runner load. It also exercises SysTick and the idle wait, though
+  QEMU's models do not prove behaviour on silicon.
+- Until then, the existing demo keeps the tick check enabled in CI with a
+  half-slot tolerance; an occasional failure on a heavily loaded runner is
+  acceptable.
+
 ## Continuous integration
 
 - Add CI jobs, run in parallel, that build and run the existing tests under:
