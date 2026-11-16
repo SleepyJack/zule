@@ -27,22 +27,27 @@ neither.
 
 ## Structure
 
-The core knows modules only through
-[`zule_modules.h`](../zule/modules/zule_modules.h), much as it knows the port
-through `zule_port.h`. For each hook, the header provides:
+Modules consume the core's hook interface the same way the application's hooks
+do: the core defines the interface, and modules implement it.
 
-- a condition, `ZULE_MODULES_HOOK_<HOOK>`, that is `1` when any enabled module
-  consumes the hook;
-- an entry point, `zule_modules_<hook>()`, declared under that condition, which
-  calls each enabled module in a fixed order.
+- [`zule_hooks.h`](../zule/core/api/zule_hooks.h) declares, for each hook, a
+  module entry point, `zule_modules_<hook>()`, alongside the user hook.
+- [`zule_modules_config.h`](../zule/modules/zule_modules_config.h) holds the
+  module settings and derives, for each hook, a condition,
+  `ZULE_MODULES_HOOK_<HOOK>`, that is `1` when any enabled module consumes it.
+  `zule_config.h` includes it, so the conditions are ordinary settings: the core
+  reads them, but never names a module.
+- `zule_modules.c` defines the entry points for consumed hooks, each calling the
+  enabled modules in a fixed order.
 
 The core calls each hook point through an inline wrapper that reads the
-timebase once and then calls the modules entry point and the user hook. A hook
+timebase once and then calls the module entry point and the user hook. A hook
 that neither consumes compiles to nothing, including the time read. Adding a
-module therefore changes only the modules layer, never the core.
+module changes only the modules layer and its settings, never the core.
 
-`zule_modules.c` defines the entry points. It is built into the `zule_modules`
-library, which the core links privately.
+Module sources live in `zule/modules/` but are compiled into the core library,
+so modules can call the core API, such as `zule_timebase_hz()`, without a
+circular dependency between libraries.
 
 ## Adding a module
 
@@ -50,9 +55,11 @@ A module consists of:
 
 - a subdirectory, `zule/modules/<name>/`, with its sources and a public header
   for its read API;
-- a `ZULE_CONFIG_MODULE_<NAME>` setting in `zule_config.h`, defaulting to `0`;
+- a `ZULE_CONFIG_MODULE_<NAME>` setting in `zule_modules_config.h`, defaulting
+  to `0`;
 - its setting added to the `ZULE_MODULES_HOOK_<HOOK>` condition of each hook it
   consumes, and a call from each of those entry points in `zule_modules.c`;
+- its sources added to the core library;
 - compile-time checks for any further features it requires;
 - tests, using the core test port's scripted timebase.
 

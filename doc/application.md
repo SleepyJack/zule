@@ -183,16 +183,16 @@ Without CMake, compile and link:
 
 - the sources in `zule/core/src/`;
 - the selected port's sources, for example `zule/ports/posix/*.c`;
-- `zule/modules/zule_modules.c`, which holds the enabled [modules](modules.md);
+- the [modules](modules.md) in `zule/modules/`;
 - the generated `zule_schedule_definition.c`;
 - the application.
 
-Every component needs `zule/core/api/` on its include path, plus the
-[build settings](configuration.md#build-settings) and
-[port settings](configuration.md#port-settings). The core and generated
-schedule also need `zule/core/inc/`. The core and port need `zule/ports/` and the
-port's own directory, and the core also needs `zule/modules/`. Apply any definitions the port's README requires. Generate
-the schedule from `zule/tools/schedule/`:
+The application's sources need `zule/core/api/` and `zule/modules/` on their
+include path, and the same [build settings](configuration.md#build-settings) as
+every other component. Compile Zule's own components with the include
+directories and definitions of their targets in `zule/`'s CMake files, plus any
+definitions the port's README requires. Generate the schedule from
+`zule/tools/schedule/`:
 
 ```sh
 python -m zule_schedule generate path/to/schedule.json path/to/output

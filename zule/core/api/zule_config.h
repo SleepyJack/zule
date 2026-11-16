@@ -78,4 +78,7 @@
 #error "User hooks require ZULE_CONFIG_TIMEBASE"
 #endif
 
+/* Module settings and the hook conditions derived from them. */
+#include "zule_modules_config.h"
+
 #endif

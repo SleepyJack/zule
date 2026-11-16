@@ -11,7 +11,6 @@ target_link_libraries(zule_test_port INTERFACE zule_port_api)
 set(ZULE_MODULES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../modules")
 add_library(zule_test_modules INTERFACE)
 target_sources(zule_test_modules INTERFACE "${ZULE_MODULES_SOURCE_DIR}/zule_modules.c")
-target_include_directories(zule_test_modules INTERFACE "${ZULE_MODULES_SOURCE_DIR}")
 
 add_executable(zule_core_tests zule_scheduler_test.c
     "${ZULE_CORE_SOURCE_DIR}/zule_scheduler.c" "${ZULE_CORE_SOURCE_DIR}/zule_schedule.c")

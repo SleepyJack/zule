@@ -49,4 +49,29 @@ void zule_user_hook_task_start(uint32_t time_counts, uint32_t task_id, size_t wi
 void zule_user_hook_task_end(uint32_t time_counts, uint32_t task_id, size_t window_index);
 #endif
 
+/* Module entry points, implemented by the modules layer and declared for each
+ * hook that an enabled module consumes (see zule_modules_config.h). They take
+ * the same arguments and give the same guarantees as the user hooks, and are
+ * called first. Applications must not call or define them. */
+
+#if ZULE_MODULES_HOOK_TICK_START
+void zule_modules_tick_start(uint32_t time_counts, uint32_t slot, uint32_t cycle_count);
+#endif
+
+#if ZULE_MODULES_HOOK_TICK_END
+void zule_modules_tick_end(uint32_t time_counts);
+#endif
+
+#if ZULE_MODULES_HOOK_TICK_TASK_RELEASE
+void zule_modules_tick_task_release(uint32_t time_counts, uint32_t task_id, size_t window_index);
+#endif
+
+#if ZULE_MODULES_HOOK_TASK_START
+void zule_modules_task_start(uint32_t time_counts, uint32_t task_id, size_t window_index);
+#endif
+
+#if ZULE_MODULES_HOOK_TASK_END
+void zule_modules_task_end(uint32_t time_counts, uint32_t task_id, size_t window_index);
+#endif
+
 #endif

@@ -8,7 +8,6 @@
  * provide the hook's context: tick context, or the scheduler's critical
  * section. */
 #include "zule.h"
-#include "zule_modules.h"
 #include "zule_port.h"
 
 #include <stddef.h>
