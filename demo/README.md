@@ -8,7 +8,9 @@ A small user-domain application, and the reference for integrating Zule:
   and every ten cycles the demo prints the longest so far.
 - [`config/`](config): the [configuration](../doc/configuration.md). It contains
   the schedule `control-loop.json` and the build settings `zule_user_config.h`,
-  which enables task names, the timebase, and the two hooks.
+  which enables task names, the timebase, the two hooks, and the
+  [tick timing check](../doc/core.md#tick-timing-check) with a tolerance of half a
+  slot.
 - [`CMakeLists.txt`](CMakeLists.txt): a standalone project following
   [CMake integration](../doc/application.md#cmake-integration). It adds `../zule`,
   selects the POSIX port, and points Zule at `config/`.

@@ -103,7 +103,9 @@ same settings.
 | `ZULE_USE_USER_PORT_CONFIG` | `0` | Set to `1` to have the port include an integrator-supplied `zule_user_port_config.h`; see [port settings](#port-settings). |
 | `ZULE_CONFIG_TASK_NAMES` | `0` | Set to `1` to compile diagnostic task names into the schedule. Must be `0` or `1`. |
 | `ZULE_CONFIG_TIMEBASE` | `0` | Set to `1` to enable the optional [port timebase](port.md#timebase) for sub-slot timing. The selected port must provide it. Must be `0` or `1`. |
-| `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`. Must be `0` or `1`. |
+| `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`, and a cycle shorter than 2^32 timebase counts, checked at initialization. Must be `0` or `1`. |
+| `ZULE_CONFIG_TICK_CHECK` | `0` | Set to `1` to enable the [tick timing check](core.md#tick-timing-check). Requires `ZULE_CONFIG_TIMEBASE` and `ZULE_CONFIG_TICK_TOLERANCE_US`. Must be `0` or `1`. |
+| `ZULE_CONFIG_TICK_TOLERANCE_US` | None | Largest accepted tick deviation, early or late, in microseconds. Required with the tick check. Initialization checks it is at least one timebase count and less than one slot. |
 
 The default build needs no user header. Individual settings can be supplied as
 compiler definitions, for example `-DZULE_CONFIG_TASK_NAMES=1`. For a group of
@@ -132,6 +134,17 @@ entry and returned by [`zule_task_name_get()`](application.md#task-names-and-ids
 With names disabled, both the member and its strings are excluded. The setting
 changes the layout of the schedule's task type, so changing it requires
 recompiling every component, but no schedule regeneration.
+
+### Tick timing tolerance
+
+`ZULE_CONFIG_TICK_TOLERANCE_US` sets how far a tick may deviate from its
+expected time, early or late, before the [tick timing check](core.md#tick-timing-check)
+faults. Choose it with the schedule's budgets. A late release tick shortens the
+released task's window, and an early end tick cuts the running task's window
+short, so budgets must allow for the tolerance. It must also exceed what the
+target really does: interrupt latency, the longest interrupt-masked section,
+higher-priority interrupts, and [hook](application.md#hooks) run time. Measured
+tick timing can guide it. The effective resolution is one timebase count.
 
 ### Port settings
 

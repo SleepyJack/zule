@@ -16,6 +16,7 @@ typedef enum {
     ZULE_RESULT_PORT_ERROR,
     ZULE_RESULT_ALREADY_RUNNING,
     ZULE_RESULT_INVALID_CONFIG,
+    ZULE_RESULT_TICK_TIMING,
 } zule_result_t;
 
 typedef struct {
@@ -24,9 +25,15 @@ typedef struct {
     uint32_t slot;
     uint32_t cycle_count;
     uint32_t task_id;
+#if ZULE_CONFIG_TICK_CHECK
+    /* Deviation of the tick that detected the fault from its expected time, in
+     * timebase counts: positive when late, negative when early. */
+    int32_t tick_deviation_counts;
+#endif
 } zule_fault_info_t;
 
-/* Called once after the first missed-dispatch or overrun fault is latched.
+/* Called once after the first missed-dispatch, overrun, or tick timing fault is
+ * latched.
  * Runs in tick/ISR context (the excluded timer thread on native ports), possibly
  * interrupting a task. Must be bounded and nonblocking: do not allocate, log
  * synchronously, call Zule APIs or port lifecycle functions, or wait for main.

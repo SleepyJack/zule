@@ -31,6 +31,8 @@ void zule_test_port_reset(void) {
     zule_test_port_control = (zule_test_port_control_t){0};
     zule_test_port_control.ticks_per_idle = 1U;
     zule_test_port_control.idle_limit = 4U;
+    zule_test_port_control.time_step = 1U;
+    zule_test_port_control.time_hz = 1000000U;
     tick_callback = NULL;
 }
 
@@ -68,13 +70,17 @@ zule_port_result_t zule_port_tick_stop(void) {
 
 #if ZULE_CONFIG_TIMEBASE
 uint32_t zule_port_time_hz(void) {
-    return 1000000U;
+    return zule_test_port_control.time_hz;
 }
 
-/* Deterministic: each read returns the current count and then advances it by
- * one, so tests can check both the values passed on and how many reads occur. */
+/* Deterministic: each read returns the current count and then advances it by the
+ * step, 1 by default, so tests can check the values passed on and count reads.
+ * A step of 0 lets tests script the time of each tick. */
 uint32_t zule_port_time_get(void) {
-    return zule_test_port_control.time_counts++;
+    ++zule_test_port_control.time_reads;
+    const uint32_t time_counts = zule_test_port_control.time_counts;
+    zule_test_port_control.time_counts += zule_test_port_control.time_step;
+    return time_counts;
 }
 #endif
 

@@ -23,6 +23,21 @@ decisions or a committed order of delivery.
 - Once added, the licence applies to everything published from then on, and
   published versions remain available under it.
 
+## Demos
+
+- Split the demo by feature set as features grow. Keep a minimal POSIX demo
+  (tasks and a fault handler only) for the CI smoke test, with no timing
+  sensitivity to host load.
+- Add a fully featured demo for the Cortex-M port, running in QEMU on the
+  `mps2-an385` (Cortex-M3) machine: the timebase, hooks, the tick timing check,
+  and modules as they arrive. Run it in CI with `-icount`, so guest time follows
+  executed instructions and timing, including the tick check, is deterministic
+  regardless of runner load. It also exercises SysTick and the idle wait, though
+  QEMU's models do not prove behaviour on silicon.
+- Until then, the existing demo keeps the tick check enabled in CI with a
+  half-slot tolerance; an occasional failure on a heavily loaded runner is
+  acceptable.
+
 ## Continuous integration
 
 - Add CI jobs, run in parallel, that build and run the existing tests under:
@@ -56,23 +71,20 @@ decisions or a committed order of delivery.
 - Reuse the existing schema and validator for feedback on bounds, overlaps,
   and task references, and save definitions in the existing JSON format.
 
-## Timebase and tick timing checks
+## Tick timing reporting module
 
-- The port timebase API is defined: an optional core feature
-  (`ZULE_CONFIG_TIMEBASE`) providing a wrapping 32-bit count and its frequency.
-  See [timebase](port.md#timebase). The POSIX port implements it.
-- Use the timebase for core tick timing checks, as a core setting that requires
-  `ZULE_CONFIG_TIMEBASE`, and for [hook](#hooks-and-modules) timestamps used by
-  profiling modules. At initialization, check that each slot is a whole number
-  of counts and that one cycle is shorter than 2^31 counts. Keep timing policy
-  and fault detection in the core, with clock and timer implementation in the
-  port.
-- Establish the first expected tick boundary and compare subsequent ticks with
-  expected deadlines, accounting for accumulated drift as well as individual
-  delays. Define acceptable lateness and the fault response for missed periods.
-- Test delayed ticks, missed periods, timebase wraparound, and startup timing.
-  Tick timing checks cannot detect a complete loss of execution on their own;
-  retain independent watchdog monitoring where required.
+- Add a module that reports tick timing, so the tick tolerance can be chosen
+  from observed behaviour: the worst early and late deviation from the expected
+  tick time, and possibly a distribution of deviations. It should work without
+  the tick timing check enabled, so the tolerance can be measured before the
+  check is turned on.
+- Open: whether `tick_start` passes the deviation the core already computes
+  when the check is enabled, or the module computes its own expected times from
+  the first tick and the slot length in counts. Passing it makes the hook
+  signature depend on a setting; computing it needs the slot length, through
+  module initialization.
+- Expose a snapshot copied under a critical section and a reset, like the
+  statistics module.
 
 ## Watchdog integration
 
@@ -89,10 +101,6 @@ decisions or a committed order of delivery.
 
 ## Hooks and modules
 
-- Hooks and the modules layer are in place: see [hooks](application.md#hooks)
-  and [modules](modules.md). The core reports tick start and end, task release,
-  and task start and end; user hooks and modules both require the timebase.
-  No modules exist yet.
 - The statistics module (below) is the first module, and proves the module
   path: its setting, the hook conditions, the entry points, and a read API.
 - Add a fault event, for modules only, with the trace module. The application
@@ -113,6 +121,15 @@ decisions or a committed order of delivery.
   duration, since budgets must cover scheduler overhead. Index storage by task
   ID, which equals the task's table index; size it from a task count to be
   added to the generated task-ID header.
+- Add module initialization with the first module that needs it, likely the
+  statistics or tick timing reporting module: a
+  `zule_modules_init()` entry point, declared when any module is enabled and
+  called from scheduler initialization after the core's own checks. Each
+  module validates and prepares there, for example checking that its storage
+  matches the schedule's task count, and failure stops `zule_run()` with
+  `ZULE_RESULT_INVALID_CONFIG`. Init must not discard accumulated results unless
+  the module documents it. Intervals up to a cycle are already guaranteed by the
+  core's hook checks.
 - Keep monotonically increasing totals, such as busy time and cycle count, plus
   the busiest single cycle. Readers choose their own interval by subtracting two
   snapshots, so the module needs no measurement window. Idle time and slack

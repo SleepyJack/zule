@@ -111,6 +111,7 @@ static void start(void) {
 }
 
 int main(void) {
+    zule_test_port_reset();
     assert(zule_timebase_hz() == 1000000U);
 
     /* A full cycle and the start of the next, dispatching each released task. */

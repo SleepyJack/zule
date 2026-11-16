@@ -10,6 +10,9 @@
 #include "zule_user_config.h"
 #endif
 
+/* UINT32_MAX, usable in #if, for range checks below. */
+#include <stdint.h>
+
 #ifndef ZULE_CONFIG_TASK_NAMES
 #define ZULE_CONFIG_TASK_NAMES 0
 #endif
@@ -76,6 +79,32 @@
      ZULE_CONFIG_USER_HOOK_TASK_END) &&                                                            \
     !ZULE_CONFIG_TIMEBASE
 #error "User hooks require ZULE_CONFIG_TIMEBASE"
+#endif
+
+/* Optional feature: tick timing check. Faults when a tick deviates from its
+ * expected time, early or late, by more than ZULE_CONFIG_TICK_TOLERANCE_US
+ * microseconds. Requires the timebase. */
+#ifndef ZULE_CONFIG_TICK_CHECK
+#define ZULE_CONFIG_TICK_CHECK 0
+#endif
+
+#if ZULE_CONFIG_TICK_CHECK != 0 && ZULE_CONFIG_TICK_CHECK != 1
+#error "ZULE_CONFIG_TICK_CHECK must be 0 or 1"
+#endif
+
+#if ZULE_CONFIG_TICK_CHECK && !ZULE_CONFIG_TIMEBASE
+#error "ZULE_CONFIG_TICK_CHECK requires ZULE_CONFIG_TIMEBASE"
+#endif
+
+/* Required with the tick check; there is no default. Initialization also checks
+ * it against the slot and the timebase resolution. */
+#if ZULE_CONFIG_TICK_CHECK
+#ifndef ZULE_CONFIG_TICK_TOLERANCE_US
+#error "ZULE_CONFIG_TICK_CHECK requires ZULE_CONFIG_TICK_TOLERANCE_US"
+#endif
+#if ZULE_CONFIG_TICK_TOLERANCE_US < 1 || ZULE_CONFIG_TICK_TOLERANCE_US > UINT32_MAX
+#error "ZULE_CONFIG_TICK_TOLERANCE_US must be from 1 to UINT32_MAX"
+#endif
 #endif
 
 /* Module settings and the hook conditions derived from them. */
