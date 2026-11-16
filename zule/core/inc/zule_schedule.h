@@ -32,7 +32,7 @@ typedef struct {
 } zule_schedule_t;
 
 /* Return OK for a nonempty schedule with nonzero slot period and cycle length, callable tasks
- * with unique IDs, windows referencing entries in the task array,
+ * whose IDs equal their task array index, windows referencing entries in the task array,
  * positive budgets, and ordered, nonoverlapping windows within the cycle.
  * Otherwise return INVALID_SCHEDULE, including for null schedule/windows/tasks.
  * Non-null pointers must address readable storage for the declared array size;

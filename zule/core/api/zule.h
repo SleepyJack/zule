@@ -2,6 +2,7 @@
 #define ZULE_H
 
 #include "zule_config.h"
+#include "zule_hooks.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -47,7 +48,8 @@ typedef struct {
 zule_result_t zule_configure(const zule_config_t *config);
 
 /* Return the immutable diagnostic name for a declared task, or NULL for an
- * unknown ID or when the schedule has no names. The linked schedule and names must
+ * unknown ID or when the schedule has no names. Task IDs are task indexes,
+ * starting at zero, as defined by the generated zule_task_ids.h. The linked schedule and names must
  * remain valid and unchanged for the lifetime of the application. */
 const char *zule_task_name_get(uint32_t task_id);
 
@@ -57,5 +59,12 @@ const char *zule_task_name_get(uint32_t task_id);
  * from separate application threads are unsupported. Tick delivery is stopped
  * and quiesced before returning. Tasks must return for the runner to exit. */
 zule_result_t zule_run(void);
+
+#if ZULE_CONFIG_TIMEBASE
+/* Return the timebase frequency in counts per second, for converting hook
+ * timestamps and other timebase counts. Nonzero, constant, and callable at any
+ * time. Declared only when ZULE_CONFIG_TIMEBASE is enabled. */
+uint32_t zule_timebase_hz(void);
+#endif
 
 #endif

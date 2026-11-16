@@ -15,19 +15,19 @@ Each component below has its own document, linked from its section.
 There are two ownership domains: the user domain and the Zule domain. The
 **[application](#application)** and application-specific
 **[configuration](#configuration)** are owned by the user. The Zule
-**[core](#core)** and **[port](#port)** reside in the Zule ownership domain.
+**[core](#core)**, **[modules](#modules)**, and **[port](#port)** reside in the Zule ownership domain.
 
 ## Components
 
 ### Configuration
 
-The configuration defines the set of tasks and the schedule, and the build settings for the core and the selected port. Core settings include which optional features are enabled, such as the sub-slot timebase. Port settings supply target information that only the application knows, such as a timer clock frequency, so configuration feeds both the core and the port.
+The configuration defines the set of tasks and the schedule, and the build settings for the core and the selected port. Core settings include which optional features are enabled, such as the sub-slot timebase, hooks, and modules. Port settings supply target information that only the application knows, such as a timer clock frequency, so configuration feeds both the core and the port.
 
 See [configuration](configuration.md).
 
 ### Application
 
-The application defines the implementation of the tasks and the high-level interactions with the scheduler (starting, stopping, [fault handling](core.md#fault-handling)).
+The application defines the implementation of the tasks and the high-level interactions with the scheduler (starting, stopping, [fault handling](core.md#fault-handling)). It can also define [hooks](application.md#hooks), which the core calls on scheduler events, and read results from enabled modules.
 
 See [application](application.md).
 
@@ -35,7 +35,15 @@ See [application](application.md).
 
 The scheduler core dispatches tasks to be run according to the schedule and enforces schedule-defined timing constraints on task execution.
 
+The core can optionally report scheduler events through hooks, to enabled modules and to the application.
+
 See [core](core.md) for task execution and timing details.
+
+### Modules
+
+Optional consumers of the core's hook events, shipped with Zule and each enabled by a core setting. Modules observe the schedule, for example to collect task timing statistics, and cannot change scheduling. The application reads their results through each module's API.
+
+See [modules](modules.md).
 
 ### Port
 

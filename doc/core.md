@@ -110,6 +110,16 @@ context observes the fault, the scheduler stops tick delivery and waits for any
 active tick handler before returning. An executing task must return before the
 scheduler entry point can return.
 
+## Hooks
+
+The core reports scheduler events through [hooks](application.md#hooks): tick
+start and end, task release in tick context, and task start and end around each
+task call. It reads the timebase once per event and passes the count to enabled
+[modules](modules.md), then to the application's hooks. Hook points sit beside
+the state transitions above: release when a task becomes pending, start just
+before running, end as completion is recorded. Hooks observe; they cannot change
+scheduling. Unused hooks compile to nothing.
+
 ## Timing assumptions
 
 The port is responsible for timer accuracy, reliable tick delivery, and

@@ -8,6 +8,11 @@ decisions or a committed order of delivery.
 - Consider a dev container for tools that `requirements-dev.txt` cannot pin,
   such as the host and cross compilers. It should install `requirements-dev.txt`
   rather than duplicate its versions.
+- Keep the core, modules, and port source lists in one place. They are
+  currently listed in the CMake targets, the core tests' CMake, and the
+  schedule tool's generation tests, so a new source file must be added to
+  each. Consider deriving the test lists from the CMake targets or a shared
+  list.
 
 ## Licence
 
@@ -17,6 +22,19 @@ decisions or a committed order of delivery.
 - MIT is the provisional choice. Decide the copyright holder named in the notice.
 - Once added, the licence applies to everything published from then on, and
   published versions remain available under it.
+
+## Continuous integration
+
+- Add CI jobs, run in parallel, that build and run the existing tests under:
+  ThreadSanitizer, including a short demo run, since the POSIX port shares
+  state between real threads; AddressSanitizer and UndefinedBehaviorSanitizer;
+  Clang as a second compiler; and GCC with `-Wconversion -Wshadow
+  -Wstrict-prototypes`. All have been clean in local runs, so no existing
+  findings need fixing first.
+- Treat warnings as errors in the existing CI build and in each new job.
+- With the Cortex-M port, add a cross-compiled build of the core, port, and demo
+  for the Armv6-M subset (`-mcpu=cortex-m0plus`), optionally running tests in
+  QEMU.
 
 ## Static analysis
 
@@ -61,6 +79,8 @@ decisions or a committed order of delivery.
 - Consider an application callback from tick context to support watchdog
   integration. Define when it runs relative to timing and deadline checks,
   what scheduler health information it exposes, and its behaviour after faults.
+- Keep this callback separate from [hooks](#hooks-and-modules), so watchdog
+  support does not require the timebase.
 - Keep the callback bounded and nonblocking. Define how application task progress
   contributes to watchdog servicing so continued ticks alone do not conceal a
   stalled task.
@@ -69,44 +89,39 @@ decisions or a committed order of delivery.
 
 ## Hooks and modules
 
-- Split observation from enforcement. The core enforces the schedule: deadline
-  checks, tick timing checks, and faults. Optional modules observe it: they run
-  on target, consume core hooks, and cannot affect scheduling. Modules shipped
-  with Zule live in the Zule domain outside the core; applications can write
-  their own against the same hooks.
-- Add hooks as an optional core feature, compiled away when disabled. Define the
-  events, such as tick start and end, dispatch, task end, fault, and possibly
-  idle start and end; the context and critical-section state of each; and
-  ordering guarantees, such as dispatch before the matching task end. When the
-  timebase is enabled, the core reads it once per event and passes the
-  timestamp, so all consumers see consistent times.
-- Handlers can run in tick context, so they must be bounded and nonblocking and
-  must not call Zule APIs, like the fault handler. One slow handler delays the
-  tick for every consumer.
-- Open: how handlers combine when several modules are used. Prefer build-time,
-  plain C that static analysis can follow, such as a dispatch function owned by
-  the application that calls Zule and user modules in order. Avoid run-time
-  registration, and macro-generated handler lists that conflict with
-  MISRA-style rules.
-- Add a modules component to the architecture documentation and diagram,
-  receiving events from the core and read by the application, with its own
-  document.
+- Hooks and the modules layer are in place: see [hooks](application.md#hooks)
+  and [modules](modules.md). The core reports tick start and end, task release,
+  and task start and end; user hooks and modules both require the timebase.
+  No modules exist yet.
+- The statistics module (below) is the first module, and proves the module
+  path: its setting, the hook conditions, the entry points, and a read API.
+- Add a fault event, for modules only, with the trace module. The application
+  already receives faults through its fault handler, so there is no user fault
+  hook.
+- Add idle start and end events only when a consumer needs them, since they
+  fire on every dispatch loop iteration.
+- Deferred: equal treatment for several separate user modules. That needs a
+  registry, most cleanly a generated dispatcher built from a list of modules and
+  the hooks each needs. Only the modules layer would change; the core's
+  wrappers and the hooks stay the same.
 
 ## Task profiling and benchmarking
 
 - Provide per-task statistics as the first module: execution time minimum,
   maximum, and count, and worst dispatch latency from window start to task
   start, which also consumes budget. Also record the maximum tick handler
-  duration, since budgets must cover scheduler overhead. Size storage from a
-  task count in the generated task-ID header.
+  duration, since budgets must cover scheduler overhead. Index storage by task
+  ID, which equals the task's table index; size it from a task count to be
+  added to the generated task-ID header.
 - Keep monotonically increasing totals, such as busy time and cycle count, plus
   the busiest single cycle. Readers choose their own interval by subtracting two
   snapshots, so the module needs no measurement window. Idle time and slack
   within windows follow from the schedule; only running time is measured.
-- Expose a snapshot copied under a critical section, and a reset. Keep the data
-  in plain static structures that a debugger can also read.
-- Open: statistics per task or per window, a mean (needing a 64-bit total), and
-  whether statistics reset at each run or only on request.
+- Expose a snapshot copied under a critical section, and a reset that the
+  application calls when it wants, for example before `zule_run()`. Keep the
+  data in plain static structures that a debugger can also read.
+- Open: statistics per task or per window, and a mean (needing a 64-bit
+  total).
 - Add host tooling that reads the statistics with the schedule JSON and reports
   each task's measured maximum, budget, and margin, suggesting `budget_slots`.
 - Consider a trace module: a ring buffer of fixed-size timestamped events,

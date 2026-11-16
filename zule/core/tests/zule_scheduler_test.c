@@ -41,8 +41,8 @@ static void second_task(void) {
 }
 
 static const zule_task_t tasks[] = {
-    {.id = 10U, .function = first_task},
-    {.id = 20U, .function = second_task},
+    {.id = 0U, .function = first_task},
+    {.id = 1U, .function = second_task},
 };
 
 static const zule_window_t windows[] = {
@@ -160,7 +160,7 @@ int main(void) {
     assert(fault_calls == 1U);
     assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
-    assert(last_fault.task_id == 10U);
+    assert(last_fault.task_id == 0U);
     assert(last_fault.cycle_count == 0U);
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(fault_calls == 1U);
@@ -185,7 +185,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(fault_calls == 3U);
     assert(last_fault.window_index == 1U && last_fault.slot == 3U);
-    assert(last_fault.task_id == 20U);
+    assert(last_fault.task_id == 1U);
     assert(last_fault.cycle_count == 0U);
 
     schedule_definition = NULL;
@@ -207,7 +207,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(last_fault.cycle_count == 3U);
     assert(last_fault.window_index == 0U && last_fault.slot == 2U);
-    assert(last_fault.task_id == 10U);
+    assert(last_fault.task_id == 0U);
     for (uint32_t tick = 0U; tick < 8U; ++tick) {
         assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     }
@@ -231,7 +231,7 @@ int main(void) {
     assert(fault_calls == 5U);
     assert(last_fault.cycle_count == 3U);
     assert(last_fault.window_index == 1U && last_fault.slot == 0U);
-    assert(last_fault.task_id == 20U);
+    assert(last_fault.task_id == 1U);
 
     /* Reinitialization resets the count, including for a boundary overrun. */
     assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
@@ -246,7 +246,7 @@ int main(void) {
     assert(last_fault.reason == ZULE_RESULT_EXECUTION_OVERRUN);
     assert(last_fault.cycle_count == 1U);
     assert(last_fault.window_index == 1U && last_fault.slot == 0U);
-    assert(last_fault.task_id == 20U);
+    assert(last_fault.task_id == 1U);
 
     /* Idle waits in the port, inside the critical section, only without pending work. */
     schedule_definition = &schedule;
@@ -279,7 +279,7 @@ int main(void) {
     zule_test_port_fire_tick();
     assert(fault_calls == 7U);
     assert(last_fault.reason == ZULE_RESULT_DISPATCH_MISSED);
-    assert(last_fault.task_id == 20U);
+    assert(last_fault.task_id == 1U);
     assert(zule_scheduler_idle() == ZULE_RESULT_DISPATCH_MISSED);
     assert(zule_test_port_control.idle_calls == 4U);
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);

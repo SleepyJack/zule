@@ -8,14 +8,10 @@ zule_result_t zule_schedule_validate(const zule_schedule_t *schedule) {
         return ZULE_RESULT_INVALID_SCHEDULE;
     }
 
+    /* Each task's ID is its index in the task array, which also makes IDs unique. */
     for (size_t index = 0U; index < schedule->task_count; ++index) {
-        if (schedule->tasks[index].function == NULL) {
+        if (schedule->tasks[index].function == NULL || (size_t)schedule->tasks[index].id != index) {
             return ZULE_RESULT_INVALID_SCHEDULE;
-        }
-        for (size_t previous = 0U; previous < index; ++previous) {
-            if (schedule->tasks[index].id == schedule->tasks[previous].id) {
-                return ZULE_RESULT_INVALID_SCHEDULE;
-            }
         }
     }
 
