@@ -139,6 +139,15 @@ IDs are specific to a build; see [task names and IDs](configuration.md#task-name
 or when [task names](configuration.md#task-names) are disabled. It can be called
 at any time, including before `zule_run()`.
 
+## Target environment
+
+Zule needs no C library and includes only the headers C99 guarantees in a
+freestanding environment. Like any C code built with GCC or Clang, it may still
+cause calls to `memcpy`, `memmove`, `memset`, and `memcmp`, for example to copy
+or initialise structures, so the target environment must provide them. A
+target's C library normally does. The cross-compiled builds check this
+requirement; see [CONTRIBUTING.md](../CONTRIBUTING.md#cross-compiled-builds).
+
 ## CMake integration
 
 Add the `zule/` directory to the application's CMake project, select a port,

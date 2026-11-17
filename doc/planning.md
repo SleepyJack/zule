@@ -13,41 +13,20 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ### Development environment
 
-- Pinned tools come in two kinds. `requirements-dev.txt` pins what pip can
-  install: CMake, Ninja, clang-format, and the schedule tool's dependencies.
-  Host tools need another route: the Arm GNU toolchain (`arm-none-eabi-gcc`),
-  Cppcheck, and later QEMU.
-- Provide a container image, defined by a Dockerfile, as the source of truth for
-  the host tools: it installs them at pinned versions and installs
-  `requirements-dev.txt` rather than duplicating its versions. CI runs in the
-  same image, so local and CI results match.
-- Add a `devcontainer.json` pointing at the image, for editors and tools that
-  support the open Dev Containers specification, such as VS Code, GitHub
-  Codespaces, JetBrains IDEs, and the `devcontainer` CLI. It is optional:
-  anyone can use the image directly with Docker or Podman.
-- List the same versions in `CONTRIBUTING.md`, for contributors who install the
-  tools without containers.
-- Define each build configuration once as a CMake preset, used both locally and
-  by CI: the default host build, the host sanitizer build, and each
-  cross-compiled configuration. Presets keep a configuration's settings with
-  its name, rather than in workflow files, documentation, or shell history.
+- Host the development image on GitHub Container Registry. Add a workflow that
+  builds and publishes it when the Dockerfile or `requirements-dev.txt`
+  changes, tagged so that each commit's CI uses the matching image, and have CI
+  jobs pull it instead of building it. Until then, the cross-compiled build job
+  builds the image on each run, with cached layers.
+- Run the remaining host CI steps inside the image too, so every job uses the
+  same pinned tools; they currently use the runner's compiler.
+- Consider pinning the base image by digest as well as tag.
 - Cover the feature configurations, not only the defaults: much of the code is
-  behind settings. At least run everything disabled and everything enabled (the
-  timebase, hooks, the tick timing check, and modules).
+  behind settings. The cross-compiled builds already build everything disabled
+  and everything enabled; extend this to the host tests and static analysis.
 
 ### Cross-compilation
 
-- Cross-compile the Zule library and a generated schedule with
-  `arm-none-eabi-gcc`, before the Cortex-M port exists, using a compile-check
-  port: `zule_port_types.h` and empty port functions, enough to link. The real
-  Cortex-M port replaces it when available.
-- Build for Armv7-M (`-mcpu=cortex-m3`) and the Armv6-M subset
-  (`-mcpu=cortex-m0plus`), with warnings as errors, including `-Wconversion`,
-  `-Wshadow`, and `-Wstrict-prototypes`. Target type sizes, such as a 32-bit
-  `size_t` and `long`, expose conversions a 64-bit host build does not.
-- Build freestanding (`-ffreestanding`) and link without a C library, so any
-  use of hosted library functions fails. This enforces that the Zule library
-  includes only freestanding headers.
 - Later, consider a target where `int` is 16 bits, such as MSP430, to catch
   assumptions about `int` size.
 
@@ -67,15 +46,11 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ### Continuous integration
 
-- Keep the existing jobs: formatting, Python tests, host build and C tests,
-  generated C formatting, and the demo smoke test. Treat warnings as errors in
-  the host build.
-- Add, in parallel: the cross-compiled builds; Cppcheck; and one host test job
-  under UndefinedBehaviorSanitizer and AddressSanitizer. UBSan gives exact
-  detection of undefined arithmetic, the core's main risk, which static
-  analysis only approximates; ASan comes at no extra cost in the same build.
-- Pin tool versions, preferably through the dev container image, and run jobs
-  through the CMake presets.
+- Add, in parallel with the existing jobs: Cppcheck, and one host test job
+  under UndefinedBehaviorSanitizer and AddressSanitizer, each with its own CMake
+  preset. UBSan gives exact detection of undefined arithmetic, the core's main
+  risk, which static analysis only approximates; ASan comes at no extra cost in
+  the same build.
 - With the Cortex-M port, run the tests and the fully featured demo in QEMU;
   see [demos](#demos).
 - Considered and not planned: ThreadSanitizer, which would only cover the POSIX
@@ -254,8 +229,7 @@ main checks, and CI runs everything with the same tools and configurations.
 ## Additional ports
 
 - Add a Cortex-M port, choosing an initial core and board/toolchain to target.
-  It replaces the compile-check port in the
-  [cross-compiled builds](#cross-compilation), joins
+  It joins the cross-compiled builds alongside the stub port, joins
   [static analysis](#static-analysis), and enables tests and the fully featured
   demo in QEMU (`mps2-an385`).
 - Implement saved-state critical sections, periodic timer delivery, and the

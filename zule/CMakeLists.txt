@@ -5,8 +5,9 @@ project(zule VERSION 0.1.0 LANGUAGES C)
 # directory, select a port, and link zule::zule. See doc/application.md.
 
 option(ZULE_BUILD_TESTS "Build the core and port tests" ${PROJECT_IS_TOP_LEVEL})
+option(ZULE_BUILD_CROSS_CHECK "Build the link check for cross-compiled builds" OFF)
 set(ZULE_PORT "" CACHE STRING
-    "Port directory under ports/ (posix), or 'external' for an application-defined zule::port")
+    "Port directory under ports/ (posix, stub), or 'external' for an application-defined zule::port")
 
 set(CMAKE_C_EXTENSIONS OFF)
 
@@ -68,7 +69,7 @@ elseif(NOT ZULE_PORT STREQUAL "" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ports/$
     add_subdirectory("ports/${ZULE_PORT}")
 else()
     message(FATAL_ERROR "Set ZULE_PORT to a port under ${CMAKE_CURRENT_SOURCE_DIR}/ports "
-                        "(posix), or to 'external' and define a zule::port target")
+                        "(posix, stub), or to 'external' and define a zule::port target")
 endif()
 
 # Zule's sources, read from the single list in zule_sources.txt, as absolute
@@ -95,3 +96,7 @@ target_link_libraries(zule
 add_subdirectory(core)
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ZuleSchedule.cmake")
+
+if(ZULE_BUILD_CROSS_CHECK)
+    add_subdirectory(tests/cross)
+endif()

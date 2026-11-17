@@ -1,0 +1,92 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build/zule-${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
+      }
+    },
+    {
+      "name": "host",
+      "displayName": "Host build with the POSIX port and tests",
+      "inherits": "base",
+      "cacheVariables": { "ZULE_PORT": "posix" }
+    },
+    {
+      "name": "cross",
+      "hidden": true,
+      "description": "Freestanding Cortex-M link check with the stub port and strict warnings",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/arm-none-eabi.cmake",
+      "cacheVariables": {
+        "ZULE_PORT": "stub",
+        "ZULE_BUILD_TESTS": "OFF",
+        "ZULE_BUILD_CROSS_CHECK": "ON"
+      }
+    },
+    {
+      "name": "cortex-m3",
+      "hidden": true,
+      "inherits": "cross",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-mcpu=cortex-m3 -mthumb -ffreestanding -Wconversion -Wshadow -Wstrict-prototypes"
+      }
+    },
+    {
+      "name": "cortex-m0plus",
+      "hidden": true,
+      "inherits": "cross",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-mcpu=cortex-m0plus -mthumb -ffreestanding -Wconversion -Wshadow -Wstrict-prototypes"
+      }
+    },
+    {
+      "name": "all-features",
+      "hidden": true,
+      "cacheVariables": {
+        "ZULE_USER_CONFIG_DIR": "${sourceDir}/tests/cross/config_all_on"
+      }
+    },
+    {
+      "name": "cross-m3",
+      "displayName": "Cortex-M3, default features",
+      "inherits": "cortex-m3"
+    },
+    {
+      "name": "cross-m3-all",
+      "displayName": "Cortex-M3, all features",
+      "inherits": ["cortex-m3", "all-features"]
+    },
+    {
+      "name": "cross-m0plus",
+      "displayName": "Cortex-M0+ (Armv6-M), default features",
+      "inherits": "cortex-m0plus"
+    },
+    {
+      "name": "cross-m0plus-all",
+      "displayName": "Cortex-M0+ (Armv6-M), all features",
+      "inherits": ["cortex-m0plus", "all-features"]
+    }
+  ],
+  "buildPresets": [
+    { "name": "host", "configurePreset": "host" },
+    { "name": "cross-m3", "configurePreset": "cross-m3" },
+    { "name": "cross-m3-all", "configurePreset": "cross-m3-all" },
+    { "name": "cross-m0plus", "configurePreset": "cross-m0plus" },
+    { "name": "cross-m0plus-all", "configurePreset": "cross-m0plus-all" }
+  ],
+  "testPresets": [
+    {
+      "name": "host",
+      "configurePreset": "host",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    }
+  ]
+}
