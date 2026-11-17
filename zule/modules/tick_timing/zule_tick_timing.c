@@ -24,8 +24,10 @@ void zule_tick_timing_tick_start(uint32_t time_counts) {
             if (deviation.magnitude_counts > timing.max_late_counts) {
                 timing.max_late_counts = deviation.magnitude_counts;
             }
-        } else if (deviation.magnitude_counts > timing.max_early_counts) {
-            timing.max_early_counts = deviation.magnitude_counts;
+        } else {
+            if (deviation.magnitude_counts > timing.max_early_counts) {
+                timing.max_early_counts = deviation.magnitude_counts;
+            }
         }
     }
 }

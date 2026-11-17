@@ -40,13 +40,12 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ### Static analysis
 
-- Extend the Cppcheck analysis in the cross-compiled builds with style checks.
-  One finding needs handling first: in `zule_modules_init()`,
-  `result == ZULE_RESULT_OK` is always true while there is a single module.
-- Add whole-program checks, such as unused functions, which the per-source
-  analysis cannot do.
-- Consider the MISRA addon; descriptions of the rules in its findings need the
-  licensed MISRA rule texts.
+- Enable Cppcheck's unused-function check in the cross-compiled builds' analysis.
+- Record MISRA deviations, with their rationale, if any become necessary,
+  following MISRA Compliance:2020. Supply the licensed MISRA rule texts to the
+  addon, so its findings describe the rules.
+- The free addon covers only part of MISRA C:2012. Consider a tool with full
+  coverage if compliance needs to be claimed.
 - Consider reporting findings as GitHub annotations, for example as SARIF.
 
 ### Continuous integration

@@ -13,6 +13,23 @@ Zule's code, including generated code, is C99, the baseline of MISRA C:2012.
 Zule's targets compile as strict C99 with warnings as errors, so using a later
 standard's features fails the build. Public headers must stay C99-compatible.
 
+## MISRA C
+
+Zule follows MISRA C:2012. The cross-compiled builds enforce the rules that
+Cppcheck's free MISRA addon checks, which are a subset of the guidelines, so a
+clean build does not by itself establish full compliance. There are no recorded
+deviations. In practice this means, among others:
+
+- one exit point per function: keep a result variable and a single `return`;
+- explicit parentheses wherever operators of different precedence combine;
+- every `if ... else if` chain ends with an `else`;
+- no side effects in the right-hand operand of `&&` or `||`;
+- no conversions of function pointers, including casts to `void`;
+- objects used by a single function are defined inside it;
+- no implicit conversions to a different or narrower essential type.
+
+Generated code follows the same rules; fix the generator, not its output.
+
 ## Formatting
 
 [.clang-format](../.clang-format) is authoritative for layout. The style uses
