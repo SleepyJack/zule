@@ -45,7 +45,9 @@ function(zule_add_schedule target)
     add_library(${schedule_target} OBJECT
         "${output_dir}/zule_schedule_definition.c" "${output_dir}/zule_task_ids.h")
     target_include_directories(${schedule_target} PUBLIC "${output_dir}")
-    set_target_properties(${schedule_target} PROPERTIES C_EXTENSIONS OFF)
+    # Generated code is Zule's, so it compiles as strict C99 like the library.
+    set_target_properties(${schedule_target} PROPERTIES
+        C_STANDARD 99 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
     target_link_libraries(${schedule_target}
         PUBLIC zule::zule PRIVATE zule_schedule_internal zule_warnings)
     target_link_libraries(${target} PRIVATE ${schedule_target})

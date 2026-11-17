@@ -7,6 +7,12 @@ should follow them where practical, but strict adherence is not required.
 Apply them to new and changed code; report relevant existing deviations without
 expanding the change into an unrelated cleanup. Update this document as decisions evolve.
 
+## Language standard
+
+Zule's code, including generated code, is C99, the baseline of MISRA C:2012.
+Zule's targets compile as strict C99 with warnings as errors, so using a later
+standard's features fails the build. Public headers must stay C99-compatible.
+
 ## Formatting
 
 [.clang-format](../.clang-format) is authoritative for layout. The style uses
