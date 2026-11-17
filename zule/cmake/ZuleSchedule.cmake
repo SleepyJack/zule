@@ -47,6 +47,6 @@ function(zule_add_schedule target)
     target_include_directories(${schedule_target} PUBLIC "${output_dir}")
     set_target_properties(${schedule_target} PROPERTIES C_EXTENSIONS OFF)
     target_link_libraries(${schedule_target}
-        PUBLIC zule::core PRIVATE zule_schedule_internal zule_warnings)
+        PUBLIC zule::zule PRIVATE zule_schedule_internal zule_warnings)
     target_link_libraries(${target} PRIVATE ${schedule_target})
 endfunction()

@@ -13,7 +13,7 @@ ZULE_DIR = Path(__file__).resolve().parents[3]
 
 
 def zule_sources() -> list[str]:
-    """Return Zule's sources, built into the core library, from the single list in zule_sources.txt."""
+    """Return Zule's sources, the core and the modules, from the single list in zule_sources.txt."""
     lines = (ZULE_DIR / "zule_sources.txt").read_text(encoding="utf-8").splitlines()
     return [str(ZULE_DIR / line.strip()) for line in lines if line.strip() and not line.startswith("#")]
 

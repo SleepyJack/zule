@@ -41,7 +41,7 @@ python -m unittest discover -s tests -v
 ```
 
 To add a source file to the core or a module, list it in
-[`zule/zule_sources.txt`](zule/zule_sources.txt). The core library, the core
+[`zule/zule_sources.txt`](zule/zule_sources.txt). The Zule library, the core
 tests, and the schedule tool's tests all read that one list. Each port lists its
 own sources once in its `CMakeLists.txt`.
 

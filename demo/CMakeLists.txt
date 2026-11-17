@@ -9,7 +9,7 @@ add_subdirectory(../zule zule)
 
 add_executable(zule_demo main.c)
 set_target_properties(zule_demo PROPERTIES C_EXTENSIONS OFF)
-target_link_libraries(zule_demo PRIVATE zule::core)
+target_link_libraries(zule_demo PRIVATE zule::zule)
 zule_add_schedule(zule_demo SCHEDULE config/control-loop.json)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

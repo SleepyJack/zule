@@ -142,7 +142,7 @@ at any time, including before `zule_run()`.
 ## CMake integration
 
 Add the `zule/` directory to the application's CMake project, select a port,
-link `zule::core`, and generate the schedule.
+link `zule::zule`, and generate the schedule.
 [demo/CMakeLists.txt](../demo/CMakeLists.txt) is the reference integration:
 
 ```cmake
@@ -154,7 +154,7 @@ set(ZULE_USER_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 add_subdirectory(path/to/zule zule)
 
 add_executable(app main.c)
-target_link_libraries(app PRIVATE zule::core)
+target_link_libraries(app PRIVATE zule::zule)
 zule_add_schedule(app SCHEDULE config/schedule.json)
 ```
 
@@ -170,7 +170,7 @@ Zule provides:
 
 | Name | Use |
 | --- | --- |
-| `zule::core` | The library to link. It carries the public include path and the build settings, so the application, core, port, and generated schedule share them. |
+| `zule::zule` | The Zule library to link: the core and the [modules](modules.md). It carries the public include path and the build settings, so the application, Zule, the port, and the generated schedule share them. |
 | `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time, compiles it, and links it into `<target>`, whose sources can then include `zule_task_ids.h`. Output defaults to `<target>_schedule/` in the calling binary directory. Only one schedule per application is supported. |
 
 `zule_add_schedule()` needs Python 3.10 or later with

@@ -4,7 +4,7 @@
 
 /* Module entry points, declared in the core's internal zule_modules.h. Each
  * calls the enabled modules that consume it, in a fixed order. Compiled into the
- * core library, with the modules, so modules can use the core API and internal
+ * Zule library, with the core, so modules can use the core API and internal
  * helpers without a link cycle. */
 
 #if ZULE_MODULES_ANY

@@ -1,4 +1,4 @@
-# Zule's sources, built into the zule_core library: the core and the modules.
+# Zule's sources, built into the Zule library (zule::zule): the core and the modules.
 # Ports are separate and list their own sources. Paths are relative to this
 # directory, one per line. This is the only list: CMake reads it for the library
 # and its tests, and the schedule tool's tests read it to compile generated
