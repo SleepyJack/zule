@@ -186,9 +186,9 @@ Applications see only the public API. The core's internal headers in
 
 Without CMake, compile and link:
 
-- the sources in `zule/core/src/`;
+- the core and [module](modules.md) sources listed in
+  [`zule/core_sources.txt`](../zule/core_sources.txt);
 - the selected port's sources, for example `zule/ports/posix/*.c`;
-- the [modules](modules.md) in `zule/modules/`;
 - the generated `zule_schedule_definition.c`;
 - the application.
 

@@ -40,6 +40,11 @@ cd zule/tools/schedule
 python -m unittest discover -s tests -v
 ```
 
+To add a source file to the core or a module, list it in
+[`zule/core_sources.txt`](zule/core_sources.txt). The core library, the core
+tests, and the schedule tool's tests all read that one list. Each port lists its
+own sources once in its `CMakeLists.txt`.
+
 ## Formatting
 
 Format C sources with the pinned clang-format, independently of CMake:

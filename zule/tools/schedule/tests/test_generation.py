@@ -9,6 +9,26 @@ from zule_schedule.schedule_io import load_schedule
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+ZULE_DIR = Path(__file__).resolve().parents[3]
+
+
+def core_sources() -> list[str]:
+    """Return the core library's sources from the single list in core_sources.txt."""
+    lines = (ZULE_DIR / "core_sources.txt").read_text(encoding="utf-8").splitlines()
+    return [str(ZULE_DIR / line.strip()) for line in lines if line.strip() and not line.startswith("#")]
+
+
+def compile_command(compiler: str, harness: Path, output: Path, executable: Path) -> list[str]:
+    """Return a command compiling a harness and generated schedule with the core and test port."""
+    core_dir = ZULE_DIR / "core"
+    return [
+        compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+        "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"),
+        "-I", str(core_dir / "tests/port"), "-I", str(ZULE_DIR / "ports"),
+        "-I", str(ZULE_DIR / "modules/api"),
+        str(harness), str(output), *core_sources(), str(core_dir / "tests/port/zule_port.c"),
+        "-o", str(executable),
+    ]
 
 
 class GenerationTests(unittest.TestCase):
@@ -64,8 +84,7 @@ int main(void) {
 }
 ''')
             executable = Path(directory) / "test"
-            core_dir = Path(__file__).resolve().parents[3] / "core"
-            command = [compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"), str(harness), str(output), str(core_dir / "src/zule_schedule.c"), str(core_dir / "src/zule.c"), str(core_dir / "src/zule_scheduler.c"), str(core_dir / "tests/port/zule_port.c"), "-I", str(core_dir / "tests/port"), "-I", str(core_dir.parent / "ports"), "-I", str(core_dir.parent / "modules/api"), str(core_dir.parent / "modules/zule_modules.c"), str(core_dir.parent / "modules/tick_timing/zule_tick_timing.c"), "-o", str(executable)]
+            command = compile_command(compiler, harness, output, executable)
             (Path(directory) / "zule_user_config.h").write_text("#define ZULE_CONFIG_TASK_NAMES 1\n")
             empty_config = Path(directory) / "empty_config"
             empty_config.mkdir()
@@ -105,7 +124,6 @@ int main(void) {
         compiler = shutil.which("cc")
         if compiler is None:
             self.skipTest("C compiler is required for generated-code integration test")
-        core_dir = Path(__file__).resolve().parents[3] / "core"
         for fixture in ("valid/repeated-task.json", "valid/unused-task.json"):
             with self.subTest(fixture=fixture), tempfile.TemporaryDirectory() as directory:
                 schedule = load_schedule(FIXTURES / fixture)
@@ -132,7 +150,7 @@ int main(void) {
     assert(zule_schedule_validate(schedule) == ZULE_RESULT_OK);
 ''' + "\n".join(checks) + "\n    return 0;\n}\n")
                 executable = Path(directory) / "test"
-                subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic", "-DZULE_CONFIG_TASK_NAMES=1", "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"), str(harness), str(output), str(core_dir / "src/zule_schedule.c"), str(core_dir / "src/zule.c"), str(core_dir / "src/zule_scheduler.c"), str(core_dir / "tests/port/zule_port.c"), "-I", str(core_dir / "tests/port"), "-I", str(core_dir.parent / "ports"), "-I", str(core_dir.parent / "modules/api"), str(core_dir.parent / "modules/zule_modules.c"), str(core_dir.parent / "modules/tick_timing/zule_tick_timing.c"), "-o", str(executable)], check=True, capture_output=True, text=True)
+                subprocess.run([*compile_command(compiler, harness, output, executable), "-DZULE_CONFIG_TASK_NAMES=1"], check=True, capture_output=True, text=True)
                 subprocess.run([str(executable)], check=True, capture_output=True, text=True)
 
     def test_invalid_input_preserves_existing_output(self):
