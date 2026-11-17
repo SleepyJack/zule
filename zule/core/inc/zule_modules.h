@@ -2,7 +2,7 @@
 #define ZULE_MODULES_H
 
 /* Internal: the core's contract for modules, implemented by the modules layer in
- * zule_modules.c. Visible only within the core library, which also builds the
+ * zule_modules.c. Visible only within the Zule library, which also builds the
  * modules; applications cannot include it.
  *
  * It covers initialization and the hook entry points. Each is declared when an

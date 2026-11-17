@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.31)
 project(zule VERSION 0.1.0 LANGUAGES C)
 
 # Zule ownership domain: core, ports, and schedule tooling. Applications add this
-# directory, select a port, and link zule::core. See doc/application.md.
+# directory, select a port, and link zule::zule. See doc/application.md.
 
 option(ZULE_BUILD_TESTS "Build the core and port tests" ${PROJECT_IS_TOP_LEVEL})
 set(ZULE_PORT "" CACHE STRING
@@ -70,6 +70,27 @@ else()
     message(FATAL_ERROR "Set ZULE_PORT to a port under ${CMAKE_CURRENT_SOURCE_DIR}/ports "
                         "(posix), or to 'external' and define a zule::port target")
 endif()
+
+# Zule's sources, read from the single list in zule_sources.txt, as absolute
+# paths. Reconfigure when the list changes.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/zule_sources.txt" zule_source_lines REGEX "^[^#]")
+set(ZULE_SOURCES "")
+foreach(zule_source IN LISTS zule_source_lines)
+    string(STRIP "${zule_source}" zule_source)
+    if(NOT zule_source STREQUAL "")
+        list(APPEND ZULE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${zule_source}")
+    endif()
+endforeach()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/zule_sources.txt")
+
+# The Zule library that applications link: the core and the modules. Modules
+# build into it, so they can use the core API without a link cycle.
+add_library(zule STATIC ${ZULE_SOURCES})
+add_library(zule::zule ALIAS zule)
+target_link_libraries(zule
+    PUBLIC zule_api
+    PRIVATE zule_schedule_internal zule_port_api zule::port zule_warnings)
 
 add_subdirectory(core)
 

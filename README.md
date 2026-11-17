@@ -99,7 +99,7 @@ Press Ctrl-C to stop. See the [demo README](demo/README.md) for what it shows.
    add_subdirectory(path/to/zule zule)
 
    add_executable(app main.c)
-   target_link_libraries(app PRIVATE zule::core)
+   target_link_libraries(app PRIVATE zule::zule)
    zule_add_schedule(app SCHEDULE config/schedule.json)
    ```
 

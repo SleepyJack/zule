@@ -72,7 +72,7 @@ do: the core defines the interface, and modules implement it.
 
 - [`zule_modules.h`](../zule/core/inc/zule_modules.h), an internal
   core header, declares the module entry points: `zule_modules_init()`, and for
-  each hook, `zule_modules_<hook>()`. Only the core library, which also builds
+  each hook, `zule_modules_<hook>()`. Only the Zule library, which also builds
   the modules, can include it; applications see only the user hooks in
   `zule_hooks.h`.
 - [`zule_modules_config.h`](../zule/modules/api/zule_modules_config.h) holds the
@@ -91,9 +91,9 @@ point and the user hook. A hook that neither consumes compiles to nothing,
 including the time read. Adding a module changes only the modules layer and its
 settings, never the core.
 
-Module sources live in `zule/modules/` but are compiled into the core library,
-so modules can call the core API, such as `zule_timebase_hz()`, and the core's
-internal helpers without a circular dependency between libraries. A module may
+Module sources live in `zule/modules/` but are compiled into the Zule library
+with the core, so modules can call the core API, such as `zule_timebase_hz()`,
+and the core's internal helpers without a circular dependency between libraries. A module may
 share a helper's code with the core, such as the tick tracker the tick timing
 check also uses, but owns its own state.
 
@@ -110,7 +110,8 @@ A module consists of:
   condition of each hook it consumes;
 - calls from `zule_modules_init()` and from each consumed hook's entry point in
   `zule_modules.c`;
-- its sources added to the core library;
+- its sources listed in [`zule/zule_sources.txt`](../zule/zule_sources.txt), the
+  single list of Zule's sources;
 - compile-time checks for any further features it requires;
 - tests, using the core test port's scripted timebase.
 
