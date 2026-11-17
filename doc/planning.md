@@ -17,9 +17,16 @@ main checks, and CI runs everything with the same tools and configurations.
   install: CMake, Ninja, clang-format, and the schedule tool's dependencies.
   Host tools need another route: the Arm GNU toolchain (`arm-none-eabi-gcc`),
   Cppcheck, and later QEMU.
-- Provide a dev container that installs the host tools at pinned versions and
-  installs `requirements-dev.txt` rather than duplicating its versions. Use the
-  same image in CI, so local and CI results match.
+- Provide a container image, defined by a Dockerfile, as the source of truth for
+  the host tools: it installs them at pinned versions and installs
+  `requirements-dev.txt` rather than duplicating its versions. CI runs in the
+  same image, so local and CI results match.
+- Add a `devcontainer.json` pointing at the image, for editors and tools that
+  support the open Dev Containers specification, such as VS Code, GitHub
+  Codespaces, JetBrains IDEs, and the `devcontainer` CLI. It is optional:
+  anyone can use the image directly with Docker or Podman.
+- List the same versions in `CONTRIBUTING.md`, for contributors who install the
+  tools without containers.
 - Define each build configuration once as a CMake preset, used both locally and
   by CI: the default host build, the host sanitizer build, and each
   cross-compiled configuration. Presets keep a configuration's settings with
