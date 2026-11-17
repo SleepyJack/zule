@@ -32,15 +32,9 @@ python -m pip install -r requirements-dev.txt
 ```
 
 The commands below assume the environment is active, so `python`, `cmake`, and
-`ctest` resolve to the pinned versions. Install the other tools from your
-system. The image pins these versions, from Ubuntu 24.04:
-
-| Tool | Version | Used for |
-| --- | --- | --- |
-| GCC | 13.3 | Host builds and tests |
-| Arm GNU toolchain (`arm-none-eabi-gcc`) | 13.2.rel1 | Cross-compiled builds |
-| Cppcheck | 2.13.0 | Static analysis (planned) |
-| Python | 3.12 | The schedule tool |
+`ctest` resolve to the pinned versions. Install the other tools, such as GCC
+and the Arm GNU toolchain, from your system;
+[the Dockerfile](.devcontainer/Dockerfile) lists the versions CI uses.
 
 ## Building and testing
 
