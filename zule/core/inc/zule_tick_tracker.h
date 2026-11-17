@@ -34,16 +34,18 @@ typedef struct {
  * compare as signed 32-bit differences. */
 static inline zule_result_t zule_tick_tracker_init(zule_tick_tracker_t *tracker, uint32_t slot_us,
                                                    uint32_t hz) {
+    zule_result_t result = ZULE_RESULT_OK;
     /* Both factors are below 2^32, so the product fits. */
     const uint64_t slot_scaled_counts = (uint64_t)slot_us * hz;
-    if (hz == 0U || slot_scaled_counts % ZULE_MICROSECONDS_PER_SECOND != 0U ||
-        slot_scaled_counts / ZULE_MICROSECONDS_PER_SECOND >= ((uint64_t)1U << 31U)) {
-        return ZULE_RESULT_INVALID_CONFIG;
+    if ((hz == 0U) || ((slot_scaled_counts % ZULE_MICROSECONDS_PER_SECOND) != 0U) ||
+        ((slot_scaled_counts / ZULE_MICROSECONDS_PER_SECOND) >= ((uint64_t)1U << 31U))) {
+        result = ZULE_RESULT_INVALID_CONFIG;
+    } else {
+        tracker->counts_per_slot = (uint32_t)(slot_scaled_counts / ZULE_MICROSECONDS_PER_SECOND);
+        tracker->expected_counts = 0U;
+        tracker->reference_set = false;
     }
-    tracker->counts_per_slot = (uint32_t)(slot_scaled_counts / ZULE_MICROSECONDS_PER_SECOND);
-    tracker->expected_counts = 0U;
-    tracker->reference_set = false;
-    return ZULE_RESULT_OK;
+    return result;
 }
 
 /* Record a tick at now_counts. Returns false for the reference tick. Otherwise
@@ -52,37 +54,40 @@ static inline zule_result_t zule_tick_tracker_init(zule_tick_tracker_t *tracker,
  * counts; a larger one, such as a very long stall, reads as early. */
 static inline bool zule_tick_tracker_update(zule_tick_tracker_t *tracker, uint32_t now_counts,
                                             zule_tick_deviation_t *deviation) {
-    if (!tracker->reference_set) {
+    const bool measured = tracker->reference_set;
+    if (!measured) {
         tracker->reference_set = true;
         tracker->expected_counts = now_counts;
-        return false;
-    }
-    tracker->expected_counts += tracker->counts_per_slot;
-    const uint32_t late_counts = now_counts - tracker->expected_counts;
-    if (late_counts <= (uint32_t)INT32_MAX) {
-        deviation->magnitude_counts = late_counts;
-        deviation->late = late_counts != 0U;
     } else {
-        /* From 1 to 2^31 counts early. */
-        deviation->magnitude_counts = tracker->expected_counts - now_counts;
-        deviation->late = false;
+        tracker->expected_counts += tracker->counts_per_slot;
+        const uint32_t late_counts = now_counts - tracker->expected_counts;
+        if (late_counts <= (uint32_t)INT32_MAX) {
+            deviation->magnitude_counts = late_counts;
+            deviation->late = (late_counts != 0U);
+        } else {
+            /* From 1 to 2^31 counts early. */
+            deviation->magnitude_counts = tracker->expected_counts - now_counts;
+            deviation->late = false;
+        }
     }
-    return true;
+    return measured;
 }
 
 /* Return a deviation as a signed count, positive when late, for reporting. Late
  * magnitudes are below 2^31, and early ones are at most 2^31. */
 static inline int32_t zule_tick_deviation_signed(zule_tick_deviation_t deviation) {
+    int32_t deviation_counts;
     if (deviation.late) {
-        return (int32_t)deviation.magnitude_counts;
+        deviation_counts = (int32_t)deviation.magnitude_counts;
+    } else if (deviation.magnitude_counts == 0x80000000U) {
+        /* An early magnitude of exactly 2^31 is the one value whose positive form
+         * does not fit an int32_t: converting it is implementation defined. Its
+         * negation is INT32_MIN, which does fit, so map it directly. */
+        deviation_counts = (int32_t)INT32_MIN;
+    } else {
+        deviation_counts = -(int32_t)deviation.magnitude_counts;
     }
-    /* An early magnitude of exactly 2^31 is the one value whose positive form
-     * does not fit an int32_t: converting it is implementation defined. Its
-     * negation is INT32_MIN, which does fit, so map it directly. */
-    if (deviation.magnitude_counts == 0x80000000U) {
-        return INT32_MIN;
-    }
-    return -(int32_t)deviation.magnitude_counts;
+    return deviation_counts;
 }
 
 #endif

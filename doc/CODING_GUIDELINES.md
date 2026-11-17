@@ -13,6 +13,27 @@ Zule's code, including generated code, is C99, the baseline of MISRA C:2012.
 Zule's targets compile as strict C99 with warnings as errors, so using a later
 standard's features fails the build. Public headers must stay C99-compatible.
 
+## MISRA C
+
+Zule follows MISRA C:2012. The cross-compiled builds enforce the rules that
+Cppcheck's free MISRA addon checks, which are a subset of the guidelines, so a
+clean build does not by itself establish full compliance. Generated code
+follows the same rules; fix the generator, not its output.
+
+## Static analysis findings
+
+Resolve findings by changing the code. Suppress one only when that is not
+possible, such as a tool false positive, and then inline, on the line before
+it, with a comment giving the reason:
+
+```c
+/* Reason: <why the code is correct>. */
+/* cppcheck-suppress <finding id> */
+```
+
+Intentionally breaking a MISRA rule is a deviation: besides the suppression,
+record it with its rationale, following MISRA Compliance:2020. There are none.
+
 ## Formatting
 
 [.clang-format](../.clang-format) is authoritative for layout. The style uses

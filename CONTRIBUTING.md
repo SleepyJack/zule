@@ -103,17 +103,15 @@ environment.
 
 ### Static analysis
 
-The cross-compiled builds also run [Cppcheck](https://cppcheck.sourceforge.io/)
-on each source of the Zule library, the selected port, and the generated
-schedule, with the same definitions and include paths, as they compile. It
-checks for errors, warnings, and portability problems, assuming 32-bit types as
-on Cortex-M. A finding fails the build. Fix it, or, if the code is correct,
-suppress the finding on the line before it, with a comment giving the reason:
-
-```c
-/* Reason: <why the code is correct>. */
-/* cppcheck-suppress <finding id> */
-```
+After compiling, the cross-compiled builds run
+[Cppcheck](https://cppcheck.sourceforge.io/) and its MISRA C:2012 addon over the
+Zule library, the selected port, and the generated schedule, analysed together
+as one program from the build's compile database. It checks for errors,
+warnings, style, and portability problems, assuming 32-bit types as on
+Cortex-M, and for violations of the MISRA rules the addon covers; see
+[MISRA C](doc/CODING_GUIDELINES.md#misra-c). A finding fails the build. Fix the
+code rather than suppress the finding; see
+[static analysis findings](doc/CODING_GUIDELINES.md#static-analysis-findings).
 
 ## Formatting
 

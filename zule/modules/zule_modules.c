@@ -8,12 +8,13 @@
  * helpers without a link cycle. */
 
 #if ZULE_MODULES_ANY
+/* Initialize each enabled module in order, stopping at the first failure: the
+ * first module's result is assigned directly, and each later module runs only if
+ * the result so far is OK. */
 zule_result_t zule_modules_init(const zule_schedule_t *schedule) {
     zule_result_t result = ZULE_RESULT_OK;
 #if ZULE_CONFIG_MODULE_TICK_TIMING
-    if (result == ZULE_RESULT_OK) {
-        result = zule_tick_timing_init(schedule);
-    }
+    result = zule_tick_timing_init(schedule);
 #endif
     return result;
 }

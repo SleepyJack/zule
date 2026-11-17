@@ -42,38 +42,43 @@ static zule_scheduler_t scheduler;
 /* Check that the timebase can represent what the enabled features measure. The
  * frequency is constant and valid at any time, so this runs before ticks start. */
 static zule_result_t check_timebase_limits(const zule_schedule_t *schedule) {
+    zule_result_t result = ZULE_RESULT_OK;
     const uint64_t hz = zule_port_time_hz();
-    if (hz == 0U) {
-        return ZULE_RESULT_INVALID_CONFIG;
-    }
     /* Slot length in counts, scaled by one million; both factors are below 2^32,
      * so the product fits. */
     const uint64_t slot_scaled_counts = (uint64_t)schedule->slot_us * hz;
+    if (hz == 0U) {
+        result = ZULE_RESULT_INVALID_CONFIG;
+    }
 #if ZULE_HOOKS_USED
     /* Hooks promise that unsigned subtraction measures any interval up to one
-     * cycle, which needs a cycle shorter than one timebase wrap of 2^32 counts. */
+     * cycle, which needs a cycle shorter than one timebase wrap of 2^32 counts.
+     * A nonzero frequency and slot make the divisor nonzero. */
     const uint64_t wrap_scaled_counts = (uint64_t)ZULE_MICROSECONDS_PER_SECOND << 32U;
-    if (slot_scaled_counts >= wrap_scaled_counts ||
-        (uint64_t)schedule->cycle_slots > (wrap_scaled_counts - 1U) / slot_scaled_counts) {
-        return ZULE_RESULT_INVALID_CONFIG;
+    if ((result == ZULE_RESULT_OK) &&
+        ((slot_scaled_counts >= wrap_scaled_counts) ||
+         ((uint64_t)schedule->cycle_slots > ((wrap_scaled_counts - 1U) / slot_scaled_counts)))) {
+        result = ZULE_RESULT_INVALID_CONFIG;
     }
 #endif
 #if ZULE_CONFIG_TICK_CHECK
-    /* Also clears the tracker's reference, so each run starts from its first tick. */
-    const zule_result_t result =
-        zule_tick_tracker_init(&scheduler.tick_tracker, schedule->slot_us, (uint32_t)hz);
-    if (result != ZULE_RESULT_OK) {
-        return result;
+    if (result == ZULE_RESULT_OK) {
+        /* Also clears the tracker's reference, so each run starts from its first tick. */
+        result = zule_tick_tracker_init(&scheduler.tick_tracker, schedule->slot_us, (uint32_t)hz);
     }
-    /* Round down, so the tolerance never exceeds what was configured. */
-    const uint64_t tolerance_counts =
-        (uint64_t)ZULE_CONFIG_TICK_TOLERANCE_US * hz / ZULE_MICROSECONDS_PER_SECOND;
-    if (tolerance_counts < 1U || tolerance_counts >= scheduler.tick_tracker.counts_per_slot) {
-        return ZULE_RESULT_INVALID_CONFIG;
+    if (result == ZULE_RESULT_OK) {
+        /* Round down, so the tolerance never exceeds what was configured. */
+        const uint64_t tolerance_counts =
+            ((uint64_t)ZULE_CONFIG_TICK_TOLERANCE_US * hz) / ZULE_MICROSECONDS_PER_SECOND;
+        if ((tolerance_counts < 1U) ||
+            (tolerance_counts >= scheduler.tick_tracker.counts_per_slot)) {
+            result = ZULE_RESULT_INVALID_CONFIG;
+        } else {
+            scheduler.tolerance_counts = (uint32_t)tolerance_counts;
+        }
     }
-    scheduler.tolerance_counts = (uint32_t)tolerance_counts;
 #endif
-    return ZULE_RESULT_OK;
+    return result;
 }
 #endif
 
@@ -81,55 +86,53 @@ zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault) {
     scheduler.initialized = false;
     scheduler.schedule = zule_schedule_get();
     zule_result_t result = zule_schedule_validate(scheduler.schedule);
-    if (result != ZULE_RESULT_OK) {
-        return result;
-    }
 #if ZULE_HOOKS_USED || ZULE_CONFIG_TICK_CHECK
-    result = check_timebase_limits(scheduler.schedule);
-    if (result != ZULE_RESULT_OK) {
-        return result;
+    if (result == ZULE_RESULT_OK) {
+        result = check_timebase_limits(scheduler.schedule);
     }
 #endif
 #if ZULE_MODULES_ANY
-    result = zule_modules_init(scheduler.schedule);
-    if (result != ZULE_RESULT_OK) {
-        return result;
+    if (result == ZULE_RESULT_OK) {
+        result = zule_modules_init(scheduler.schedule);
     }
 #endif
+    if (result == ZULE_RESULT_OK) {
 #if ZULE_CONFIG_TICK_CHECK
-    scheduler.tick_deviation = (zule_tick_deviation_t){0};
+        scheduler.tick_deviation = (zule_tick_deviation_t){0};
 #endif
-    scheduler.slot = 0U;
-    scheduler.cycle_count = 0U;
-    scheduler.active_window_ind = 0U;
-    scheduler.exec.task = NULL;
-    scheduler.exec.state = ZULE_TASK_IDLE;
-    scheduler.exec.fault = ZULE_RESULT_OK;
-    scheduler.on_fault = on_fault;
-    scheduler.initialized = true;
-    return ZULE_RESULT_OK;
+        scheduler.slot = 0U;
+        scheduler.cycle_count = 0U;
+        scheduler.active_window_ind = 0U;
+        scheduler.exec.task = NULL;
+        scheduler.exec.state = ZULE_TASK_IDLE;
+        scheduler.exec.fault = ZULE_RESULT_OK;
+        scheduler.on_fault = on_fault;
+        scheduler.initialized = true;
+    }
+    return result;
 }
 
+/* Latch the first fault and notify the handler; later faults are ignored. */
 static void raise_fault(zule_result_t reason) {
-    if (scheduler.exec.fault != ZULE_RESULT_OK) {
-        return;
-    }
-    scheduler.exec.fault = reason;
-    if (scheduler.on_fault != NULL) {
-        /* Every fault is detected in a tick, while the active window identifies the
-         * faulting task. A tick timing fault can occur before any task runs, so
-         * the task comes from the window rather than the execution state. */
-        const zule_fault_info_t fault = {
-            .reason = reason,
-            .window_index = scheduler.active_window_ind,
-            .slot = scheduler.slot,
-            .cycle_count = scheduler.cycle_count,
-            .task_id = scheduler.schedule->windows[scheduler.active_window_ind].task->id,
+    if (scheduler.exec.fault == ZULE_RESULT_OK) {
+        scheduler.exec.fault = reason;
+        if (scheduler.on_fault != NULL) {
+            /* Every fault is detected in a tick, while the active window identifies
+             * the faulting task. A tick timing fault can occur before any task
+             * runs, so the task comes from the window rather than the execution
+             * state. */
+            const zule_fault_info_t fault = {
+                .reason = reason,
+                .window_index = scheduler.active_window_ind,
+                .slot = scheduler.slot,
+                .cycle_count = scheduler.cycle_count,
+                .task_id = scheduler.schedule->windows[scheduler.active_window_ind].task->id,
 #if ZULE_CONFIG_TICK_CHECK
-            .tick_deviation_counts = zule_tick_deviation_signed(scheduler.tick_deviation),
+                .tick_deviation_counts = zule_tick_deviation_signed(scheduler.tick_deviation),
 #endif
-        };
-        scheduler.on_fault(&fault);
+            };
+            scheduler.on_fault(&fault);
+        }
     }
 }
 
@@ -138,7 +141,7 @@ static void raise_fault(zule_result_t reason) {
  * fault comes before any deviation reaches 2^31 counts. */
 static void check_tick_timing(uint32_t now_counts) {
     if (zule_tick_tracker_update(&scheduler.tick_tracker, now_counts, &scheduler.tick_deviation) &&
-        scheduler.tick_deviation.magnitude_counts > scheduler.tolerance_counts) {
+        (scheduler.tick_deviation.magnitude_counts > scheduler.tolerance_counts)) {
         raise_fault(ZULE_RESULT_TICK_TIMING);
     }
 }
@@ -160,10 +163,8 @@ static void start_tick(void) {
 #endif
 }
 
-zule_result_t zule_scheduler_tick(void) {
-    if (!scheduler.initialized) {
-        return ZULE_RESULT_NOT_INITIALIZED;
-    }
+/* Process one tick of an initialized scheduler. */
+static void process_tick(void) {
     start_tick();
     const zule_window_t *active_window = &scheduler.schedule->windows[scheduler.active_window_ind];
 
@@ -186,7 +187,7 @@ zule_result_t zule_scheduler_tick(void) {
         // Prevent window advance in case of active faults
         if (scheduler.exec.fault == ZULE_RESULT_OK) {
             scheduler.active_window_ind =
-                (scheduler.active_window_ind + 1u) % scheduler.schedule->window_count;
+                (scheduler.active_window_ind + 1U) % scheduler.schedule->window_count;
             active_window = &scheduler.schedule->windows[scheduler.active_window_ind];
         }
     }
@@ -210,13 +211,21 @@ zule_result_t zule_scheduler_tick(void) {
     // Halt the scheduler in case of active faults
     if (scheduler.exec.fault == ZULE_RESULT_OK) {
         // Advance the slot
-        scheduler.slot = (scheduler.slot + 1u) % scheduler.schedule->cycle_slots;
+        scheduler.slot = (scheduler.slot + 1U) % scheduler.schedule->cycle_slots;
         if (scheduler.slot == 0U) {
             ++scheduler.cycle_count;
         }
     }
     zule_hook_tick_end();
-    return scheduler.exec.fault;
+}
+
+zule_result_t zule_scheduler_tick(void) {
+    zule_result_t result = ZULE_RESULT_NOT_INITIALIZED;
+    if (scheduler.initialized) {
+        process_tick();
+        result = scheduler.exec.fault;
+    }
+    return result;
 }
 
 zule_result_t zule_scheduler_run(void) {
@@ -249,19 +258,22 @@ zule_result_t zule_scheduler_run(void) {
 }
 
 zule_result_t zule_scheduler_idle(void) {
-    if (!scheduler.initialized) {
-        return ZULE_RESULT_NOT_INITIALIZED;
+    zule_result_t result = ZULE_RESULT_NOT_INITIALIZED;
+    if (scheduler.initialized) {
+        result = ZULE_RESULT_OK;
+        const zule_port_critical_state_t critical_state = zule_port_critical_enter();
+        /* Only tick context makes a task pending or latches a fault, and it cannot
+         * run between this check and the port's atomic wait. */
+        if (scheduler.exec.fault != ZULE_RESULT_OK) {
+            result = scheduler.exec.fault;
+        } else if (scheduler.exec.state != ZULE_TASK_PENDING) {
+            if (zule_port_idle() != ZULE_PORT_RESULT_OK) {
+                result = ZULE_RESULT_PORT_ERROR;
+            }
+        } else {
+            /* A task is pending: return without waiting, so it is dispatched. */
+        }
+        zule_port_critical_exit(critical_state);
     }
-    zule_result_t result = ZULE_RESULT_OK;
-    const zule_port_critical_state_t critical_state = zule_port_critical_enter();
-    /* Only tick context makes a task pending or latches a fault, and it cannot run between
-     * this check and the port's atomic wait. */
-    if (scheduler.exec.fault != ZULE_RESULT_OK) {
-        result = scheduler.exec.fault;
-    } else if (scheduler.exec.state != ZULE_TASK_PENDING &&
-               zule_port_idle() != ZULE_PORT_RESULT_OK) {
-        result = ZULE_RESULT_PORT_ERROR;
-    }
-    zule_port_critical_exit(critical_state);
     return result;
 }

@@ -14,9 +14,12 @@ void zule_port_critical_exit(zule_port_critical_state_t previous_state) {
 }
 
 zule_port_result_t zule_port_tick_init(uint32_t slot_us, zule_port_tick_callback_t callback) {
-    (void)slot_us;
-    (void)callback;
-    return ZULE_PORT_RESULT_OK;
+    /* The contract requires a nonzero period and a callback; reject others. */
+    zule_port_result_t result = ZULE_PORT_RESULT_OK;
+    if ((slot_us == 0U) || (callback == NULL)) {
+        result = ZULE_PORT_RESULT_ERROR;
+    }
+    return result;
 }
 
 zule_port_result_t zule_port_tick_stop(void) {
