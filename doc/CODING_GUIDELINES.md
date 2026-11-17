@@ -17,18 +17,22 @@ standard's features fails the build. Public headers must stay C99-compatible.
 
 Zule follows MISRA C:2012. The cross-compiled builds enforce the rules that
 Cppcheck's free MISRA addon checks, which are a subset of the guidelines, so a
-clean build does not by itself establish full compliance. There are no recorded
-deviations. In practice this means, among others:
+clean build does not by itself establish full compliance. Generated code
+follows the same rules; fix the generator, not its output.
 
-- one exit point per function: keep a result variable and a single `return`;
-- explicit parentheses wherever operators of different precedence combine;
-- every `if ... else if` chain ends with an `else`;
-- no side effects in the right-hand operand of `&&` or `||`;
-- no conversions of function pointers, including casts to `void`;
-- objects used by a single function are defined inside it;
-- no implicit conversions to a different or narrower essential type.
+## Static analysis findings
 
-Generated code follows the same rules; fix the generator, not its output.
+Resolve findings by changing the code. Suppress one only when that is not
+possible, such as a tool false positive, and then inline, on the line before
+it, with a comment giving the reason:
+
+```c
+/* Reason: <why the code is correct>. */
+/* cppcheck-suppress <finding id> */
+```
+
+Intentionally breaking a MISRA rule is a deviation: besides the suppression,
+record it with its rationale, following MISRA Compliance:2020. There are none.
 
 ## Formatting
 

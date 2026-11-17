@@ -41,9 +41,8 @@ main checks, and CI runs everything with the same tools and configurations.
 ### Static analysis
 
 - Enable Cppcheck's unused-function check in the cross-compiled builds' analysis.
-- Record MISRA deviations, with their rationale, if any become necessary,
-  following MISRA Compliance:2020. Supply the licensed MISRA rule texts to the
-  addon, so its findings describe the rules.
+- Supply the licensed MISRA rule texts to the addon, so its findings describe
+  the rules.
 - The free addon covers only part of MISRA C:2012. Consider a tool with full
   coverage if compliance needs to be claimed.
 - Consider reporting findings as GitHub annotations, for example as SARIF.
