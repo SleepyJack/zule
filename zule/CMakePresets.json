@@ -1,59 +1,41 @@
 {
-    "version": 6,
-    "cmakeMinimumRequired": {
-        "major": 3,
-        "minor": 25,
-        "patch": 0
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "tests",
+      "displayName": "Zule's core and port tests, with the POSIX port",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build/zule",
+      "cacheVariables": {
+        "ZULE_PORT": "posix",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
+      }
     },
-    "configurePresets": [
-        {
-            "name": "tests",
-            "displayName": "Zule's core and port tests, with the POSIX port",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/../build/zule",
-            "cacheVariables": {
-                "ZULE_PORT": "posix",
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
-            }
-        },
-        {
-            "name": "sanitize",
-            "inherits": "tests",
-            "displayName": "Zule's core and port tests, under UndefinedBehaviorSanitizer and AddressSanitizer",
-            "binaryDir": "${sourceDir}/../build/zule-sanitize",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
-                "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
-            }
-        }
-    ],
-    "buildPresets": [
-        {
-            "name": "tests",
-            "configurePreset": "tests"
-        },
-        {
-            "name": "sanitize",
-            "configurePreset": "sanitize"
-        }
-    ],
-    "testPresets": [
-        {
-            "name": "tests",
-            "configurePreset": "tests",
-            "output": {
-                "outputOnFailure": true
-            },
-            "execution": {
-                "noTestsAction": "error"
-            }
-        },
-        {
-            "name": "sanitize",
-            "inherits": "tests",
-            "configurePreset": "sanitize"
-        }
-    ]
+    {
+      "name": "sanitize",
+      "inherits": "tests",
+      "displayName": "Zule's core and port tests, under UndefinedBehaviorSanitizer and AddressSanitizer",
+      "binaryDir": "${sourceDir}/../build/zule-sanitize",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "tests", "configurePreset": "tests" },
+    { "name": "sanitize", "configurePreset": "sanitize" }
+  ],
+  "testPresets": [
+    {
+      "name": "tests",
+      "configurePreset": "tests",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    { "name": "sanitize", "inherits": "tests", "configurePreset": "sanitize" }
+  ]
 }
