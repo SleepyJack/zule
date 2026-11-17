@@ -171,7 +171,7 @@ Set these variables before `add_subdirectory()`:
 
 | Variable | Meaning |
 | --- | --- |
-| `ZULE_PORT` | Required. A directory under `zule/ports/` (currently `posix`), or `external` for a [custom port](port.md#creating-a-port). |
+| `ZULE_PORT` | Required. A directory under `zule/ports/`, or `external` for a [custom port](port.md#creating-a-port). |
 | `ZULE_USER_CONFIG_DIR` | Optional absolute path of the directory holding [`zule_user_config.h`](configuration.md#build-settings), [`zule_user_port_config.h`](configuration.md#port-settings), or both. |
 | `ZULE_BUILD_TESTS` | Build Zule's own tests. Defaults to `ON` only when `zule/` is the top-level project. |
 

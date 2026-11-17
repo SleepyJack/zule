@@ -9,89 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  tests-and-format:
-    name: Tests and formatting
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Set up Python
-        id: python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: |
-            requirements-dev.txt
-            zule/tools/schedule/requirements.txt
-
-      - name: Install pinned development tools
-        run: |
-          python -m pip install -r requirements-dev.txt
-          cmake --version
-
-      - name: Check handwritten C formatting
-        run: python tools/format.py --check
-
-      - name: Run Python unit tests
-        working-directory: zule/tools/schedule
-        run: python -m unittest discover -s tests -v
-
-      - name: Configure Zule and C tests
-        working-directory: zule
-        run: cmake --preset host
-
-      - name: Build Zule and C tests
-        working-directory: zule
-        run: cmake --build --preset host
-
-      - name: Run C unit tests
-        working-directory: zule
-        run: ctest --preset host
-
-      - name: Configure demo
-        working-directory: demo
-        run: >-
-          cmake --preset host
-          -DPython3_EXECUTABLE="${{ steps.python.outputs.python-path }}"
-
-      - name: Build demo
-        working-directory: demo
-        run: cmake --build --preset host
-
-      - name: Check generated C formatting
-        run: >-
-          python tools/format.py --check
-          build/demo-host/zule_demo_schedule/zule_schedule_definition.c
-          build/demo-host/zule_demo_schedule/zule_task_ids.h
-
-      - name: Run demo
-        run: |
-          python - <<'PY'
-          import subprocess
-          process = subprocess.Popen(
-              ["./build/demo-host/zule_demo"], stdout=subprocess.PIPE,
-              stderr=subprocess.PIPE, text=True,
-          )
-          try:
-              output, errors = process.communicate(timeout=2)
-          except subprocess.TimeoutExpired:
-              process.terminate()
-              output, errors = process.communicate(timeout=5)
-          else:
-              raise SystemExit(f"Demo exited unexpectedly: {process.returncode}\n{output}\n{errors}")
-          print(output, end="")
-          if errors or not all(task in output.splitlines() for task in ("sense", "control", "output")):
-              raise SystemExit(f"Demo smoke test failed: {errors}")
-          PY
-
-  cross:
-    name: Cross-compiled builds
+  image:
+    name: Development image
     runs-on: ubuntu-24.04
     timeout-minutes: 20
 
@@ -104,26 +23,122 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Built for each run, with layers cached between runs. Hosting the image is
-      # planned; see doc/planning.md.
+      # Built for each run, with layers cached between runs, and passed to the
+      # other jobs as an artifact. Hosting the image is planned; see
+      # doc/planning.md.
       - name: Build development image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: .devcontainer/Dockerfile
           tags: zule-dev:ci
-          load: true
+          outputs: type=docker,dest=${{ runner.temp }}/zule-dev.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Upload development image
+        uses: actions/upload-artifact@v4
+        with:
+          name: zule-dev-image
+          path: ${{ runner.temp }}/zule-dev.tar
+          retention-days: 1
+
+  tests-and-format:
+    name: Tests and formatting
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download development image
+        uses: actions/download-artifact@v4
+        with:
+          name: zule-dev-image
+          path: ${{ runner.temp }}
+
+      # Later steps run in the image through $IN_IMAGE, as the runner's user so
+      # files in the workspace are not owned by root.
+      - name: Load development image
+        run: |
+          docker load --input "${{ runner.temp }}/zule-dev.tar"
+          echo "IN_IMAGE=docker run --rm --user $(id -u):$(id -g) --env HOME=/tmp --volume $PWD:/work --workdir /work zule-dev:ci" >> "$GITHUB_ENV"
+
+      - name: Check handwritten C formatting
+        run: $IN_IMAGE python tools/format.py --check
+
+      - name: Run Python unit tests
+        run: $IN_IMAGE sh -c 'cd zule/tools/schedule && python -m unittest discover -s tests -v'
+
+      - name: Build Zule and C tests
+        run: $IN_IMAGE sh -c 'cd zule && cmake --preset tests && cmake --build --preset tests'
+
+      - name: Run C unit tests
+        run: $IN_IMAGE sh -c 'cd zule && ctest --preset tests'
+
+      - name: Build demo
+        run: $IN_IMAGE sh -c 'cd demo && cmake --preset demo && cmake --build --preset demo'
+
+      - name: Check generated C formatting
+        run: >-
+          $IN_IMAGE python tools/format.py --check
+          build/demo/zule_demo_schedule/zule_schedule_definition.c
+          build/demo/zule_demo_schedule/zule_task_ids.h
+
+      # The script is passed with -c, since the container has no terminal input.
+      - name: Run demo
+        run: |
+          $IN_IMAGE python -c '
+          import subprocess
+          process = subprocess.Popen(
+              ["./build/demo/zule_demo"], stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE, text=True,
+          )
+          try:
+              output, errors = process.communicate(timeout=2)
+          except subprocess.TimeoutExpired:
+              process.terminate()
+              output, errors = process.communicate(timeout=5)
+          else:
+              raise SystemExit(f"Demo exited unexpectedly: {process.returncode}\n{output}\n{errors}")
+          print(output, end="")
+          if errors or not all(task in output.splitlines() for task in ("sense", "control", "output")):
+              raise SystemExit(f"Demo smoke test failed: {errors}")
+          '
+
+  cross:
+    name: Cross-compiled builds
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download development image
+        uses: actions/download-artifact@v4
+        with:
+          name: zule-dev-image
+          path: ${{ runner.temp }}
+
+      - name: Load development image
+        run: docker load --input "${{ runner.temp }}/zule-dev.tar"
 
       # Run as the runner's user, so build output in the workspace is not owned by
       # root.
       - name: Build Cortex-M link checks
         run: >-
-          docker run --rm --user "$(id -u):$(id -g)"
-          --volume "$PWD:/work" --workdir /work/zule zule-dev:ci
+          docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
+          --volume "$PWD:/work" --workdir /work/zule/tests/cross zule-dev:ci
           sh -c 'set -e;
-          for preset in cross-m3 cross-m3-all cross-m0plus cross-m0plus-all; do
+          for preset in m3 m3-all m0plus m0plus-all; do
           cmake --preset "$preset";
           cmake --build --preset "$preset";
           done'

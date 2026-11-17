@@ -16,10 +16,8 @@ main checks, and CI runs everything with the same tools and configurations.
 - Host the development image on GitHub Container Registry. Add a workflow that
   builds and publishes it when the Dockerfile or `requirements-dev.txt`
   changes, tagged so that each commit's CI uses the matching image, and have CI
-  jobs pull it instead of building it. Until then, the cross-compiled build job
-  builds the image on each run, with cached layers.
-- Run the remaining host CI steps inside the image too, so every job uses the
-  same pinned tools; they currently use the runner's compiler.
+  jobs pull it instead of building it. Until then, CI builds the image on each
+  run, with cached layers, and passes it to its jobs as an artifact.
 - Consider pinning the base image by digest as well as tag.
 - Cover the feature configurations, not only the defaults: much of the code is
   behind settings. The cross-compiled builds already build everything disabled

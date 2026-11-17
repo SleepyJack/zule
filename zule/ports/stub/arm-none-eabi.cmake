@@ -1,6 +1,6 @@
-# Toolchain file for bare-metal Arm Cortex-M with the Arm GNU toolchain
-# (arm-none-eabi-gcc). Select the core through compiler flags, for example
-# -mcpu=cortex-m3 -mthumb; the CMake presets set them.
+# Toolchain file for the stub port's target, bare-metal Arm Cortex-M, with the
+# Arm GNU toolchain (arm-none-eabi-gcc). Select the core through compiler flags,
+# for example -mcpu=cortex-m3 -mthumb; the cross check's presets set them.
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 set(CMAKE_C_COMPILER arm-none-eabi-gcc)

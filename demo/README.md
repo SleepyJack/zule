@@ -25,9 +25,9 @@ With the development environment from [Getting started](../README.md#getting-sta
 
 ```sh
 cd demo
-cmake --preset host
-cmake --build --preset host
-../build/demo-host/zule_demo
+cmake --preset demo
+cmake --build --preset demo
+../build/demo/zule_demo
 ```
 
 The cycle repeats until a fault or port error, when the demo prints the fault,

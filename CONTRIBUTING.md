@@ -45,26 +45,25 @@ system. The image pins these versions, from Ubuntu 24.04:
 ## Building and testing
 
 Builds use [CMake presets](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html),
-which hold each configuration's settings; `zule/CMakePresets.json` and
-`demo/CMakePresets.json` define them. Build output goes to `build/` in the
-project root.
+which hold each configuration's settings. Each project defines its own, in its
+`CMakePresets.json`, and build output goes to `build/` in the project root.
 
 Build Zule with the POSIX port and run the core and port tests:
 
 ```sh
 cd zule
-cmake --preset host
-cmake --build --preset host
-ctest --preset host
+cmake --preset tests
+cmake --build --preset tests
+ctest --preset tests
 ```
 
 Build and run the demo, which also regenerates its schedule:
 
 ```sh
 cd demo
-cmake --preset host
-cmake --build --preset host
-../build/demo-host/zule_demo
+cmake --preset demo
+cmake --build --preset demo
+../build/demo/zule_demo
 ```
 
 Run the schedule tool's tests:
@@ -82,24 +81,26 @@ own sources once in its `CMakeLists.txt`.
 ### Cross-compiled builds
 
 The cross-compiled builds check the Zule library with the target compiler,
-`arm-none-eabi-gcc`. Each links the library, the
-[stub port](zule/ports/stub/README.md), and a generated schedule into a small
-program that nothing runs: freestanding, with no C library, and with warnings
-as errors, including `-Wconversion`, `-Wshadow`, and `-Wstrict-prototypes`. Use
-of a C library function, or a warning with the target's type sizes, fails the
-build.
+`arm-none-eabi-gcc`. They are a standalone project in
+[`zule/tests/cross/`](zule/tests/cross), like the demo. Each links the library,
+the [stub port](zule/ports/stub/README.md), and a generated schedule into a
+small program that nothing runs: freestanding, with no C library, and with
+warnings as errors, including `-Wconversion`, `-Wshadow`, and
+`-Wstrict-prototypes`. Use of a C library function, or a warning with the
+target's type sizes, fails the build. Its presets choose the core and the
+features:
 
 | Preset | Target | Features |
 | --- | --- | --- |
-| `cross-m3` | Cortex-M3 (Armv7-M) | Defaults |
-| `cross-m3-all` | Cortex-M3 (Armv7-M) | All enabled |
-| `cross-m0plus` | Cortex-M0+ (Armv6-M) | Defaults |
-| `cross-m0plus-all` | Cortex-M0+ (Armv6-M) | All enabled |
+| `m3` | Cortex-M3 (Armv7-M) | Defaults |
+| `m3-all` | Cortex-M3 (Armv7-M) | All enabled |
+| `m0plus` | Cortex-M0+ (Armv6-M) | Defaults |
+| `m0plus-all` | Cortex-M0+ (Armv6-M) | All enabled |
 
 ```sh
-cd zule
-cmake --preset cross-m3-all
-cmake --build --preset cross-m3-all
+cd zule/tests/cross
+cmake --preset m3-all
+cmake --build --preset m3-all
 ```
 
 GCC requires `memcpy`, `memmove`, `memset`, and `memcmp` even in a freestanding
@@ -125,7 +126,7 @@ Generated files are excluded by default. After building the demo, check its
 generated schedule explicitly:
 
 ```sh
-python tools/format.py --check build/demo-host/zule_demo_schedule/zule_schedule_definition.c build/demo-host/zule_demo_schedule/zule_task_ids.h
+python tools/format.py --check build/demo/zule_demo_schedule/zule_schedule_definition.c build/demo/zule_demo_schedule/zule_task_ids.h
 ```
 
 Generated formatting fixes belong in the Python generator, never in generated
@@ -141,8 +142,9 @@ against those guidelines.
 
 ## Continuous integration
 
-GitHub Actions runs the C and Python unit tests, checks handwritten and
-generated C formatting, and builds and smoke-tests the demo on Ubuntu. A second
-job builds the container image, caching its layers between runs, and runs the
-cross-compiled builds inside it. Both run for pushes and pull requests, and the
+GitHub Actions first builds the container image, caching its layers between
+runs, and passes it to the other jobs, which run every step inside it. One job
+runs the C and Python unit tests, checks handwritten and generated C
+formatting, and builds and smoke-tests the demo; another runs the
+cross-compiled builds. CI runs for pushes and pull requests, and the
 [CI workflow](.github/workflows/ci.yml) can also be run manually.
