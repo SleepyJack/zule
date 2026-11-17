@@ -3,22 +3,86 @@
 Open topics for future work. These are backlog items, not settled implementation
 decisions or a committed order of delivery.
 
-## Development environment
+## Verification for embedded targets
 
-- Consider a dev container for tools that `requirements-dev.txt` cannot pin,
-  such as the host and cross compilers. It should install `requirements-dev.txt`
-  rather than duplicate its versions.
+Zule's main product is the Zule library cross-compiled for embedded ports, so
+verification centres on the target compiler and on static analysis rather than
+host-specific tools. The sections below depend on each other: the development
+environment provides the tools, the cross build and static analysis are the
+main checks, and CI runs everything with the same tools and configurations.
 
-## Licence
+### Development environment
 
-- The repository is public but deliberately unlicensed while pre-release. Add a
-  licence before promoting the project, accepting outside contributions, or
-  making a first release.
-- MIT is the provisional choice. Decide the copyright holder named in the notice.
-- Once added, the licence applies to everything published from then on, and
-  published versions remain available under it.
+- Pinned tools come in two kinds. `requirements-dev.txt` pins what pip can
+  install: CMake, Ninja, clang-format, and the schedule tool's dependencies.
+  Host tools need another route: the Arm GNU toolchain (`arm-none-eabi-gcc`),
+  Cppcheck, and later QEMU.
+- Provide a container image, defined by a Dockerfile, as the source of truth for
+  the host tools: it installs them at pinned versions and installs
+  `requirements-dev.txt` rather than duplicating its versions. CI runs in the
+  same image, so local and CI results match.
+- Add a `devcontainer.json` pointing at the image, for editors and tools that
+  support the open Dev Containers specification, such as VS Code, GitHub
+  Codespaces, JetBrains IDEs, and the `devcontainer` CLI. It is optional:
+  anyone can use the image directly with Docker or Podman.
+- List the same versions in `CONTRIBUTING.md`, for contributors who install the
+  tools without containers.
+- Define each build configuration once as a CMake preset, used both locally and
+  by CI: the default host build, the host sanitizer build, and each
+  cross-compiled configuration. Presets keep a configuration's settings with
+  its name, rather than in workflow files, documentation, or shell history.
+- Cover the feature configurations, not only the defaults: much of the code is
+  behind settings. At least run everything disabled and everything enabled (the
+  timebase, hooks, the tick timing check, and modules).
 
-## Demos
+### Cross-compilation
+
+- Cross-compile the Zule library and a generated schedule with
+  `arm-none-eabi-gcc`, before the Cortex-M port exists, using a compile-check
+  port: `zule_port_types.h` and empty port functions, enough to link. The real
+  Cortex-M port replaces it when available.
+- Build for Armv7-M (`-mcpu=cortex-m3`) and the Armv6-M subset
+  (`-mcpu=cortex-m0plus`), with warnings as errors, including `-Wconversion`,
+  `-Wshadow`, and `-Wstrict-prototypes`. Target type sizes, such as a 32-bit
+  `size_t` and `long`, expose conversions a 64-bit host build does not.
+- Build freestanding (`-ffreestanding`) and link without a C library, so any
+  use of hosted library functions fails. This enforces that the Zule library
+  includes only freestanding headers.
+- Later, consider a target where `int` is 16 bits, such as MSP430, to catch
+  assumptions about `int` size.
+
+### Static analysis
+
+- Use the free, open-source edition of Cppcheck as the main static analysis,
+  covering every path regardless of test coverage. Consider its MISRA addon
+  later; descriptions of the rules in its findings need the licensed MISRA rule
+  texts.
+- Analyse the Zule library (core and modules) and a generated schedule, with
+  the actual include paths, a platform definition matching the target's type
+  sizes, and each feature configuration. Add each embedded port's code as it
+  arrives. The POSIX port and tests are not the focus.
+- Decide the initial checks, the supported version, and how findings are
+  reviewed, fixed, or suppressed with a recorded reason. Keep formatting a
+  separate responsibility of clang-format.
+
+### Continuous integration
+
+- Keep the existing jobs: formatting, Python tests, host build and C tests,
+  generated C formatting, and the demo smoke test. Treat warnings as errors in
+  the host build.
+- Add, in parallel: the cross-compiled builds; Cppcheck; and one host test job
+  under UndefinedBehaviorSanitizer and AddressSanitizer. UBSan gives exact
+  detection of undefined arithmetic, the core's main risk, which static
+  analysis only approximates; ASan comes at no extra cost in the same build.
+- Pin tool versions, preferably through the dev container image, and run jobs
+  through the CMake presets.
+- With the Cortex-M port, run the tests and the fully featured demo in QEMU;
+  see [demos](#demos).
+- Considered and not planned: ThreadSanitizer, which would only cover the POSIX
+  port, a development and demonstration target; and Clang as a second host
+  compiler, which adds little beyond the cross-compiled builds.
+
+### Demos
 
 - Split the demo by feature set as features grow. Keep a minimal POSIX demo
   (tasks and a fault handler only) for the CI smoke test, with no timing
@@ -33,29 +97,14 @@ decisions or a committed order of delivery.
   half-slot tolerance; an occasional failure on a heavily loaded runner is
   acceptable.
 
-## Continuous integration
+## Licence
 
-- Add CI jobs, run in parallel, that build and run the existing tests under:
-  ThreadSanitizer, including a short demo run, since the POSIX port shares
-  state between real threads; AddressSanitizer and UndefinedBehaviorSanitizer;
-  Clang as a second compiler; and GCC with `-Wconversion -Wshadow
-  -Wstrict-prototypes`. All have been clean in local runs, so no existing
-  findings need fixing first.
-- Treat warnings as errors in the existing CI build and in each new job.
-- With the Cortex-M port, add a cross-compiled build of the core, port, and demo
-  for the Armv6-M subset (`-mcpu=cortex-m0plus`), optionally running tests in
-  QEMU.
-
-## Static analysis
-
-- Evaluate the free, open-source edition of Cppcheck, previously considered
-  for C defect analysis.
-- Decide the initial checks, supported tool version, and how findings are
-  reviewed and addressed.
-- Cover handwritten core and port code as well as generated C, using the
-  actual build configuration and include paths.
-- Decide how to invoke analysis locally and in CI. Keep formatting as a
-  separate responsibility of clang-format.
+- The repository is public but deliberately unlicensed while pre-release. Add a
+  licence before promoting the project, accepting outside contributions, or
+  making a first release.
+- MIT is the provisional choice. Decide the copyright holder named in the notice.
+- Once added, the licence applies to everything published from then on, and
+  published versions remain available under it.
 
 ## Schedule definition tooling
 
@@ -205,6 +254,10 @@ decisions or a committed order of delivery.
 ## Additional ports
 
 - Add a Cortex-M port, choosing an initial core and board/toolchain to target.
+  It replaces the compile-check port in the
+  [cross-compiled builds](#cross-compilation), joins
+  [static analysis](#static-analysis), and enables tests and the fully featured
+  demo in QEMU (`mps2-an385`).
 - Implement saved-state critical sections, periodic timer delivery, and the
   atomic idle wait against the generic port contract.
 - For idle, `WFI` inside a PRIMASK critical section meets the contract: a
