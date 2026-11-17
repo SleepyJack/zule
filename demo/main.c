@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "zule.h"
+#include "zule_tick_timing.h"
 
 /* Only the handler writes these while running. Main reads after zule_run()
  * returns, when tick delivery has been stopped and quiesced. */
@@ -38,11 +39,23 @@ void zule_user_hook_task_end(uint32_t time_counts, uint32_t task_id, size_t wind
     }
 }
 
-static void print_longest_task(FILE *stream) {
+static unsigned long counts_to_us(uint32_t counts) {
+    return (unsigned long)((uint64_t)counts * 1000000U / zule_timebase_hz());
+}
+
+/* Report the longest task, from the demo's hooks, and tick timing, from the tick
+ * timing module. The module's API takes a consistent snapshot, so tasks can call
+ * it while ticks run. */
+static void print_timing(FILE *stream) {
     const char *name = zule_task_name_get(longest_task_id);
-    const uint64_t duration_us = (uint64_t)longest_counts * 1000000U / zule_timebase_hz();
     (void)fprintf(stream, "Longest task so far: %s, %lu us\n", name != NULL ? name : "unnamed",
-                  (unsigned long)duration_us);
+                  counts_to_us(longest_counts));
+    zule_tick_timing_t timing;
+    zule_tick_timing_get(&timing);
+    (void)fprintf(stream,
+                  "Tick timing: worst late %lu us, worst early %lu us, longest tick %lu us\n",
+                  counts_to_us(timing.max_late_counts), counts_to_us(timing.max_early_counts),
+                  counts_to_us(timing.max_tick_counts));
 }
 
 void zule_task_sense(void) {
@@ -58,7 +71,7 @@ void zule_task_output(void) {
     /* Output runs once per cycle; report every ten cycles. */
     ++completed_cycles;
     if (completed_cycles % 10U == 0U) {
-        print_longest_task(stdout);
+        print_timing(stdout);
     }
 }
 
@@ -83,6 +96,6 @@ int main(void) {
                       (long)last_fault.tick_deviation_counts);
 #endif
     }
-    print_longest_task(stderr);
+    print_timing(stderr);
     return result == ZULE_RESULT_OK ? 0 : 1;
 }

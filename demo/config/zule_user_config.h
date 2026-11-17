@@ -14,4 +14,7 @@
 #define ZULE_CONFIG_TICK_CHECK 1
 #define ZULE_CONFIG_TICK_TOLERANCE_US 25000
 
+/* Measure tick deviations, to see what tolerance the host needs. */
+#define ZULE_CONFIG_MODULE_TICK_TIMING 1
+
 #endif

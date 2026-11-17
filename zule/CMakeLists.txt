@@ -41,7 +41,7 @@ endif()
 add_library(zule_api INTERFACE)
 add_library(zule::api ALIAS zule_api)
 target_include_directories(zule_api INTERFACE
-    "${CMAKE_CURRENT_SOURCE_DIR}/core/api" "${CMAKE_CURRENT_SOURCE_DIR}/modules")
+    "${CMAKE_CURRENT_SOURCE_DIR}/core/api" "${CMAKE_CURRENT_SOURCE_DIR}/modules/api")
 target_compile_features(zule_api INTERFACE c_std_99)
 target_link_libraries(zule_api INTERFACE zule_config)
 

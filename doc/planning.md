@@ -71,21 +71,6 @@ decisions or a committed order of delivery.
 - Reuse the existing schema and validator for feedback on bounds, overlaps,
   and task references, and save definitions in the existing JSON format.
 
-## Tick timing reporting module
-
-- Add a module that reports tick timing, so the tick tolerance can be chosen
-  from observed behaviour: the worst early and late deviation from the expected
-  tick time, and possibly a distribution of deviations. It should work without
-  the tick timing check enabled, so the tolerance can be measured before the
-  check is turned on.
-- Open: whether `tick_start` passes the deviation the core already computes
-  when the check is enabled, or the module computes its own expected times from
-  the first tick and the slot length in counts. Passing it makes the hook
-  signature depend on a setting; computing it needs the slot length, through
-  module initialization.
-- Expose a snapshot copied under a critical section and a reset, like the
-  statistics module.
-
 ## Watchdog integration
 
 - Consider an application callback from tick context to support watchdog
@@ -101,8 +86,6 @@ decisions or a committed order of delivery.
 
 ## Hooks and modules
 
-- The statistics module (below) is the first module, and proves the module
-  path: its setting, the hook conditions, the entry points, and a read API.
 - Add a fault event, for modules only, with the trace module. The application
   already receives faults through its fault handler, so there is no user fault
   hook.
@@ -115,21 +98,12 @@ decisions or a committed order of delivery.
 
 ## Task profiling and benchmarking
 
-- Provide per-task statistics as the first module: execution time minimum,
+- Provide per-task statistics as a module: execution time minimum,
   maximum, and count, and worst dispatch latency from window start to task
-  start, which also consumes budget. Also record the maximum tick handler
-  duration, since budgets must cover scheduler overhead. Index storage by task
+  start, which also consumes budget. The tick timing module already reports
+  the longest tick handler. Index storage by task
   ID, which equals the task's table index; size it from a task count to be
   added to the generated task-ID header.
-- Add module initialization with the first module that needs it, likely the
-  statistics or tick timing reporting module: a
-  `zule_modules_init()` entry point, declared when any module is enabled and
-  called from scheduler initialization after the core's own checks. Each
-  module validates and prepares there, for example checking that its storage
-  matches the schedule's task count, and failure stops `zule_run()` with
-  `ZULE_RESULT_INVALID_CONFIG`. Init must not discard accumulated results unless
-  the module documents it. Intervals up to a cycle are already guaranteed by the
-  core's hook checks.
 - Keep monotonically increasing totals, such as busy time and cycle count, plus
   the busiest single cycle. Readers choose their own interval by subtracting two
   snapshots, so the module needs no measurement window. Idle time and slack
