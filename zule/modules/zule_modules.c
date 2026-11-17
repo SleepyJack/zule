@@ -1,8 +1,8 @@
-#include "zule_module_hooks.h"
+#include "zule_modules.h"
 
 #include "tick_timing/zule_tick_timing_hooks.h"
 
-/* Module entry points, declared in the core's internal zule_module_hooks.h. Each
+/* Module entry points, declared in the core's internal zule_modules.h. Each
  * calls the enabled modules that consume it, in a fixed order. Compiled into the
  * core library, with the modules, so modules can use the core API and internal
  * helpers without a link cycle. */

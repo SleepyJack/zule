@@ -18,9 +18,9 @@ zule_result_t zule_tick_timing_init(const zule_schedule_t *schedule) {
 void zule_tick_timing_tick_start(uint32_t time_counts) {
     tick_start_counts = time_counts;
     int32_t deviation_counts = 0;
-    uint32_t magnitude_counts = 0U;
-    if (zule_tick_tracker_update(&tracker, time_counts, &deviation_counts, &magnitude_counts)) {
+    if (zule_tick_tracker_update(&tracker, time_counts, &deviation_counts)) {
         ++timing.ticks;
+        const uint32_t magnitude_counts = zule_tick_deviation_magnitude(deviation_counts);
         if (deviation_counts > 0) {
             if (magnitude_counts > timing.max_late_counts) {
                 timing.max_late_counts = magnitude_counts;

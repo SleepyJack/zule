@@ -136,10 +136,10 @@ static void raise_fault(zule_result_t reason) {
 /* Compare the tick with its expected time. The tolerance is below one slot, so a
  * fault comes before any deviation reaches 2^31 counts. */
 static void check_tick_timing(uint32_t now_counts) {
-    uint32_t magnitude_counts = 0U;
     if (zule_tick_tracker_update(&scheduler.tick_tracker, now_counts,
-                                 &scheduler.tick_deviation_counts, &magnitude_counts) &&
-        magnitude_counts > scheduler.tolerance_counts) {
+                                 &scheduler.tick_deviation_counts) &&
+        zule_tick_deviation_magnitude(scheduler.tick_deviation_counts) >
+            scheduler.tolerance_counts) {
         raise_fault(ZULE_RESULT_TICK_TIMING);
     }
 }

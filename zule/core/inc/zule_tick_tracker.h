@@ -38,12 +38,12 @@ static inline zule_result_t zule_tick_tracker_init(zule_tick_tracker_t *tracker,
 }
 
 /* Record a tick at now_counts. Returns false for the reference tick. Otherwise
- * returns true with the deviation from the expected time, positive when late,
- * and its magnitude. Wrapping arithmetic keeps this exact across timebase
- * rollover while the deviation is below 2^31 counts; a larger one, such as a
- * very long stall, reads as early. */
+ * returns true with the deviation from the expected time, positive when late.
+ * Wrapping arithmetic keeps this exact across timebase rollover while the
+ * deviation is below 2^31 counts; a larger one, such as a very long stall, reads
+ * as early. */
 static inline bool zule_tick_tracker_update(zule_tick_tracker_t *tracker, uint32_t now_counts,
-                                            int32_t *deviation_counts, uint32_t *magnitude_counts) {
+                                            int32_t *deviation_counts) {
     if (!tracker->reference_set) {
         tracker->reference_set = true;
         tracker->expected_counts = now_counts;
@@ -52,15 +52,23 @@ static inline bool zule_tick_tracker_update(zule_tick_tracker_t *tracker, uint32
     tracker->expected_counts += tracker->counts_per_slot;
     const uint32_t late_counts = now_counts - tracker->expected_counts;
     /* Convert to signed explicitly; out-of-range conversions are implementation
-     * defined. An early tick's magnitude is at most 2^31. */
+     * defined. An early tick's magnitude is from 1 to 2^31. */
     if (late_counts <= (uint32_t)INT32_MAX) {
-        *magnitude_counts = late_counts;
         *deviation_counts = (int32_t)late_counts;
     } else {
-        *magnitude_counts = tracker->expected_counts - now_counts;
-        *deviation_counts = -(int32_t)(*magnitude_counts - 1U) - 1;
+        const uint32_t early_counts = tracker->expected_counts - now_counts;
+        *deviation_counts = -(int32_t)(early_counts - 1U) - 1;
     }
     return true;
+}
+
+/* Return the magnitude of a deviation. Unlike abs(), this is defined for
+ * INT32_MIN, whose magnitude of 2^31 does not fit an int32_t. */
+static inline uint32_t zule_tick_deviation_magnitude(int32_t deviation_counts) {
+    if (deviation_counts < 0) {
+        return (uint32_t)(-(deviation_counts + 1)) + 1U;
+    }
+    return (uint32_t)deviation_counts;
 }
 
 #endif

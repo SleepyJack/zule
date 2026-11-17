@@ -70,7 +70,7 @@ The demo enables the module and prints its results every ten cycles.
 Modules consume the core's hook interface the same way the application's hooks
 do: the core defines the interface, and modules implement it.
 
-- [`zule_module_hooks.h`](../zule/core/inc/zule_module_hooks.h), an internal
+- [`zule_modules.h`](../zule/core/inc/zule_modules.h), an internal
   core header, declares the module entry points: `zule_modules_init()`, and for
   each hook, `zule_modules_<hook>()`. Only the core library, which also builds
   the modules, can include it; applications see only the user hooks in

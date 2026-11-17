@@ -1,13 +1,14 @@
-#ifndef ZULE_MODULE_HOOKS_H
-#define ZULE_MODULE_HOOKS_H
+#ifndef ZULE_MODULES_H
+#define ZULE_MODULES_H
 
-/* Internal: the core's hook contract for modules. Visible only within the core
- * library, which also builds the modules; applications cannot include it.
+/* Internal: the core's contract for modules, implemented by the modules layer in
+ * zule_modules.c. Visible only within the core library, which also builds the
+ * modules; applications cannot include it.
  *
- * Each entry point is declared when an enabled module consumes its hook, as
- * derived in zule_modules_config.h, and is defined by the modules layer in
- * zule_modules.c. Entry points take the same arguments and give the same
- * guarantees as the user hooks in zule_hooks.h, and are called first. */
+ * It covers initialization and the hook entry points. Each is declared when an
+ * enabled module needs it, as derived in zule_modules_config.h. Hook entry
+ * points take the same arguments and give the same guarantees as the user hooks
+ * in zule_hooks.h, and are called first. */
 #include "zule.h"
 #include "zule_schedule.h"
 

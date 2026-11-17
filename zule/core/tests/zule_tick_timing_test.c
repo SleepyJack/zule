@@ -117,6 +117,16 @@ int main(void) {
     check_timing(2U, 3U, 5U, 1U);
     stop();
 
+    /* A stall of 2^31 counts past the expected time is the documented limit: it
+     * reads as the most negative deviation, INT32_MIN, whose magnitude of 2^31
+     * must be reported without overflow. */
+    start();
+    zule_tick_timing_reset();
+    tick_at(0U, 1U);
+    tick_at(100U + 2147483648U, 1U);
+    check_timing(1U, 0U, 2147483648U, 1U);
+    stop();
+
     /* The module requires a slot of whole timebase counts; zule_run() reports the
      * failure before starting ticks. */
     zule_test_port_reset();
