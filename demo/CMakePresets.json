@@ -1,0 +1,17 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "demo",
+      "displayName": "The demo, with the POSIX port",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build/demo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
+      }
+    }
+  ],
+  "buildPresets": [{ "name": "demo", "configurePreset": "demo" }]
+}

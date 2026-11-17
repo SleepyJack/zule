@@ -9,6 +9,7 @@ by an integrator is owned by the user (see [ownership](architecture.md#ownership
 | Port | Target |
 | --- | --- |
 | [`posix`](../zule/ports/posix/README.md) | Native development on POSIX hosts, using a timer thread and a mutex. |
+| [`stub`](../zule/ports/stub/README.md) | Arm Cortex-M compile check: links but does nothing, for the cross-compiled builds. |
 
 ## Contract
 

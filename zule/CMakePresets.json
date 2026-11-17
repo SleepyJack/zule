@@ -1,0 +1,26 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "tests",
+      "displayName": "Zule's core and port tests, with the POSIX port",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build/zule",
+      "cacheVariables": {
+        "ZULE_PORT": "posix",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "ON"
+      }
+    }
+  ],
+  "buildPresets": [{ "name": "tests", "configurePreset": "tests" }],
+  "testPresets": [
+    {
+      "name": "tests",
+      "configurePreset": "tests",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    }
+  ]
+}

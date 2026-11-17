@@ -24,9 +24,10 @@ The schedule is a 500 ms cycle of ten 50 ms slots: `sense`, `control`, and
 With the development environment from [Getting started](../README.md#getting-started) active:
 
 ```sh
-cmake -S demo -B build/demo -G Ninja
-cmake --build build/demo
-./build/demo/zule_demo
+cd demo
+cmake --preset demo
+cmake --build --preset demo
+../build/demo/zule_demo
 ```
 
 The cycle repeats until a fault or port error, when the demo prints the fault,

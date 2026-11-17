@@ -139,6 +139,15 @@ IDs are specific to a build; see [task names and IDs](configuration.md#task-name
 or when [task names](configuration.md#task-names) are disabled. It can be called
 at any time, including before `zule_run()`.
 
+## Target environment
+
+Zule needs no C library and includes only the headers C99 guarantees in a
+freestanding environment. Like any C code built with GCC or Clang, it may still
+cause calls to `memcpy`, `memmove`, `memset`, and `memcmp`, for example to copy
+or initialise structures, so the target environment must provide them. A
+target's C library normally does. The cross-compiled builds check this
+requirement; see [CONTRIBUTING.md](../CONTRIBUTING.md#cross-compiled-builds).
+
 ## CMake integration
 
 Add the `zule/` directory to the application's CMake project, select a port,
@@ -162,7 +171,7 @@ Set these variables before `add_subdirectory()`:
 
 | Variable | Meaning |
 | --- | --- |
-| `ZULE_PORT` | Required. A directory under `zule/ports/` (currently `posix`), or `external` for a [custom port](port.md#creating-a-port). |
+| `ZULE_PORT` | Required. A directory under `zule/ports/`, or `external` for a [custom port](port.md#creating-a-port). |
 | `ZULE_USER_CONFIG_DIR` | Optional absolute path of the directory holding [`zule_user_config.h`](configuration.md#build-settings), [`zule_user_port_config.h`](configuration.md#port-settings), or both. |
 | `ZULE_BUILD_TESTS` | Build Zule's own tests. Defaults to `ON` only when `zule/` is the top-level project. |
 

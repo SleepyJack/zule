@@ -31,9 +31,10 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-dev.txt
 
-cmake -S demo -B build/demo -G Ninja
-cmake --build build/demo
-./build/demo/zule_demo
+cd demo
+cmake --preset demo
+cmake --build --preset demo
+../build/demo/zule_demo
 ```
 
 Each task prints its name when it runs, and the cycle repeats every 500 ms:
