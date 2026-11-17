@@ -8,6 +8,11 @@ option(ZULE_BUILD_TESTS "Build the core and port tests" ${PROJECT_IS_TOP_LEVEL})
 set(ZULE_PORT "" CACHE STRING
     "Port directory under ports/, or 'external' for an application-defined zule::port")
 
+# Zule's own targets compile as strict C99, the MISRA C:2012 baseline, so any use
+# of a later standard fails the build. Applications keep their own standard;
+# zule_api only requires at least C99 of them.
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 if(ZULE_BUILD_TESTS)

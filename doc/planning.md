@@ -25,28 +25,34 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ### Cross-compilation
 
-- Later, consider a target where `int` is 16 bits, such as MSP430, to catch
-  assumptions about `int` size.
+- Keep the stub port alongside real ports. It checks the Zule library alone, so
+  a finding cannot come from port code or vendor headers; it is the only way to
+  check targets without a port; and it shows the smallest valid port. Real ports
+  check their own code and, in QEMU, behaviour, which the stub cannot.
+- The cross-compiled builds become combinations of port, core, and features:
+  each real port joins as presets alongside the stub's. Compiler warnings and
+  static analysis apply to whichever port is selected, so real ports are
+  covered as soon as they are added.
+- When the Cortex-M port arrives, move the Arm toolchain file into it. The stub
+  port then becomes architecture-neutral, used with any toolchain.
+- Later, consider a target where `int` is 16 bits, such as MSP430, built with
+  the stub port, to catch assumptions about `int` size.
 
 ### Static analysis
 
-- Use the free, open-source edition of Cppcheck as the main static analysis,
-  covering every path regardless of test coverage. Consider its MISRA addon
-  later; descriptions of the rules in its findings need the licensed MISRA rule
-  texts.
-- Analyse the Zule library (core and modules) and a generated schedule, with
-  the actual include paths, a platform definition matching the target's type
-  sizes, and each feature configuration. Add each embedded port's code as it
-  arrives. The POSIX port and tests are not the focus.
-- Decide the initial checks, the supported version, and how findings are
-  reviewed, fixed, or suppressed with a recorded reason. Keep formatting a
-  separate responsibility of clang-format.
+- Extend the Cppcheck analysis in the cross-compiled builds with style checks.
+  One finding needs handling first: in `zule_modules_init()`,
+  `result == ZULE_RESULT_OK` is always true while there is a single module.
+- Add whole-program checks, such as unused functions, which the per-source
+  analysis cannot do.
+- Consider the MISRA addon; descriptions of the rules in its findings need the
+  licensed MISRA rule texts.
+- Consider reporting findings as GitHub annotations, for example as SARIF.
 
 ### Continuous integration
 
-- Add, in parallel with the existing jobs: Cppcheck, and one host test job
-  under UndefinedBehaviorSanitizer and AddressSanitizer, each with its own CMake
-  preset. UBSan gives exact detection of undefined arithmetic, the core's main
+- Add, in parallel with the existing jobs, one host test job under
+  UndefinedBehaviorSanitizer and AddressSanitizer, with its own CMake preset. UBSan gives exact detection of undefined arithmetic, the core's main
   risk, which static analysis only approximates; ASan comes at no extra cost in
   the same build.
 - With the Cortex-M port, run the tests and the fully featured demo in QEMU;
@@ -227,9 +233,10 @@ main checks, and CI runs everything with the same tools and configurations.
 ## Additional ports
 
 - Add a Cortex-M port, choosing an initial core and board/toolchain to target.
-  It joins the cross-compiled builds alongside the stub port, joins
-  [static analysis](#static-analysis), and enables tests and the fully featured
-  demo in QEMU (`mps2-an385`).
+  It joins the cross-compiled builds as presets alongside the stub port, which
+  also brings it under static analysis, takes over the Arm toolchain file (see
+  [cross-compilation](#cross-compilation)), and enables tests and the fully
+  featured demo in QEMU (`mps2-an385`).
 - Implement saved-state critical sections, periodic timer delivery, and the
   atomic idle wait against the generic port contract.
 - For idle, `WFI` inside a PRIMASK critical section meets the contract: a

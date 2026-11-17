@@ -101,6 +101,20 @@ GCC requires `memcpy`, `memmove`, `memset`, and `memcmp` even in a freestanding
 build, so the check program provides them, standing in for the target
 environment.
 
+### Static analysis
+
+The cross-compiled builds also run [Cppcheck](https://cppcheck.sourceforge.io/)
+on each source of the Zule library, the selected port, and the generated
+schedule, with the same definitions and include paths, as they compile. It
+checks for errors, warnings, and portability problems, assuming 32-bit types as
+on Cortex-M. A finding fails the build. Fix it, or, if the code is correct,
+suppress the finding on the line before it, with a comment giving the reason:
+
+```c
+/* Reason: <why the code is correct>. */
+/* cppcheck-suppress <finding id> */
+```
+
 ## Formatting
 
 Format C sources with the pinned clang-format, independently of CMake:
