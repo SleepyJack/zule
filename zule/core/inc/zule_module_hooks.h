@@ -9,9 +9,19 @@
  * zule_modules.c. Entry points take the same arguments and give the same
  * guarantees as the user hooks in zule_hooks.h, and are called first. */
 #include "zule.h"
+#include "zule_schedule.h"
 
 #include <stddef.h>
 #include <stdint.h>
+
+#if ZULE_MODULES_ANY
+/* Called on each run from scheduler initialization, in application context
+ * before ticks start, after the schedule and the core's own checks pass. Each
+ * enabled module validates and prepares, and the first failure is returned,
+ * normally INVALID_CONFIG. Modules keep accumulated results unless they
+ * document otherwise. */
+zule_result_t zule_modules_init(const zule_schedule_t *schedule);
+#endif
 
 #if ZULE_MODULES_HOOK_TICK_START
 void zule_modules_tick_start(uint32_t time_counts, uint32_t slot, uint32_t cycle_count);

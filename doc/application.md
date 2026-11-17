@@ -192,7 +192,7 @@ Without CMake, compile and link:
 - the generated `zule_schedule_definition.c`;
 - the application.
 
-The application's sources need `zule/core/api/` and `zule/modules/` on their
+The application's sources need `zule/core/api/` and `zule/modules/api/` on their
 include path, and the same [build settings](configuration.md#build-settings) as
 every other component. Compile Zule's own components with the include
 directories and definitions of their targets in `zule/`'s CMake files, plus any
