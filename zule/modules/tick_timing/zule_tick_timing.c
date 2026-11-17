@@ -17,16 +17,15 @@ zule_result_t zule_tick_timing_init(const zule_schedule_t *schedule) {
 
 void zule_tick_timing_tick_start(uint32_t time_counts) {
     tick_start_counts = time_counts;
-    int32_t deviation_counts = 0;
-    if (zule_tick_tracker_update(&tracker, time_counts, &deviation_counts)) {
+    zule_tick_deviation_t deviation;
+    if (zule_tick_tracker_update(&tracker, time_counts, &deviation)) {
         ++timing.ticks;
-        const uint32_t magnitude_counts = zule_tick_deviation_magnitude(deviation_counts);
-        if (deviation_counts > 0) {
-            if (magnitude_counts > timing.max_late_counts) {
-                timing.max_late_counts = magnitude_counts;
+        if (deviation.late) {
+            if (deviation.magnitude_counts > timing.max_late_counts) {
+                timing.max_late_counts = deviation.magnitude_counts;
             }
-        } else if (magnitude_counts > timing.max_early_counts) {
-            timing.max_early_counts = magnitude_counts;
+        } else if (deviation.magnitude_counts > timing.max_early_counts) {
+            timing.max_early_counts = deviation.magnitude_counts;
         }
     }
 }

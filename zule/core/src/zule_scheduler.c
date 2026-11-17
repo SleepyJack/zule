@@ -31,7 +31,8 @@ typedef struct {
 #if ZULE_CONFIG_TICK_CHECK
     zule_tick_tracker_t tick_tracker;
     uint32_t tolerance_counts;
-    int32_t tick_deviation_counts;
+    /* Deviation of the current tick, reported with any fault it detects. */
+    zule_tick_deviation_t tick_deviation;
 #endif
 } zule_scheduler_t;
 
@@ -96,7 +97,7 @@ zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault) {
     }
 #endif
 #if ZULE_CONFIG_TICK_CHECK
-    scheduler.tick_deviation_counts = 0;
+    scheduler.tick_deviation = (zule_tick_deviation_t){0};
 #endif
     scheduler.slot = 0U;
     scheduler.cycle_count = 0U;
@@ -125,7 +126,7 @@ static void raise_fault(zule_result_t reason) {
             .cycle_count = scheduler.cycle_count,
             .task_id = scheduler.schedule->windows[scheduler.active_window_ind].task->id,
 #if ZULE_CONFIG_TICK_CHECK
-            .tick_deviation_counts = scheduler.tick_deviation_counts,
+            .tick_deviation_counts = zule_tick_deviation_signed(scheduler.tick_deviation),
 #endif
         };
         scheduler.on_fault(&fault);
@@ -136,10 +137,8 @@ static void raise_fault(zule_result_t reason) {
 /* Compare the tick with its expected time. The tolerance is below one slot, so a
  * fault comes before any deviation reaches 2^31 counts. */
 static void check_tick_timing(uint32_t now_counts) {
-    if (zule_tick_tracker_update(&scheduler.tick_tracker, now_counts,
-                                 &scheduler.tick_deviation_counts) &&
-        zule_tick_deviation_magnitude(scheduler.tick_deviation_counts) >
-            scheduler.tolerance_counts) {
+    if (zule_tick_tracker_update(&scheduler.tick_tracker, now_counts, &scheduler.tick_deviation) &&
+        scheduler.tick_deviation.magnitude_counts > scheduler.tolerance_counts) {
         raise_fault(ZULE_RESULT_TICK_TIMING);
     }
 }

@@ -118,8 +118,7 @@ int main(void) {
     stop();
 
     /* A stall of 2^31 counts past the expected time is the documented limit: it
-     * reads as the most negative deviation, INT32_MIN, whose magnitude of 2^31
-     * must be reported without overflow. */
+     * reads as an early deviation of the largest magnitude, 2^31. */
     start();
     zule_tick_timing_reset();
     tick_at(0U, 1U);

@@ -19,6 +19,15 @@ typedef struct {
     bool reference_set;
 } zule_tick_tracker_t;
 
+/* A tick's deviation from its expected time, as a magnitude and a direction, so
+ * consumers compare unsigned magnitudes and never need abs(). */
+typedef struct {
+    /* From 0 to 2^31 counts. */
+    uint32_t magnitude_counts;
+    /* True when late; false when early or exactly on time. */
+    bool late;
+} zule_tick_deviation_t;
+
 /* Prepare for a run with slots of slot_us at a timebase of hz, clearing the
  * reference. Returns INVALID_CONFIG unless hz is nonzero and a slot is a whole
  * number of counts below 2^31, so expected times do not drift and deviations
@@ -38,12 +47,11 @@ static inline zule_result_t zule_tick_tracker_init(zule_tick_tracker_t *tracker,
 }
 
 /* Record a tick at now_counts. Returns false for the reference tick. Otherwise
- * returns true with the deviation from the expected time, positive when late.
- * Wrapping arithmetic keeps this exact across timebase rollover while the
- * deviation is below 2^31 counts; a larger one, such as a very long stall, reads
- * as early. */
+ * returns true with the deviation from the expected time. Wrapping arithmetic
+ * keeps this exact across timebase rollover while the deviation is below 2^31
+ * counts; a larger one, such as a very long stall, reads as early. */
 static inline bool zule_tick_tracker_update(zule_tick_tracker_t *tracker, uint32_t now_counts,
-                                            int32_t *deviation_counts) {
+                                            zule_tick_deviation_t *deviation) {
     if (!tracker->reference_set) {
         tracker->reference_set = true;
         tracker->expected_counts = now_counts;
@@ -51,24 +59,28 @@ static inline bool zule_tick_tracker_update(zule_tick_tracker_t *tracker, uint32
     }
     tracker->expected_counts += tracker->counts_per_slot;
     const uint32_t late_counts = now_counts - tracker->expected_counts;
-    /* Convert to signed explicitly; out-of-range conversions are implementation
-     * defined. An early tick's magnitude is from 1 to 2^31. */
     if (late_counts <= (uint32_t)INT32_MAX) {
-        *deviation_counts = (int32_t)late_counts;
+        deviation->magnitude_counts = late_counts;
+        deviation->late = late_counts != 0U;
     } else {
-        const uint32_t early_counts = tracker->expected_counts - now_counts;
-        *deviation_counts = -(int32_t)(early_counts - 1U) - 1;
+        /* From 1 to 2^31 counts early. */
+        deviation->magnitude_counts = tracker->expected_counts - now_counts;
+        deviation->late = false;
     }
     return true;
 }
 
-/* Return the magnitude of a deviation. Unlike abs(), this is defined for
- * INT32_MIN, whose magnitude of 2^31 does not fit an int32_t. */
-static inline uint32_t zule_tick_deviation_magnitude(int32_t deviation_counts) {
-    if (deviation_counts < 0) {
-        return (uint32_t)(-(deviation_counts + 1)) + 1U;
+/* Return a deviation as a signed count, positive when late, for reporting. Every
+ * deviation fits: late magnitudes are below 2^31, and early ones are at most
+ * 2^31. The conversion avoids implementation-defined unsigned-to-signed casts. */
+static inline int32_t zule_tick_deviation_signed(zule_tick_deviation_t deviation) {
+    if (deviation.late) {
+        return (int32_t)deviation.magnitude_counts;
     }
-    return (uint32_t)deviation_counts;
+    if (deviation.magnitude_counts == 0U) {
+        return 0;
+    }
+    return -(int32_t)(deviation.magnitude_counts - 1U) - 1;
 }
 
 #endif
