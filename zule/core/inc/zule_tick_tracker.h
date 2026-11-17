@@ -70,17 +70,19 @@ static inline bool zule_tick_tracker_update(zule_tick_tracker_t *tracker, uint32
     return true;
 }
 
-/* Return a deviation as a signed count, positive when late, for reporting. Every
- * deviation fits: late magnitudes are below 2^31, and early ones are at most
- * 2^31. The conversion avoids implementation-defined unsigned-to-signed casts. */
+/* Return a deviation as a signed count, positive when late, for reporting. Late
+ * magnitudes are below 2^31, and early ones are at most 2^31. */
 static inline int32_t zule_tick_deviation_signed(zule_tick_deviation_t deviation) {
     if (deviation.late) {
         return (int32_t)deviation.magnitude_counts;
     }
-    if (deviation.magnitude_counts == 0U) {
-        return 0;
+    /* An early magnitude of exactly 2^31 is the one value whose positive form
+     * does not fit an int32_t: converting it is implementation defined. Its
+     * negation is INT32_MIN, which does fit, so map it directly. */
+    if (deviation.magnitude_counts == 0x80000000U) {
+        return INT32_MIN;
     }
-    return -(int32_t)(deviation.magnitude_counts - 1U) - 1;
+    return -(int32_t)deviation.magnitude_counts;
 }
 
 #endif

@@ -9,6 +9,7 @@
 #include "zule_schedule_definition.h"
 #include "zule_scheduler.h"
 #include "zule_test_port.h"
+#include "zule_tick_tracker.h"
 
 /* Built with ZULE_CONFIG_TICK_TOLERANCE_US=10 and the tick start hook. At the
  * default 1 MHz test timebase, a 100 us slot is 100 counts and the tolerance is
@@ -145,7 +146,18 @@ static void test_init_limits(void) {
     assert(zule_test_port_control.init_calls == 0U);
 }
 
+/* The signed form of a deviation, including the edges of the int32_t range. */
+static void test_deviation_signed(void) {
+    assert(zule_tick_deviation_signed((zule_tick_deviation_t){0U, false}) == 0);
+    assert(zule_tick_deviation_signed((zule_tick_deviation_t){5U, false}) == -5);
+    assert(zule_tick_deviation_signed((zule_tick_deviation_t){7U, true}) == 7);
+    assert(zule_tick_deviation_signed((zule_tick_deviation_t){0x7FFFFFFFU, true}) == INT32_MAX);
+    assert(zule_tick_deviation_signed((zule_tick_deviation_t){0x7FFFFFFFU, false}) == -INT32_MAX);
+    assert(zule_tick_deviation_signed((zule_tick_deviation_t){0x80000000U, false}) == INT32_MIN);
+}
+
 int main(void) {
+    test_deviation_signed();
     test_init_limits();
 
     /* Deviations up to the tolerance, early or late, are accepted. The first tick
