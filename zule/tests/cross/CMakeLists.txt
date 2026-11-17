@@ -23,23 +23,23 @@ target_link_libraries(zule_cross_check PRIVATE zule::zule zule_warnings gcc)
 # Static analysis: after the build, Cppcheck with its MISRA C:2012 addon analyses
 # the Zule library, the selected port, and the generated schedule as one
 # program, from the compile database, so it sees each source's definitions and
-# include paths, and project-wide rules see every use. The check program's own
-# sources are excluded. A finding fails the build; fix it, or suppress it inline
-# with a comment giving the reason. The compile database is enabled above.
+# include paths, and project-wide rules see every use. The check program is
+# analysed only so its calls count as uses of the public API; findings in its own
+# sources are suppressed. A finding fails the build; fix it, or suppress it
+# inline with a comment giving the reason. The compile database is enabled above.
+# There is no --cppcheck-build-dir: with one, Cppcheck 2.13 reports unused
+# functions but leaves them out of its exit status.
 find_program(ZULE_CPPCHECK cppcheck REQUIRED)
-set(zule_cppcheck_cache "${CMAKE_CURRENT_BINARY_DIR}/cppcheck")
-file(MAKE_DIRECTORY "${zule_cppcheck_cache}")
 add_custom_target(zule_cppcheck ALL
     COMMAND "${ZULE_CPPCHECK}"
         "--project=${CMAKE_BINARY_DIR}/compile_commands.json"
-        "--cppcheck-build-dir=${zule_cppcheck_cache}"
-        -i "${CMAKE_CURRENT_SOURCE_DIR}/zule_cross_check.c"
-        -i "${CMAKE_CURRENT_SOURCE_DIR}/zule_cross_runtime.c"
+        "--suppress=*:${CMAKE_CURRENT_SOURCE_DIR}/zule_cross_check.c"
+        "--suppress=*:${CMAKE_CURRENT_SOURCE_DIR}/zule_cross_runtime.c"
         --std=c99
         # 32-bit int, long, and pointers, as on Cortex-M.
         --platform=unix32
         # The MISRA addon reports at style severity, so style must be enabled.
-        --enable=warning,style,portability
+        --enable=warning,style,portability,unusedFunction
         --addon=misra
         --error-exitcode=1
         --inline-suppr

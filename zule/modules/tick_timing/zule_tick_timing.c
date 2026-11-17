@@ -1,9 +1,9 @@
 #include "zule_tick_timing.h"
 #include "zule_port.h"
 #include "zule_tick_timing_hooks.h"
-#include "zule_tick_tracker.h"
 
 #if ZULE_CONFIG_MODULE_TICK_TIMING
+#include "zule_tick_tracker.h"
 
 /* Written by the hook handlers in tick context, and read or cleared by the API
  * inside a critical section, so access never overlaps. */

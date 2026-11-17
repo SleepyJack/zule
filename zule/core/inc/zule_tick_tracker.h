@@ -6,11 +6,10 @@
  * tick is expected one slot after the previous expected time. Each user owns its
  * own tracker; this header shares only the arithmetic. */
 #include "zule.h"
+#include "zule_units.h"
 
 #include <stdbool.h>
 #include <stdint.h>
-
-#define ZULE_MICROSECONDS_PER_SECOND 1000000U
 
 typedef struct {
     uint32_t counts_per_slot;

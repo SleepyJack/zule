@@ -40,7 +40,6 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ### Static analysis
 
-- Enable Cppcheck's unused-function check in the cross-compiled builds' analysis.
 - Supply the licensed MISRA rule texts to the addon, so its findings describe
   the rules.
 - The free addon covers only part of MISRA C:2012. Consider a tool with full
@@ -49,10 +48,6 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ### Continuous integration
 
-- Add, in parallel with the existing jobs, one host test job under
-  UndefinedBehaviorSanitizer and AddressSanitizer, with its own CMake preset. UBSan gives exact detection of undefined arithmetic, the core's main
-  risk, which static analysis only approximates; ASan comes at no extra cost in
-  the same build.
 - With the Cortex-M port, run the tests and the fully featured demo in QEMU;
   see [demos](#demos).
 - Considered and not planned: ThreadSanitizer, which would only cover the POSIX
