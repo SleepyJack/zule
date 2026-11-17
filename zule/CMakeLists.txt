@@ -71,18 +71,18 @@ else()
                         "(posix), or to 'external' and define a zule::port target")
 endif()
 
-# The core library's sources, read from the single list in core_sources.txt, as
+# Zule's sources for the core library, read from the single list in zule_sources.txt, as
 # absolute paths. Reconfigure when the list changes.
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/core_sources.txt" zule_core_source_lines REGEX "^[^#]")
-set(ZULE_CORE_SOURCES "")
-foreach(zule_core_source IN LISTS zule_core_source_lines)
-    string(STRIP "${zule_core_source}" zule_core_source)
-    if(NOT zule_core_source STREQUAL "")
-        list(APPEND ZULE_CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${zule_core_source}")
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/zule_sources.txt" zule_source_lines REGEX "^[^#]")
+set(ZULE_SOURCES "")
+foreach(zule_source IN LISTS zule_source_lines)
+    string(STRIP "${zule_source}" zule_source)
+    if(NOT zule_source STREQUAL "")
+        list(APPEND ZULE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${zule_source}")
     endif()
 endforeach()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/core_sources.txt")
+    "${CMAKE_CURRENT_SOURCE_DIR}/zule_sources.txt")
 
 add_subdirectory(core)
 

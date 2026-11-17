@@ -12,9 +12,9 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 ZULE_DIR = Path(__file__).resolve().parents[3]
 
 
-def core_sources() -> list[str]:
-    """Return the core library's sources from the single list in core_sources.txt."""
-    lines = (ZULE_DIR / "core_sources.txt").read_text(encoding="utf-8").splitlines()
+def zule_sources() -> list[str]:
+    """Return Zule's sources, built into the core library, from the single list in zule_sources.txt."""
+    lines = (ZULE_DIR / "zule_sources.txt").read_text(encoding="utf-8").splitlines()
     return [str(ZULE_DIR / line.strip()) for line in lines if line.strip() and not line.startswith("#")]
 
 
@@ -26,7 +26,7 @@ def compile_command(compiler: str, harness: Path, output: Path, executable: Path
         "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"),
         "-I", str(core_dir / "tests/port"), "-I", str(ZULE_DIR / "ports"),
         "-I", str(ZULE_DIR / "modules/api"),
-        str(harness), str(output), *core_sources(), str(core_dir / "tests/port/zule_port.c"),
+        str(harness), str(output), *zule_sources(), str(core_dir / "tests/port/zule_port.c"),
         "-o", str(executable),
     ]
 

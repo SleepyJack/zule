@@ -110,7 +110,7 @@ A module consists of:
   condition of each hook it consumes;
 - calls from `zule_modules_init()` and from each consumed hook's entry point in
   `zule_modules.c`;
-- its sources listed in [`zule/core_sources.txt`](../zule/core_sources.txt), the
+- its sources listed in [`zule/zule_sources.txt`](../zule/zule_sources.txt), the
   single list of the core library's sources;
 - compile-time checks for any further features it requires;
 - tests, using the core test port's scripted timebase.

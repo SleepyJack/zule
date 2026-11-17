@@ -1,6 +1,6 @@
-# Sources come from zule/core_sources.txt. Modules live in zule/modules/ but build
+# Sources come from zule/zule_sources.txt. Modules live in zule/modules/ but build
 # into the core library, so they can use the core API without a link cycle.
-add_library(zule_core STATIC ${ZULE_CORE_SOURCES})
+add_library(zule_core STATIC ${ZULE_SOURCES})
 add_library(zule::core ALIAS zule_core)
 
 target_link_libraries(zule_core

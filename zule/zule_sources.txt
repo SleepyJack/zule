@@ -1,0 +1,10 @@
+# Zule's sources, built into the zule_core library: the core and the modules.
+# Ports are separate and list their own sources. Paths are relative to this
+# directory, one per line. This is the only list: CMake reads it for the library
+# and its tests, and the schedule tool's tests read it to compile generated
+# schedules. Lines starting with # are comments.
+core/src/zule.c
+core/src/zule_schedule.c
+core/src/zule_scheduler.c
+modules/zule_modules.c
+modules/tick_timing/zule_tick_timing.c
