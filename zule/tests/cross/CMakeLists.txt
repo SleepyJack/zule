@@ -17,3 +17,22 @@ zule_add_schedule(zule_cross_check SCHEDULE schedule.json)
 # as 64-bit division, and comes after the libraries that need it.
 target_link_options(zule_cross_check PRIVATE -nostdlib)
 target_link_libraries(zule_cross_check PRIVATE zule::zule zule_warnings gcc)
+
+# Static analysis: Cppcheck runs on each source of the Zule library, the selected
+# port, and the generated schedule as it compiles, with the same definitions and
+# include paths. A finding fails the build; fix it, or suppress it inline with a
+# comment giving the reason. The check program itself is not analysed.
+find_program(ZULE_CPPCHECK cppcheck REQUIRED)
+set(zule_cppcheck_command "${ZULE_CPPCHECK}"
+    --std=c99
+    # 32-bit int, long, and pointers, as on Cortex-M.
+    --platform=unix32
+    --enable=warning,portability
+    --error-exitcode=1
+    --inline-suppr
+    # Cppcheck knows the standard headers; it cannot see the compiler's own.
+    --suppress=missingIncludeSystem
+    --quiet)
+get_target_property(zule_port_target zule::port ALIASED_TARGET)
+set_target_properties(zule ${zule_port_target} zule_cross_check_zule_schedule
+    PROPERTIES C_CPPCHECK "${zule_cppcheck_command}")

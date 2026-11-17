@@ -15,4 +15,6 @@ timebase enabled also link.
 target, using the Arm GNU toolchain. The
 [cross-compiled builds](../../../CONTRIBUTING.md#cross-compiled-builds) use the
 port and toolchain file to check the Zule library: freestanding, with no C
-library, and with strict warnings as errors.
+library, with strict warnings as errors, and with static analysis. The stub
+stays alongside real ports: it checks the Zule library alone, and targets that
+have no port.
