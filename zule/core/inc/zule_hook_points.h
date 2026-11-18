@@ -27,7 +27,9 @@
      ZULE_HOOK_TASK_START_USED || ZULE_HOOK_TASK_END_USED)
 
 /* The scheduler reads the time for tick start itself, so the tick check can share
- * the same read; call this only when ZULE_HOOK_TICK_START_USED. */
+ * the same read. It calls this wrapper only when ZULE_HOOK_TICK_START_USED, so
+ * the wrapper is defined only then. */
+#if ZULE_HOOK_TICK_START_USED
 static inline void zule_hook_tick_start(uint32_t time_counts, uint32_t slot, uint32_t cycle_count) {
 #if ZULE_MODULES_HOOK_TICK_START
     zule_modules_tick_start(time_counts, slot, cycle_count);
@@ -35,12 +37,8 @@ static inline void zule_hook_tick_start(uint32_t time_counts, uint32_t slot, uin
 #if ZULE_CONFIG_USER_HOOK_TICK_START
     zule_user_hook_tick_start(time_counts, slot, cycle_count);
 #endif
-#if !ZULE_HOOK_TICK_START_USED
-    (void)time_counts;
-    (void)slot;
-    (void)cycle_count;
-#endif
 }
+#endif
 
 static inline void zule_hook_tick_end(void) {
 #if ZULE_HOOK_TICK_END_USED

@@ -51,6 +51,17 @@ cmake --build --preset tests
 ctest --preset tests
 ```
 
+The `sanitize` preset builds and runs the same tests under
+UndefinedBehaviorSanitizer and AddressSanitizer, in `build/zule-sanitize/`. Any
+undefined behaviour or invalid memory access they detect fails the test:
+
+```sh
+cd zule
+cmake --preset sanitize
+cmake --build --preset sanitize
+ctest --preset sanitize
+```
+
 Build and run the demo, which also regenerates its schedule:
 
 ```sh
@@ -108,7 +119,8 @@ After compiling, the cross-compiled builds run
 Zule library, the selected port, and the generated schedule, analysed together
 as one program from the build's compile database. It checks for errors,
 warnings, style, and portability problems, assuming 32-bit types as on
-Cortex-M, and for violations of the MISRA rules the addon covers; see
+Cortex-M, for functions that are never used, and for violations of the MISRA
+rules the addon covers; see
 [MISRA C](doc/CODING_GUIDELINES.md#misra-c). A finding fails the build. Fix the
 code rather than suppress the finding; see
 [static analysis findings](doc/CODING_GUIDELINES.md#static-analysis-findings).
@@ -151,6 +163,7 @@ against those guidelines.
 GitHub Actions first builds the container image, caching its layers between
 runs, and passes it to the other jobs, which run every step inside it. One job
 runs the C and Python unit tests, checks handwritten and generated C
-formatting, and builds and smoke-tests the demo; another runs the
-cross-compiled builds. CI runs for pushes and pull requests, and the
-[CI workflow](.github/workflows/ci.yml) can also be run manually.
+formatting, and builds and smoke-tests the demo; another runs the C unit tests
+under the sanitizers; and another runs the cross-compiled builds. CI runs for
+pushes and pull requests, and the [CI workflow](.github/workflows/ci.yml) can
+also be run manually.

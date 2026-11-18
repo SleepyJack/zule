@@ -2,7 +2,11 @@
 #include "zule_hook_points.h"
 #include "zule_port.h"
 #include "zule_schedule_definition.h"
+#include "zule_constants.h"
+
+#if ZULE_CONFIG_TICK_CHECK
 #include "zule_tick_tracker.h"
+#endif
 
 #include <stdbool.h>
 #include <stdint.h>
