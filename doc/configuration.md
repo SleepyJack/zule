@@ -146,7 +146,8 @@ short, so budgets must allow for the tolerance. It must also exceed what the
 target really does: interrupt latency, the longest interrupt-masked section,
 higher-priority interrupts, and [hook](application.md#hooks) run time. The
 [tick timing module](modules.md#tick-timing) measures the deviations the target
-really shows, with or without the check enabled. The effective resolution is one timebase count.
+really shows, with or without the check enabled. The effective resolution is one
+timebase count.
 
 ### Port settings
 
