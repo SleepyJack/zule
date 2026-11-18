@@ -123,3 +123,7 @@ The documentation follows the components of the [architecture](doc/architecture.
 | [Port](doc/port.md) | The port contract, and creating and linking a custom port. |
 
 To work on Zule itself, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Licence
+
+Zule is available under the [MIT License](LICENSE).

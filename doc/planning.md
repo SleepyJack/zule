@@ -19,9 +19,6 @@ main checks, and CI runs everything with the same tools and configurations.
   jobs pull it instead of building it. Until then, CI builds the image on each
   run, with cached layers, and passes it to its jobs as an artifact.
 - Consider pinning the base image by digest as well as tag.
-- Cover the feature configurations, not only the defaults: much of the code is
-  behind settings. The cross-compiled builds already build everything disabled
-  and everything enabled; extend this to the host tests and static analysis.
 
 ### Cross-compilation
 
@@ -35,6 +32,10 @@ main checks, and CI runs everything with the same tools and configurations.
   covered as soon as they are added.
 - When the Cortex-M port arrives, move the Arm toolchain file into it. The stub
   port then becomes architecture-neutral, used with any toolchain.
+- Consider presets for combinations of features between the defaults and
+  everything enabled, such as the tick check without hooks, if code depends on
+  how settings combine. The host tests already build each feature in its own
+  configuration.
 - Later, consider a target where `int` is 16 bits, such as MSP430, built with
   the stub port, to catch assumptions about `int` size.
 
@@ -68,15 +69,6 @@ main checks, and CI runs everything with the same tools and configurations.
 - Until then, the existing demo keeps the tick check enabled in CI with a
   half-slot tolerance; an occasional failure on a heavily loaded runner is
   acceptable.
-
-## Licence
-
-- The repository is public but deliberately unlicensed while pre-release. Add a
-  licence before promoting the project, accepting outside contributions, or
-  making a first release.
-- MIT is the provisional choice. Decide the copyright holder named in the notice.
-- Once added, the licence applies to everything published from then on, and
-  published versions remain available under it.
 
 ## Schedule definition tooling
 
@@ -197,24 +189,13 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ## Core and port configuration
 
-- Keep core defaults and validation in `zule/core/api/zule_config.h`, with optional
-  application overrides in `zule_user_config.h`.
-- Each port defines its own `zule_port_config.h` for defaults and validation,
-  with optional application overrides in `zule_user_port_config.h`, found
-  through `ZULE_USER_CONFIG_DIR`. Keep the core independent of port-specific
-  settings. Optional features are core settings that ports implement or reject.
-  The Cortex-M port will add the first required setting, the timer clock
-  frequency.
-- Use these Zule-owned headers to document supported settings, defaults,
-  constraints, and required values in one place for each scope.
-- Apply sensible defaults, but fail compilation for missing required hardware
-  information, such as a timer clock frequency, rather than guessing a value.
+- The Cortex-M port will add the first required port setting, the timer clock
+  frequency; see [additional ports](#additional-ports).
 - Consider opt-in diagnostics for applied defaults, keeping normal builds quiet.
   Check compiler support for `#warning` in the supported C99 toolchains and avoid
   excessive repeated diagnostics across compilation units.
-- Document and verify build integration so the core, selected port, application,
-  and generated code receive consistent settings. Keep `slot_us` in the schedule
-  JSON; the port converts it to timer settings and checks representability.
+- Consider detecting settings that differ between components, which a build
+  outside CMake can cause by not giving every component the same definitions.
 
 ## Application critical sections
 
