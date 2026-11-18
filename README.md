@@ -50,6 +50,21 @@ sense
 
 Press Ctrl-C to stop. See the [demo README](demo/README.md) for what it shows.
 
+Alternatively, on any system with Docker or Podman, run the demo in the
+[development image](.devcontainer/Dockerfile), which has every tool installed;
+you then need only Git and Docker. From the repository root:
+
+```sh
+docker build -f .devcontainer/Dockerfile -t zule-dev .
+docker run --rm -it --user "$(id -u):$(id -g)" --env HOME=/tmp \
+    --volume "$PWD:/work" --workdir /work/demo zule-dev \
+    sh -c 'cmake --preset demo && cmake --build --preset demo && ../build/demo/zule_demo'
+```
+
+The `--user` option keeps build output owned by you rather than root. Editors
+that support Dev Containers, such as VS Code, can also open the repository in
+the image; see [CONTRIBUTING.md](CONTRIBUTING.md#container-image).
+
 ## Writing an application
 
 1. **Define the schedule** in JSON. Each task gets a budget in slots, and each
