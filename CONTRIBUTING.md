@@ -8,17 +8,9 @@ or natively.
 
 ### Container image
 
-[`.devcontainer/Dockerfile`](.devcontainer/Dockerfile) defines an image with
-every tool at a pinned version, and CI builds in it. Editors and tools that
-support Dev Containers, such as VS Code, GitHub Codespaces, JetBrains IDEs, and
-the `devcontainer` CLI, can open the repository in it through
-[`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json). The image
-also works directly with Docker or Podman, from the project root:
-
-```sh
-docker build -f .devcontainer/Dockerfile -t zule-dev .
-docker run --rm -it --volume "$PWD:/work" --workdir /work zule-dev
-```
+The [development image](.devcontainer/README.md) has every tool at a pinned
+version, and CI builds in it. Use it with Docker or Podman, or open the
+repository in it with an editor that supports Dev Containers.
 
 ### Native setup
 

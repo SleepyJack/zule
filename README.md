@@ -21,19 +21,47 @@ development on Linux; embedded ports are planned.
 
 ## Getting started
 
-Run the demo on Linux. You need Git, a C compiler, and Python 3.10 or later;
-the Python environment provides CMake and the other tools.
+### Set up the environment
+
+Clone the repository:
 
 ```sh
 git clone https://github.com/SleepyJack/zule.git
 cd zule
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -r requirements-dev.txt
+```
 
+Then set up its tools in one of two ways:
+
+- **Native, on Linux.** You need a C compiler and Python 3.10 or later; a
+  Python environment provides CMake and the other tools:
+
+  ```sh
+  python3 -m venv .venv
+  . .venv/bin/activate
+  python -m pip install -r requirements-dev.txt
+  ```
+
+- **In a container.** With Docker or Podman, the
+  [development image](.devcontainer/README.md) has every tool installed. Build
+  it and start a shell in it:
+
+  ```sh
+  docker build -f .devcontainer/Dockerfile -t zule-dev .
+  docker run --rm -it --user "$(id -u):$(id -g)" --env HOME=/tmp \
+      --volume "$PWD:/work" --workdir /work zule-dev
+  ```
+
+### Build the demo
+
+```sh
 cd demo
 cmake --preset demo
 cmake --build --preset demo
+```
+
+### Run the demo
+
+```sh
 ../build/demo/zule_demo
 ```
 
@@ -49,21 +77,6 @@ sense
 ```
 
 Press Ctrl-C to stop. See the [demo README](demo/README.md) for what it shows.
-
-Alternatively, on any system with Docker or Podman, run the demo in the
-[development image](.devcontainer/Dockerfile), which has every tool installed;
-you then need only Git and Docker. From the repository root:
-
-```sh
-docker build -f .devcontainer/Dockerfile -t zule-dev .
-docker run --rm -it --user "$(id -u):$(id -g)" --env HOME=/tmp \
-    --volume "$PWD:/work" --workdir /work/demo zule-dev \
-    sh -c 'cmake --preset demo && cmake --build --preset demo && ../build/demo/zule_demo'
-```
-
-The `--user` option keeps build output owned by you rather than root. Editors
-that support Dev Containers, such as VS Code, can also open the repository in
-the image; see [CONTRIBUTING.md](CONTRIBUTING.md#container-image).
 
 ## Writing an application
 
