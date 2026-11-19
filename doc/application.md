@@ -127,7 +127,9 @@ Within each tick, `tick_start` comes first and `tick_end` last. A window's
 ticks after a fault. Enabled [modules](modules.md) receive the same events
 before the application's hooks.
 
-The demo uses `task_start` and `task_end` to report the longest task.
+The [task statistics module](modules.md#task-statistics) measures execution
+time and dispatch latency for every task this way, without any hooks of the
+application's own.
 
 ## Task names and IDs
 
@@ -188,8 +190,9 @@ installed. CMake uses the active virtual environment's interpreter if there is
 one; otherwise pass `-DPython3_EXECUTABLE=<python>`. The choice is cached in the
 build directory. Building Zule without `zule_add_schedule()` needs no Python.
 
-Applications see only the public API. The core's internal headers in
-`zule/core/inc/` are visible only to the core, its tests, and the generated schedule.
+Applications see only the public API. The internal headers in `zule/core/inc/`
+and `zule/modules/inc/` are visible only to the Zule library, its tests, and the
+generated schedule.
 
 ## Other build systems
 

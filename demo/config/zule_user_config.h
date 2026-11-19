@@ -4,10 +4,8 @@
 /* Demo build settings. */
 #define ZULE_CONFIG_TASK_NAMES 1
 
-/* The timebase and two user hooks measure the longest task; see main.c. */
+/* The timebase, which the tick timing check and the modules need. */
 #define ZULE_CONFIG_TIMEBASE 1
-#define ZULE_CONFIG_USER_HOOK_TASK_START 1
-#define ZULE_CONFIG_USER_HOOK_TASK_END 1
 
 /* Fault if a tick is more than half a 50 ms slot early or late. Generous,
  * because host thread scheduling is not real-time. */
@@ -16,5 +14,8 @@
 
 /* Measure tick deviations, to see what tolerance the host needs. */
 #define ZULE_CONFIG_MODULE_TICK_TIMING 1
+
+/* Measure task execution times and dispatch latency, to compare with budgets. */
+#define ZULE_CONFIG_MODULE_TASK_STATS 1
 
 #endif

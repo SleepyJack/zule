@@ -25,7 +25,7 @@ def compile_command(compiler: str, harness: Path, output: Path, executable: Path
         compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
         "-I", str(core_dir / "api"), "-I", str(core_dir / "inc"),
         "-I", str(core_dir / "tests/port"), "-I", str(ZULE_DIR / "ports"),
-        "-I", str(ZULE_DIR / "modules/api"),
+        "-I", str(ZULE_DIR / "modules/api"), "-I", str(ZULE_DIR / "modules/inc"),
         str(harness), str(output), *zule_sources(), str(core_dir / "tests/port/zule_port.c"),
         "-o", str(executable),
     ]
@@ -43,7 +43,9 @@ class GenerationTests(unittest.TestCase):
             harness.write_text('''#include <assert.h>
 #include "zule_task_ids.h"
 #include "zule_task_ids.h"
+#include "zule_modules_task_data.h"
 #include "zule_schedule_definition.h"
+#include "zule_task_stats.h"
 #include <string.h>
 static unsigned called;
 void zule_task_sense(void) { called = 1; }
@@ -80,6 +82,18 @@ int main(void) {
         assert(called == i + 1U);
     }
     assert(zule_task_name_get(UINT32_MAX) == NULL);
+#if ZULE_MODULES_TASK_DATA
+    /* One zeroed entry per task, through the generated storage. */
+    assert(zule_modules_task_data_get() == zule_modules_task_data_get());
+    zule_task_stats_reset();
+    for (uint32_t id = 0U; id < 3U; ++id) {
+        zule_task_stats_t stats = {.executions = 1U};
+        assert(zule_task_stats_get(id, &stats));
+        assert(stats.executions == 0U);
+    }
+    zule_task_stats_t stats;
+    assert(!zule_task_stats_get(3U, &stats));
+#endif
     return 0;
 }
 ''')
@@ -95,6 +109,7 @@ int main(void) {
                 ["-DZULE_CONFIG_TASK_NAMES=0"],
                 ["-DZULE_USE_USER_CONFIG=1", "-I", directory],
                 ["-DZULE_USE_USER_CONFIG=1", "-I", str(empty_config)],
+                ["-DZULE_CONFIG_TIMEBASE=1", "-DZULE_CONFIG_MODULE_TASK_STATS=1"],
             )
             for flags in modes:
                 with self.subTest(flags=flags):
@@ -103,6 +118,10 @@ int main(void) {
             invalid = subprocess.run(command + ["-DZULE_CONFIG_TASK_NAMES=2"], capture_output=True, text=True)
             self.assertNotEqual(invalid.returncode, 0)
             self.assertIn("ZULE_CONFIG_TASK_NAMES must be 0 or 1", invalid.stderr)
+            # Module storage is sized by the task count, and defined only when a
+            # module keeps per-task data.
+            self.assertIn("#if ZULE_MODULES_TASK_DATA", output.read_text())
+            self.assertIn("zule_modules_task_data[3U];", output.read_text())
             original = output.read_bytes()
             header = Path(directory) / "zule_task_ids.h"
             original_header = header.read_bytes()

@@ -8,7 +8,7 @@ Each component below has its own document, linked from its section.
 
 ## System overview
 
-![Zule architecture: configuration and application in the user domain, connected to the core and port in the Zule domain.](images/architecture.svg)
+![Zule architecture: configuration and application in the user domain, connected to the port, core, and modules in the Zule domain.](images/architecture.svg)
 
 ## Ownership
 
@@ -21,7 +21,7 @@ There are two ownership domains: the user domain and the Zule domain. The
 
 ### Configuration
 
-The configuration defines the set of tasks and the schedule, and the build settings for the core and the selected port. Core settings include which optional features are enabled, such as the sub-slot timebase, hooks, and modules. Port settings supply target information that only the application knows, such as a timer clock frequency, so configuration feeds both the core and the port.
+The configuration defines the set of tasks and the schedule, and the build settings for the core and the selected port. Core settings include which optional features are enabled, such as the sub-slot timebase, hooks, and modules. Port settings supply target information that only the application knows, such as a timer clock frequency. The schedule also sets the number of tasks, so the schedule generated from it provides the [per-task storage](modules.md#per-task-storage) that modules keep. Configuration therefore feeds every Zule component: the core, the modules, and the port.
 
 See [configuration](configuration.md).
 
@@ -41,7 +41,7 @@ See [core](core.md) for task execution and timing details.
 
 ### Modules
 
-Optional consumers of the core's hook events, shipped with Zule and each enabled by a core setting. Modules observe the schedule, for example to collect task timing statistics, and cannot change scheduling. The application reads their results through each module's API.
+Optional consumers of the core's hook events, shipped with Zule and each enabled by a core setting. Modules observe the schedule, for example to collect task timing statistics, and cannot change scheduling. Modules that keep data for each task use storage that the generated schedule defines. The application reads their results through each module's API.
 
 See [modules](modules.md).
 

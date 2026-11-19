@@ -106,7 +106,7 @@ same settings.
 | `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`, and a cycle shorter than 2^32 timebase counts, checked at initialization. Must be `0` or `1`. |
 | `ZULE_CONFIG_TICK_CHECK` | `0` | Set to `1` to enable the [tick timing check](core.md#tick-timing-check). Requires `ZULE_CONFIG_TIMEBASE` and `ZULE_CONFIG_TICK_TOLERANCE_US`. Must be `0` or `1`. |
 | `ZULE_CONFIG_TICK_TOLERANCE_US` | None | Largest accepted tick deviation, early or late, in microseconds. Required with the tick check. Initialization checks it is at least one timebase count and less than one slot. |
-| `ZULE_CONFIG_MODULE_<NAME>` | `0` | Set to `1` to enable a [module](modules.md), such as `TICK_TIMING`. Requires `ZULE_CONFIG_TIMEBASE`. Must be `0` or `1`. |
+| `ZULE_CONFIG_MODULE_<NAME>` | `0` | Set to `1` to enable a [module](modules.md): `TICK_TIMING` or `TASK_STATS`. Requires `ZULE_CONFIG_TIMEBASE`. Must be `0` or `1`. |
 
 The default build needs no user header. Individual settings can be supplied as
 compiler definitions, for example `-DZULE_CONFIG_TASK_NAMES=1`. For a group of

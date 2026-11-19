@@ -106,23 +106,9 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ## Task profiling and benchmarking
 
-- Provide per-task statistics as a module: execution time minimum,
-  maximum, and count, and worst dispatch latency from window start to task
-  start, which also consumes budget. The tick timing module already reports
-  the longest tick handler. Index storage by task
-  ID, which equals the task's table index; size it from a task count to be
-  added to the generated task-ID header.
-- Keep monotonically increasing totals, such as busy time and cycle count, plus
-  the busiest single cycle. Readers choose their own interval by subtracting two
-  snapshots, so the module needs no measurement window. Idle time and slack
-  within windows follow from the schedule; only running time is measured.
-- Expose a snapshot copied under a critical section, and a reset that the
-  application calls when it wants, for example before `zule_run()`. Keep the
-  data in plain static structures that a debugger can also read.
-- Open: statistics per task or per window, and a mean (needing a 64-bit
-  total).
-- Add host tooling that reads the statistics with the schedule JSON and reports
-  each task's measured maximum, budget, and margin, suggesting `budget_slots`.
+- Add host tooling that reads the [task statistics](modules.md#task-statistics)
+  with the schedule JSON and reports each task's measured maximum, budget, and
+  margin, suggesting `budget_slots`.
 - Consider a trace module: a ring buffer of fixed-size timestamped events,
   frozen on a fault or on request to keep the lead-up. Offload it through a
   debugger or the application, and decode it on the host for timeline viewers,
