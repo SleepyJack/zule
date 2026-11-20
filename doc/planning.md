@@ -46,6 +46,19 @@ main checks, and CI runs everything with the same tools and configurations.
 - The free addon covers only part of MISRA C:2012. Consider a tool with full
   coverage if compliance needs to be claimed.
 - Consider reporting findings as GitHub annotations, for example as SARIF.
+- Generated code: the application is responsible for checking its generated
+  schedule, and Zule makes that easy rather than validating the generator.
+  - Provide a one-step check that runs Zule's static analysis, with the same
+    options as the cross-compiled builds, on an application's generated
+    schedule and build settings.
+  - Analyse a reference schedule that exercises every generator branch in the
+    cross-compiled builds: many tasks, a task in several windows, an unused
+    task, the longest names, and values near their limits.
+  - Have the generator reject input with known MISRA risks, such as task names
+    whose generated identifiers are not distinct within their first 31
+    characters (rule 5.1).
+  - Document the generated code's structure, which parts vary with the input,
+    and the application's responsibility for checking the result.
 
 ### Continuous integration
 
