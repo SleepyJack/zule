@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.31)
 project(zule_cross_check LANGUAGES C)
 
-# Link check for cross-compiled builds, a standalone project like the demo. It
+# Link check for cross-compiled builds, a standalone project like the examples. It
 # links the Zule library, the stub port, and a generated schedule into a
 # freestanding program with no C library, so problems that only appear with the
 # target compiler fail the build. Nothing runs it. The presets choose the core

@@ -3,7 +3,7 @@
 The application is owned by the user (see [ownership](architecture.md#ownership)).
 It implements the tasks, runs the scheduler, responds to faults, and builds Zule
 into its executable. The public API is [`zule.h`](../zule/core/api/zule.h);
-[`demo/`](../demo) is a complete example.
+the [examples](../examples/README.md) are complete applications.
 
 ## Tasks
 
@@ -85,8 +85,8 @@ or log synchronously from it. The snapshot pointer is valid only during the
 call, so copy what you need. Returning does not clear the fault or stop a running
 task; the application supplies any safe-state response.
 
-The demo copies the snapshot in the handler and prints it after `zule_run()`
-returns, when tick delivery is quiescent.
+The showcase example copies the snapshot in the handler and prints it after
+`zule_run()` returns, when tick delivery is quiescent.
 
 ## Hooks
 
@@ -154,7 +154,9 @@ requirement; see [CONTRIBUTING.md](../CONTRIBUTING.md#cross-compiled-builds).
 
 Add the `zule/` directory to the application's CMake project, select a port,
 link `zule::zule`, and generate the schedule.
-[demo/CMakeLists.txt](../demo/CMakeLists.txt) is the reference integration:
+[examples/minimal/CMakeLists.txt](../examples/minimal/CMakeLists.txt) is the
+smallest integration, and the showcase example's adds build settings. In
+outline:
 
 ```cmake
 cmake_minimum_required(VERSION 3.31)
@@ -175,6 +177,7 @@ Set these variables before `add_subdirectory()`:
 | --- | --- |
 | `ZULE_PORT` | Required. A directory under `zule/ports/`, or `external` for a [custom port](port.md#creating-a-port). |
 | `ZULE_USER_CONFIG_DIR` | Optional absolute path of the directory holding [`zule_user_config.h`](configuration.md#build-settings), [`zule_user_port_config.h`](configuration.md#port-settings), or both. |
+| `ZULE_USER_PORT_CONFIG_DIR` | Optional absolute path of a separate directory holding [`zule_user_port_config.h`](configuration.md#port-settings), when the port settings are kept apart from the build settings. Only one of the two directories may hold it. |
 | `ZULE_BUILD_TESTS` | Build Zule's own tests. Defaults to `ON` only when `zule/` is the top-level project. |
 
 Zule provides:

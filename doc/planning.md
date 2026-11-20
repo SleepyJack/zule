@@ -49,26 +49,25 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ### Continuous integration
 
-- With the Cortex-M port, run the tests and the fully featured demo in QEMU;
-  see [demos](#demos).
+- With the Cortex-M port, run its tests and the examples in QEMU; see
+  [examples](#examples).
 - Considered and not planned: ThreadSanitizer, which would only cover the POSIX
   port, a development and demonstration target; and Clang as a second host
   compiler, which adds little beyond the cross-compiled builds.
 
-### Demos
+### Examples
 
-- Split the demo by feature set as features grow. Keep a minimal POSIX demo
-  (tasks and a fault handler only) for the CI smoke test, with no timing
-  sensitivity to host load.
-- Add a fully featured demo for the Cortex-M port, running in QEMU on the
-  `mps2-an385` (Cortex-M3) machine: the timebase, hooks, the tick timing check,
-  and modules as they arrive. Run it in CI with `-icount`, so guest time follows
-  executed instructions and timing, including the tick check, is deterministic
-  regardless of runner load. It also exercises SysTick and the idle wait, though
-  QEMU's models do not prove behaviour on silicon.
-- Until then, the existing demo keeps the tick check enabled in CI with a
-  half-slot tolerance; an occasional failure on a heavily loaded runner is
-  acceptable.
+- With the Cortex-M port, add an `mps2-an385` target (Cortex-M3, in QEMU) to the
+  minimal and showcase examples, with the code they share in
+  `examples/common/targets/mps2-an385/`. Run both in CI with `-icount`, so guest
+  time follows executed instructions and timing, including the tick check, is
+  deterministic regardless of runner load. This also exercises SysTick and the
+  idle wait, though QEMU's models do not prove behaviour on silicon.
+- Until then, the showcase keeps the tick check enabled in CI on the host, with
+  a half-slot tolerance; an occasional failure on a heavily loaded runner is
+  acceptable. The minimal example is the stable smoke test.
+- Consider an example for measuring and checking timing on a target, such as
+  setting budgets and the tick timing tolerance from the modules' measurements.
 
 ## Schedule definition tooling
 
@@ -167,7 +166,7 @@ main checks, and CI runs everything with the same tools and configurations.
 - Until switching exists, leave the first slots of the schedule idle, as
   described in [scheduler initialisation](core.md#scheduler-initialisation).
   This absorbs startup latency at the cost of those slots in every cycle.
-- Cover the pattern with a demo example: a startup schedule, a mode-manager
+- Cover the pattern with an example: a startup schedule, a mode-manager
   task, and a switch to the operational schedule.
 - If switching is deferred indefinitely, reconsider a dedicated startup delay:
   a countdown of `n` slots in tick processing, without marking tasks pending,
@@ -188,15 +187,26 @@ main checks, and CI runs everything with the same tools and configurations.
 - Fault handlers run in tick context, so data shared between a fault handler and
   application context needs exclusion. Consider public wrappers for the port's
   critical section, with the same nesting and short-duration rules.
-- Have the demo use them to protect the state its fault handler writes.
+- Have the showcase example use them to protect the state its fault handler
+  writes.
 
 ## Additional ports
 
-- Add a Cortex-M port, choosing an initial core and board/toolchain to target.
-  It joins the cross-compiled builds as presets alongside the stub port, which
+- Add a generic Cortex-M port, `zule/ports/cortex_m`, using only what the
+  architecture defines: SysTick, PRIMASK, and `WFI`. Written to the Armv6-M
+  subset, it serves Armv6-M, Armv7-M, and Armv8-M. It joins the cross-compiled
+  builds as presets alongside the stub port, for Cortex-M0+ and Cortex-M3, which
   also brings it under static analysis, takes over the Arm toolchain file (see
-  [cross-compilation](#cross-compilation)), and enables tests and the fully
-  featured demo in QEMU (`mps2-an385`).
+  [cross-compilation](#cross-compilation)), and enables tests and the
+  [examples](#examples) in QEMU (`mps2-an385`).
+- Deliver it in steps: the port's critical sections, periodic tick, and idle,
+  with host tests against fake SysTick registers; a QEMU harness that runs the
+  port's tests in CI; the timebase; and the `mps2-an385` example target.
+- Proposed, to settle with the first step: no CMSIS dependency, defining the
+  few registers the port uses; the port exports a tick handler that the
+  application's `SysTick_Handler` calls, since vendor HALs often use SysTick
+  themselves; and the few instructions C cannot express, such as `cpsid` and
+  `wfi`, live in a small assembly file, keeping the C strict C99.
 - Implement saved-state critical sections, periodic timer delivery, and the
   atomic idle wait against the generic port contract.
 - For idle, `WFI` inside a PRIMASK critical section meets the contract: a
@@ -204,13 +214,18 @@ main checks, and CI runs everything with the same tools and configurations.
   the core exits the critical section. Interrupts masked through BASEPRI do not
   wake `WFI`, so a BASEPRI-based port must mask with PRIMASK and lift BASEPRI
   around the `WFI`.
-- Provide the timebase from SysTick, and require the timer clock frequency as a
-  port setting in `zule_user_port_config.h` when the timebase is enabled. The
+- Require the SysTick clock frequency as a port setting in
+  `zule_user_port_config.h`: the tick needs it to convert `slot_us` to a reload
+  value. Tick init fails unless a slot is a whole number of clock counts that
+  fits SysTick's 24 bits.
+- Provide the timebase from SysTick, at the same clock frequency. The
   count is the tick count times the reload period, plus the elapsed part of the
   current period from the SysTick counter. A read must account for a counter
-  wrap whose interrupt is still pending. SysTick is 24 bits, so check that the
-  slot period fits. The DWT cycle counter is optional in the architecture and
+  wrap whose interrupt is still pending. The DWT cycle counter is optional in the architecture and
   often stops during `WFI`, so it is not suitable as the timebase.
 - Verify nesting, ordering barriers, timer start/stop behavior, and bounded
   execution and interrupt latency on the selected target.
-- Provide an embedded example and document assumptions specific to the port.
+- Document assumptions specific to the port in its README, including that its
+  critical sections mask every interrupt for their short duration, and that
+  SysTick is optional on Armv6-M and Armv8-M Baseline, though almost every
+  part has it.

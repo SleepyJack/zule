@@ -1,7 +1,7 @@
 #ifndef ZULE_USER_CONFIG_H
 #define ZULE_USER_CONFIG_H
 
-/* Demo build settings. */
+/* Showcase build settings. */
 #define ZULE_CONFIG_TASK_NAMES 1
 
 /* The timebase, which the tick timing check and the modules need. */
