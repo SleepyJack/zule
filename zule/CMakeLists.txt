@@ -21,7 +21,11 @@ endif()
 
 # Settings shared by every component that includes zule_config.h or the port's
 # zule_port_config.h: the core, port, generated schedule, and application.
+# ZULE_USER_CONFIG_DIR holds zule_user_config.h, zule_user_port_config.h, or both.
+# ZULE_USER_PORT_CONFIG_DIR, when the port settings are kept separately, holds
+# zule_user_port_config.h; only one of the directories may supply it.
 add_library(zule_config INTERFACE)
+set(zule_user_port_config_found OFF)
 if(DEFINED ZULE_USER_CONFIG_DIR)
     if(NOT IS_ABSOLUTE "${ZULE_USER_CONFIG_DIR}" OR NOT IS_DIRECTORY "${ZULE_USER_CONFIG_DIR}")
         message(FATAL_ERROR "ZULE_USER_CONFIG_DIR must be an absolute directory")
@@ -32,7 +36,7 @@ if(DEFINED ZULE_USER_CONFIG_DIR)
         set(zule_user_config_found ON)
     endif()
     if(EXISTS "${ZULE_USER_CONFIG_DIR}/zule_user_port_config.h")
-        target_compile_definitions(zule_config INTERFACE ZULE_USE_USER_PORT_CONFIG=1)
+        set(zule_user_port_config_found ON)
         set(zule_user_config_found ON)
     endif()
     if(NOT zule_user_config_found)
@@ -40,6 +44,23 @@ if(DEFINED ZULE_USER_CONFIG_DIR)
                             "zule_user_port_config.h, or both")
     endif()
     target_include_directories(zule_config INTERFACE "${ZULE_USER_CONFIG_DIR}")
+endif()
+if(DEFINED ZULE_USER_PORT_CONFIG_DIR)
+    if(NOT IS_ABSOLUTE "${ZULE_USER_PORT_CONFIG_DIR}" OR NOT IS_DIRECTORY "${ZULE_USER_PORT_CONFIG_DIR}")
+        message(FATAL_ERROR "ZULE_USER_PORT_CONFIG_DIR must be an absolute directory")
+    endif()
+    if(NOT EXISTS "${ZULE_USER_PORT_CONFIG_DIR}/zule_user_port_config.h")
+        message(FATAL_ERROR "ZULE_USER_PORT_CONFIG_DIR must contain zule_user_port_config.h")
+    endif()
+    if(zule_user_port_config_found)
+        message(FATAL_ERROR "zule_user_port_config.h is in both ZULE_USER_CONFIG_DIR and "
+                            "ZULE_USER_PORT_CONFIG_DIR; keep one")
+    endif()
+    set(zule_user_port_config_found ON)
+    target_include_directories(zule_config INTERFACE "${ZULE_USER_PORT_CONFIG_DIR}")
+endif()
+if(zule_user_port_config_found)
+    target_compile_definitions(zule_config INTERFACE ZULE_USE_USER_PORT_CONFIG=1)
 endif()
 
 # Public application API.

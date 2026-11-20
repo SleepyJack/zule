@@ -1,7 +1,7 @@
 # C coding guidelines
 
 These conventions apply to the Zule scheduler (`zule/core/` and `zule/ports/`) and
-to generated scheduler C, wherever that output is used. Demo application code
+to generated scheduler C, wherever that output is used. Example application code
 should follow them where practical, but strict adherence is not required.
 
 Apply them to new and changed code; report relevant existing deviations without
@@ -60,7 +60,7 @@ Generated files are excluded by default. Check them explicitly and fix their
 generator rather than editing generated output:
 
 ```sh
-python tools/format.py --check build/demo/zule_demo_schedule/zule_schedule_definition.c build/demo/zule_demo_schedule/zule_task_ids.h
+python tools/format.py --check build/examples/showcase/posix/zule_showcase_schedule/*.[ch]
 ```
 
 ## Naming and files

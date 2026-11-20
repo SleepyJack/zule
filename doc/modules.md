@@ -64,7 +64,7 @@ rules as the tick timing check, so the module requires each slot to be a whole
 number of timebase counts below 2^31. A deviation of 2^31 counts or more, such
 as a very long stall, is misread as early.
 
-The demo enables the module and prints its results every ten cycles.
+The showcase example enables the module and prints its results every ten cycles.
 
 ## Task statistics
 
@@ -121,7 +121,7 @@ generated schedule defines, so the module needs no setting for the number of
 tasks. Its reset clears every task inside one critical section, so its duration
 grows with the number of tasks.
 
-The demo enables the module and prints each task's mean and longest execution
+The showcase example enables the module and prints each task's mean and longest execution
 time and worst dispatch latency, and the busiest cycle, every ten cycles.
 
 ## Structure

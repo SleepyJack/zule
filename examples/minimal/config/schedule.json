@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../zule/tools/schedule/zule_schedule/schedule.schema.json",
+  "slot_us": 10000,
+  "tasks": {
+    "read_sensors": { "budget_slots": 2 },
+    "update_control": { "budget_slots": 3 }
+  },
+  "cycle": {
+    "slots": 10,
+    "windows": [
+      { "task": "read_sensors", "start_slot": 0 },
+      { "task": "update_control", "start_slot": 2 }
+    ]
+  }
+}

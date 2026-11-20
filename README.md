@@ -51,24 +51,28 @@ Then set up its tools in one of two ways:
       --volume "$PWD:/work" --workdir /work zule-dev
   ```
 
-### Build the demo
+### Build the showcase
+
+The [showcase example](examples/showcase/README.md) tours Zule's features. Build
+it for the host, the `posix` target:
 
 ```sh
-cd demo
-cmake --preset demo
-cmake --build --preset demo
+cd examples/showcase
+cmake --preset posix
+cmake --build --preset posix
 ```
 
-### Run the demo
+### Run the showcase
 
 ```sh
-../build/demo/zule_demo
+../../build/examples/showcase/posix/zule_showcase
 ```
 
-Each task prints its name when it runs, and the cycle repeats every 500 ms:
+Each task prints its name when it runs, and the cycle repeats every 500 ms.
+Every 5 seconds, the showcase also reports measured task and tick timing:
 
 ```text
-Zule demo: running until a fault; press Ctrl-C to exit
+Zule showcase: running until a fault
 sense
 control
 output
@@ -76,7 +80,8 @@ sense
 ...
 ```
 
-Press Ctrl-C to stop. See the [demo README](demo/README.md) for what it shows.
+Press Ctrl-C to stop. The [examples](examples/README.md) include others, such as
+the smallest complete application.
 
 ## Writing an application
 
@@ -135,7 +140,8 @@ Press Ctrl-C to stop. See the [demo README](demo/README.md) for what it shows.
 Next, add a [fault handler](doc/application.md#fault-handler) and, optionally,
 [task names](doc/configuration.md#task-names) for diagnostics, or
 [hooks](doc/application.md#hooks) to measure task timing. The
-[demo](demo/) puts all of this together.
+[minimal example](examples/minimal/) is exactly this application, and the
+[showcase example](examples/showcase/) adds those features.
 
 ## Design documentation
 
