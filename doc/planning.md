@@ -54,9 +54,6 @@ main checks, and CI runs everything with the same tools and configurations.
   - Analyse a reference schedule that exercises every generator branch in the
     cross-compiled builds: many tasks, a task in several windows, an unused
     task, the longest names, and values near their limits.
-  - Have the generator reject input with known MISRA risks, such as task names
-    whose generated identifiers are not distinct within their first 31
-    characters (rule 5.1).
   - Document the generated code's structure, which parts vary with the input,
     and the application's responsibility for checking the result.
 
