@@ -4,7 +4,7 @@ A small user-domain application, and the reference for integrating Zule:
 
 - [`main.c`](main.c): the [application](../doc/application.md). It provides three
   tasks that print their names, installs a fault handler, and calls `zule_run()`.
-  Every ten cycles it prints each task's mean and longest execution time and
+  Every ten cycles, which is every 5 seconds, it prints each task's mean and longest execution time and
   worst dispatch latency, and the busiest cycle, from the task statistics module,
   and the worst tick deviations and longest tick, from the tick timing module.
 - [`config/`](config): the [configuration](../doc/configuration.md). It contains
