@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "zule.h"
+#include "zule_task_stats.h"
 #include "zule_tick_timing.h"
 
 /* Only the handler writes these while running. Main reads after zule_run()
@@ -15,41 +16,32 @@ static void handle_fault(const zule_fault_info_t *fault) {
     fault_seen = true;
 }
 
-/* User hooks measuring the longest task execution. Task start and end hooks run
- * in application context, like the tasks themselves, so tasks can read these
- * values without synchronization. */
-static uint32_t task_start_counts;
-static uint32_t longest_counts;
-static uint32_t longest_task_id;
 static uint32_t completed_cycles;
 
-void zule_user_hook_task_start(uint32_t time_counts, uint32_t task_id, size_t window_index) {
-    (void)task_id;
-    (void)window_index;
-    task_start_counts = time_counts;
+static unsigned long counts_to_us(uint64_t counts) {
+    return (unsigned long)(counts * 1000000U / zule_timebase_hz());
 }
 
-void zule_user_hook_task_end(uint32_t time_counts, uint32_t task_id, size_t window_index) {
-    (void)window_index;
-    /* Unsigned subtraction handles a timebase wrap. */
-    const uint32_t duration_counts = time_counts - task_start_counts;
-    if (duration_counts > longest_counts) {
-        longest_counts = duration_counts;
-        longest_task_id = task_id;
-    }
-}
-
-static unsigned long counts_to_us(uint32_t counts) {
-    return (unsigned long)((uint64_t)counts * 1000000U / zule_timebase_hz());
-}
-
-/* Report the longest task, from the demo's hooks, and tick timing, from the tick
- * timing module. The module's API takes a consistent snapshot, so tasks can call
- * it while ticks run. */
+/* Report task timing, from the task statistics module, and tick timing, from the
+ * tick timing module. Their APIs take consistent snapshots, so tasks can call
+ * them while ticks run. */
 static void print_timing(FILE *stream) {
-    const char *name = zule_task_name_get(longest_task_id);
-    (void)fprintf(stream, "Longest task so far: %s, %lu us\n", name != NULL ? name : "unnamed",
-                  counts_to_us(longest_counts));
+    zule_task_stats_t stats;
+    /* Task IDs run from zero; the module rejects the first ID past the last. */
+    for (uint32_t task_id = 0U; zule_task_stats_get(task_id, &stats); ++task_id) {
+        const char *name = zule_task_name_get(task_id);
+        const uint64_t mean_counts =
+            stats.executions != 0U ? stats.total_execution_counts / stats.executions : 0U;
+        (void)fprintf(stream,
+                      "Task %s: mean %lu us, longest %lu us, worst dispatch latency %lu us\n",
+                      name != NULL ? name : "unnamed", counts_to_us(mean_counts),
+                      counts_to_us(stats.max_execution_counts),
+                      counts_to_us(stats.max_dispatch_latency_counts));
+    }
+    zule_task_stats_summary_t summary;
+    zule_task_stats_summary_get(&summary);
+    (void)fprintf(stream, "Cycles: %lu, busiest cycle %lu us of task time\n",
+                  (unsigned long)summary.cycles, counts_to_us(summary.max_cycle_busy_counts));
     zule_tick_timing_t timing;
     zule_tick_timing_get(&timing);
     (void)fprintf(stream,

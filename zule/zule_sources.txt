@@ -7,4 +7,5 @@ core/src/zule.c
 core/src/zule_schedule.c
 core/src/zule_scheduler.c
 modules/zule_modules.c
+modules/task_stats/zule_task_stats.c
 modules/tick_timing/zule_tick_timing.c

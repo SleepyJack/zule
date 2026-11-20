@@ -56,9 +56,12 @@ add_library(zule::port_api ALIAS zule_port_api)
 target_include_directories(zule_port_api INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/ports")
 target_link_libraries(zule_port_api INTERFACE zule_api)
 
-# Internal schedule types, for the core, its tests, and generated schedules only.
+# Internal headers, for the Zule library, its tests, and generated schedules only:
+# the schedule types, and the modules' per-task storage that generated schedules
+# define.
 add_library(zule_schedule_internal INTERFACE)
-target_include_directories(zule_schedule_internal INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/core/inc")
+target_include_directories(zule_schedule_internal INTERFACE
+    "${CMAKE_CURRENT_SOURCE_DIR}/core/inc" "${CMAKE_CURRENT_SOURCE_DIR}/modules/inc")
 target_link_libraries(zule_schedule_internal INTERFACE zule_api)
 
 # Warning flags for Zule-owned targets; linked privately and not imposed on applications.

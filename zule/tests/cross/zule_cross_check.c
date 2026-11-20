@@ -6,6 +6,9 @@
 #if ZULE_CONFIG_MODULE_TICK_TIMING
 #include "zule_tick_timing.h"
 #endif
+#if ZULE_CONFIG_MODULE_TASK_STATS
+#include "zule_task_stats.h"
+#endif
 
 #include <stddef.h>
 #include <stdint.h>
@@ -19,6 +22,16 @@ void zule_task_check(void) {
     zule_tick_timing_get(&timing);
     sink = timing.ticks;
     zule_tick_timing_reset();
+#endif
+#if ZULE_CONFIG_MODULE_TASK_STATS
+    zule_task_stats_t stats;
+    if (zule_task_stats_get(0U, &stats)) {
+        sink = stats.max_execution_counts;
+    }
+    zule_task_stats_summary_t summary;
+    zule_task_stats_summary_get(&summary);
+    sink = summary.max_cycle_busy_counts;
+    zule_task_stats_reset();
 #endif
     ++sink;
 }

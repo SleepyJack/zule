@@ -50,6 +50,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     lines = [
         "/* Generated Zule schedule. Do not edit. */",
+        '#include "zule_modules_task_data.h"',
         '#include "zule_schedule_definition.h"',
         '#include "zule_task_ids.h"',
         "",
@@ -98,6 +99,15 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         "",
         "    return &zule_schedule;",
         "}",
+        "",
+        # Storage for modules that keep data for each task, sized by the task
+        # count; the modules own its contents.
+        "#if ZULE_MODULES_TASK_DATA",
+        "zule_modules_task_data_t *zule_modules_task_data_get(void) {",
+        f"    static zule_modules_task_data_t zule_modules_task_data[{len(task_names)}U];",
+        "    return zule_modules_task_data;",
+        "}",
+        "#endif",
         "",
     ])
     source = "\n".join(lines)

@@ -63,3 +63,16 @@ zule_add_test_config(zule_test_config_tick_timing_check
     ZULE_CONFIG_TICK_TOLERANCE_US=10)
 zule_add_test(zule_tick_timing_check zule_tick_timing_test.c
     zule_test_config_tick_timing_check)
+
+# The task statistics module, alone and with the tick timing module, which shares
+# the tick start entry point.
+zule_add_test_config(zule_test_config_task_stats
+    ZULE_CONFIG_TIMEBASE=1
+    ZULE_CONFIG_MODULE_TASK_STATS=1)
+zule_add_test(zule_task_stats zule_task_stats_test.c zule_test_config_task_stats)
+zule_add_test_config(zule_test_config_task_stats_tick_timing
+    ZULE_CONFIG_TIMEBASE=1
+    ZULE_CONFIG_MODULE_TASK_STATS=1
+    ZULE_CONFIG_MODULE_TICK_TIMING=1)
+zule_add_test(zule_task_stats_tick_timing zule_task_stats_test.c
+    zule_test_config_task_stats_tick_timing)

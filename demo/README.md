@@ -4,14 +4,15 @@ A small user-domain application, and the reference for integrating Zule:
 
 - [`main.c`](main.c): the [application](../doc/application.md). It provides three
   tasks that print their names, installs a fault handler, and calls `zule_run()`.
-  Two [hooks](../doc/application.md#hooks) measure each task's execution time.
-  Every ten cycles the demo prints the longest task so far, and the tick timing
-  module's worst tick deviations and longest tick.
+  Every ten cycles, which is every 5 seconds, it prints each task's mean and longest execution time and
+  worst dispatch latency, and the busiest cycle, from the task statistics module,
+  and the worst tick deviations and longest tick, from the tick timing module.
 - [`config/`](config): the [configuration](../doc/configuration.md). It contains
   the schedule `control-loop.json` and the build settings `zule_user_config.h`,
-  which enables task names, the timebase, the two hooks, and the
+  which enables task names, the timebase, the
   [tick timing check](../doc/core.md#tick-timing-check) with a tolerance of half a
-  slot, and the [tick timing module](../doc/modules.md#tick-timing).
+  slot, and the [tick timing](../doc/modules.md#tick-timing) and
+  [task statistics](../doc/modules.md#task-statistics) modules.
 - [`CMakeLists.txt`](CMakeLists.txt): a standalone project following
   [CMake integration](../doc/application.md#cmake-integration). It adds `../zule`,
   selects the POSIX port, and points Zule at `config/`.
