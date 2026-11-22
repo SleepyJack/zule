@@ -148,8 +148,27 @@ static void test_tick_lifecycle(void) {
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
 }
 
+/* With the reference clock selected, tick init fails on a part without one,
+ * which SYST_CALIB's NOREF bit reports. With the processor clock, the bit does
+ * not matter. */
+static void test_clock_availability(void) {
+    zule_port_cortex_m_systick.csr = 0U;
+    zule_port_cortex_m_systick.calib = ZULE_PORT_CORTEX_M_SYST_CALIB_NOREF;
+#if ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK
+    assert(zule_port_tick_init(1000U, on_tick) == ZULE_PORT_RESULT_ERROR);
+    assert(zule_port_cortex_m_systick.csr == 0U);
+#else
+    assert(zule_port_tick_init(1000U, on_tick) == ZULE_PORT_RESULT_OK);
+    assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
+#endif
+    zule_port_cortex_m_systick.calib = 0U;
+    assert(zule_port_tick_init(1000U, on_tick) == ZULE_PORT_RESULT_OK);
+    assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
+}
+
 int main(void) {
     test_critical_sections();
+    test_clock_availability();
     test_tick_periods();
     test_tick_lifecycle();
     return 0;

@@ -17,6 +17,8 @@ typedef struct {
 #define ZULE_PORT_CORTEX_M_SYST_CSR_ENABLE 0x00000001U
 #define ZULE_PORT_CORTEX_M_SYST_CSR_TICKINT 0x00000002U
 #define ZULE_PORT_CORTEX_M_SYST_CSR_CLKSOURCE 0x00000004U
+/* SYST_CALIB's NOREF bit is set when the part has no reference clock. */
+#define ZULE_PORT_CORTEX_M_SYST_CALIB_NOREF 0x80000000U
 /* SysTick counts down from the reload value, a 24-bit field. */
 #define ZULE_PORT_CORTEX_M_SYST_RVR_MAX 0x00FFFFFFU
 

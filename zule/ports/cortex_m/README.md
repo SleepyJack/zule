@@ -37,7 +37,9 @@ Set these in `zule_user_port_config.h`; see
 
 Tick init fails, and `zule_run()` returns `ZULE_RESULT_PORT_ERROR`, unless a
 slot is a whole number of SysTick clock counts, so ticks do not drift, and from
-2 to 2^24 counts, SysTick's 24-bit range. For example, at 170 MHz the longest
+2 to 2^24 counts, SysTick's 24-bit range. With the reference clock selected, it
+also fails on a part that has none, which SysTick's calibration register
+reports, rather than leaving ticks never arriving. For example, at 170 MHz the longest
 slot is about 98 ms; from the reference clock at 21.25 MHz, it is about 789 ms.
 
 ## Application responsibilities

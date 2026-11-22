@@ -54,7 +54,14 @@ static uint32_t reload_value(uint32_t slot_us) {
 zule_port_result_t zule_port_tick_init(uint32_t slot_us, zule_port_tick_callback_t callback) {
     zule_port_result_t result = ZULE_PORT_RESULT_ERROR;
     const uint32_t reload = reload_value(slot_us);
-    if ((callback != NULL) && (reload != 0U) && !tick_running) {
+    bool valid = (callback != NULL) && (reload != 0U) && !tick_running;
+#if ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK
+    /* On a part with no reference clock, SysTick would never count, so ticks
+     * would never arrive. */
+    const uint32_t calib = zule_port_cortex_m_systick.calib;
+    valid = valid && ((calib & ZULE_PORT_CORTEX_M_SYST_CALIB_NOREF) == 0U);
+#endif
+    if (valid) {
         tick_callback = callback;
         zule_port_cortex_m_systick.rvr = reload;
         /* Any write clears the counter, so the first tick comes one full period
