@@ -174,8 +174,7 @@ static void process_tick(void) {
 
     // Check for end of the current active window. Validation keeps every window within
     // the cycle, so a window ends at most at the cycle's end, which is slot 0 of the next.
-    // The tick avoids division, which cores without a divide instruction, such as
-    // Cortex-M0, perform in a library call.
+    // The tick avoids division, as the coding guidelines require.
     uint32_t active_window_end_slot = active_window->start_slot + active_window->budget_slots;
     if (active_window_end_slot == scheduler.schedule->cycle_slots) {
         active_window_end_slot = 0U;

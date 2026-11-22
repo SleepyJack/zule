@@ -77,10 +77,10 @@ To add a source file to the core or a module, list it in
 tests, and the schedule tool's tests all read that one list. Each port lists its
 own sources once in its `CMakeLists.txt`.
 
-### Cross-compiled builds
+### Cross-compiled checks
 
-The cross-compiled builds check the Zule library with the target compiler,
-`arm-none-eabi-gcc`. They are a standalone project in
+The cross-compiled checks build the Zule library with a target compiler,
+currently `arm-none-eabi-gcc`. They are a standalone project in
 [`zule/tests/cross/`](zule/tests/cross), like the examples. Each links the library,
 a port, and a generated schedule into a small program that nothing runs:
 freestanding, with no C library, and with warnings as errors, including
@@ -99,8 +99,7 @@ features:
 | `cortex-m-m0plus` | Cortex-M | Cortex-M0+ (Armv6-M) | Defaults |
 
 The stub port checks the Zule library alone; a real port's presets check it with
-the library. The Cortex-M port has no all-enabled presets until it provides the
-timebase, which the other features need.
+the library.
 
 ```sh
 cd zule/tests/cross
@@ -114,7 +113,7 @@ environment.
 
 ### Static analysis
 
-After compiling, the cross-compiled builds run
+After compiling, the cross-compiled checks run
 [Cppcheck](https://cppcheck.sourceforge.io/) and its MISRA C:2012 addon over the
 Zule library, the selected port, and the generated schedule, analysed together
 as one program from the build's compile database. It checks for errors,
@@ -164,6 +163,6 @@ GitHub Actions first builds the container image, caching its layers between
 runs, and passes it to the other jobs, which run every step inside it. One job
 runs the C and Python unit tests, checks handwritten and generated C
 formatting, and builds and runs the examples; another runs the C unit tests
-under the sanitizers; and another runs the cross-compiled builds. CI runs for
+under the sanitizers; and another runs the cross-compiled checks. CI runs for
 pushes and pull requests, and the [CI workflow](.github/workflows/ci.yml) can
 also be run manually.

@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.31)
 project(zule_cross_check LANGUAGES C)
 
-# Link check for cross-compiled builds, a standalone project like the examples. It
+# Link check for cross-compiled checks, a standalone project like the examples. It
 # links the Zule library, a port, and a generated schedule into a freestanding
 # program with no C library, so problems that only appear with the target
 # compiler fail the build. Nothing runs it. The presets choose the port, the
-# core, and the features; the settings below apply to every build.
+# core, and the features; the settings below apply to every build. Nothing here
+# is specific to Arm: the presets choose the toolchain, currently the Arm GNU
+# toolchain, so other GCC-based targets can join as presets.
 set(ZULE_PORT stub CACHE STRING "Zule port")
 # Static analysis below reads the compile database; enable it before any target.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

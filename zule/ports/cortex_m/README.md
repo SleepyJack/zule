@@ -75,6 +75,6 @@ have preempted until it finished, so no callback is in flight when it returns.
 [`tests/`](tests) checks the port's C on the host, against fake registers and
 instructions: critical-section nesting, reload values and slot limits at two
 clock frequencies and both clock sources, tick start and stop, and idle. The
-[cross-compiled builds](../../../CONTRIBUTING.md#cross-compiled-builds) build
+[cross-compiled checks](../../../CONTRIBUTING.md#cross-compiled-checks) build
 it for Cortex-M0+ and Cortex-M3, with static analysis. It has not yet run on a
 Cortex-M core; QEMU tests are planned.

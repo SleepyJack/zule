@@ -11,7 +11,7 @@ Select it with `ZULE_PORT=stub`. It has no
 optional timebase, at a fixed 1 MHz with a constant count, so builds with the
 timebase enabled also link.
 
-The [cross-compiled builds](../../../CONTRIBUTING.md#cross-compiled-builds) use
+The [cross-compiled checks](../../../CONTRIBUTING.md#cross-compiled-checks) use
 it to check the Zule library alone, so a finding cannot come from port code:
 freestanding, with no C library, with strict warnings as errors, and with static
 analysis, including MISRA C:2012 checks. They build it for Cortex-M cores with

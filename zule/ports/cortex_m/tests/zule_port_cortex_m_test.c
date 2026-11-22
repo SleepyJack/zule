@@ -12,7 +12,7 @@
 
 /* Fake registers, in ordinary memory instead of at their hardware addresses. */
 zule_port_cortex_m_systick_t zule_port_cortex_m_systick;
-volatile uint32_t zule_port_cortex_m_icsr;
+zule_port_cortex_m_scb_t zule_port_cortex_m_scb;
 
 /* Fake instructions, modelling PRIMASK and counting waits. */
 static uint32_t primask;
@@ -51,11 +51,11 @@ static zule_result_t on_tick(void) {
 static void check_init(uint32_t slot_us, uint32_t expected_reload) {
     zule_port_cortex_m_systick.rvr = 0xDEADU;
     zule_port_cortex_m_systick.cvr = 0xBEEFU;
-    zule_port_cortex_m_icsr = 0U;
+    zule_port_cortex_m_scb.icsr = 0U;
     assert(zule_port_tick_init(slot_us, on_tick) == ZULE_PORT_RESULT_OK);
     assert(zule_port_cortex_m_systick.rvr == expected_reload);
     assert(zule_port_cortex_m_systick.cvr == 0U);
-    assert(zule_port_cortex_m_icsr == ZULE_PORT_CORTEX_M_ICSR_PENDSTCLR);
+    assert(zule_port_cortex_m_scb.icsr == ZULE_PORT_CORTEX_M_ICSR_PENDSTCLR);
     assert(zule_port_cortex_m_systick.csr == EXPECTED_CSR);
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
 }
@@ -133,10 +133,10 @@ static void test_tick_lifecycle(void) {
     assert(waits == 1U);
 
     /* Stop disables the counter and its interrupt, and clears a pending tick. */
-    zule_port_cortex_m_icsr = 0U;
+    zule_port_cortex_m_scb.icsr = 0U;
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
     assert(zule_port_cortex_m_systick.csr == 0U);
-    assert(zule_port_cortex_m_icsr == ZULE_PORT_CORTEX_M_ICSR_PENDSTCLR);
+    assert(zule_port_cortex_m_scb.icsr == ZULE_PORT_CORTEX_M_ICSR_PENDSTCLR);
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
 
     /* Without ticks, nothing would end the wait, so idle fails without waiting. */

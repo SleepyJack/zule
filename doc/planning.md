@@ -43,10 +43,10 @@ main checks, and CI runs everything with the same tools and configurations.
 - Generated code: the application is responsible for checking its generated
   schedule, and Zule makes that easy rather than validating the generator.
   - Provide a one-step check that runs Zule's static analysis, with the same
-    options as the cross-compiled builds, on an application's generated
+    options as the cross-compiled checks, on an application's generated
     schedule and build settings.
   - Analyse a reference schedule that exercises every generator branch in the
-    cross-compiled builds: many tasks, a task in several windows, an unused
+    cross-compiled checks: many tasks, a task in several windows, an unused
     task, the longest names, and values near their limits.
   - Document the generated code's structure, which parts vary with the input,
     and the application's responsibility for checking the result.
@@ -57,7 +57,7 @@ main checks, and CI runs everything with the same tools and configurations.
   [examples](#examples).
 - Considered and not planned: ThreadSanitizer, which would only cover the POSIX
   port, a development and demonstration target; and Clang as a second host
-  compiler, which adds little beyond the cross-compiled builds.
+  compiler, which adds little beyond the cross-compiled checks.
 
 ### Examples
 

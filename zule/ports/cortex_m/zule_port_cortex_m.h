@@ -22,15 +22,22 @@ typedef struct {
 /* SysTick counts down from the reload value, a 24-bit field. */
 #define ZULE_PORT_CORTEX_M_SYST_RVR_MAX 0x00FFFFFFU
 
-/* The Interrupt Control and State Register's write-one-to-clear bit for a
- * pending SysTick exception; writing zero to its other bits has no effect. */
+/* The start of the System Control Block: CPUID, then the Interrupt Control and
+ * State Register, ICSR. */
+typedef struct {
+    volatile uint32_t cpuid;
+    volatile uint32_t icsr;
+} zule_port_cortex_m_scb_t;
+
+/* ICSR's write-one-to-clear bit for a pending SysTick exception; writing zero to
+ * its other bits has no effect. */
 #define ZULE_PORT_CORTEX_M_ICSR_PENDSTCLR 0x02000000U
 
 /* The registers. zule_port_cortex_m.S places them at their architecture-defined
  * addresses, so the C needs no conversion from an integer to a pointer, and host
  * tests define them in ordinary memory instead. */
 extern zule_port_cortex_m_systick_t zule_port_cortex_m_systick;
-extern volatile uint32_t zule_port_cortex_m_icsr;
+extern zule_port_cortex_m_scb_t zule_port_cortex_m_scb;
 
 /* Instructions, in zule_port_cortex_m.S. Each call is opaque to the compiler, so
  * it cannot move accesses to data the tick shares across one: that data is

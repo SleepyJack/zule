@@ -3,6 +3,8 @@
 
 /* Cortex-M port settings. Override them in zule_user_port_config.h; see
  * README.md. */
+#include <stdint.h>
+
 #ifndef ZULE_USE_USER_PORT_CONFIG
 #define ZULE_USE_USER_PORT_CONFIG 0
 #endif
@@ -17,8 +19,9 @@
 #error "ZULE_PORT_CORTEX_M_SYSTICK_HZ must be set to the SysTick clock frequency in Hz"
 #endif
 
-#if (ZULE_PORT_CORTEX_M_SYSTICK_HZ < 1) || (ZULE_PORT_CORTEX_M_SYSTICK_HZ > 4294967295)
-#error "ZULE_PORT_CORTEX_M_SYSTICK_HZ must be from 1 to 4294967295"
+/* C99 makes UINT32_MAX usable in #if. */
+#if (ZULE_PORT_CORTEX_M_SYSTICK_HZ < 1) || (ZULE_PORT_CORTEX_M_SYSTICK_HZ > UINT32_MAX)
+#error "ZULE_PORT_CORTEX_M_SYSTICK_HZ must be from 1 to UINT32_MAX"
 #endif
 
 /* Set to 1 to clock SysTick from the external reference clock, which the

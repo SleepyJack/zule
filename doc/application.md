@@ -147,8 +147,8 @@ Zule needs no C library and includes only the headers C99 guarantees in a
 freestanding environment. Like any C code built with GCC or Clang, it may still
 cause calls to `memcpy`, `memmove`, `memset`, and `memcmp`, for example to copy
 or initialise structures, so the target environment must provide them. A
-target's C library normally does. The cross-compiled builds check this
-requirement; see [CONTRIBUTING.md](../CONTRIBUTING.md#cross-compiled-builds).
+target's C library normally does. The cross-compiled checks check this
+requirement; see [CONTRIBUTING.md](../CONTRIBUTING.md#cross-compiled-checks).
 
 ## CMake integration
 

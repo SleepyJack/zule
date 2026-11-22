@@ -10,8 +10,8 @@
 /* Architecture-defined register addresses, the same on every Cortex-M. */
     .global zule_port_cortex_m_systick
     .set zule_port_cortex_m_systick, 0xE000E010
-    .global zule_port_cortex_m_icsr
-    .set zule_port_cortex_m_icsr, 0xE000ED04
+    .global zule_port_cortex_m_scb
+    .set zule_port_cortex_m_scb, 0xE000ED00
 
     .text
 
