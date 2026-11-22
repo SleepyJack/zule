@@ -9,7 +9,7 @@ FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Pinned: the host compiler, the Arm GNU toolchain, Cppcheck, and Python. Supporting
+# Pinned: the host compiler, the Arm GNU toolchain, Cppcheck, QEMU, and Python. Supporting
 # packages, such as certificates and git, follow the release's updates.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -19,6 +19,7 @@ RUN apt-get update \
         gcc-arm-none-eabi=15:13.2.rel1-2 \
         binutils-arm-none-eabi=2.42-1ubuntu1+23 \
         cppcheck=2.13.0-2ubuntu3 \
+        qemu-system-arm=1:8.2.2+ds-0ubuntu1.18 \
         python3=3.12.3-0ubuntu2.1 \
         python3-venv=3.12.3-0ubuntu2.1 \
         ca-certificates \

@@ -1,10 +1,11 @@
 # Testing
 
-Zule is checked in two ways, each with its own place in the repository:
+Zule is checked in three ways, each with its own place in the repository:
 
 | Kind | What it shows | Where |
 | --- | --- | --- |
 | [Host tests](#host-tests) | Behaviour of the core, modules, ports, and schedule tool, run on the build machine. | `zule/core/tests/`, `zule/ports/<port>/tests/`, `zule/tools/schedule/tests/`, and the [examples](examples/README.md) |
+| [Target tests](#target-tests) | Behaviour on a target, for now in QEMU. | `zule/ports/<port>/tests/qemu/`, with board support in `zule/tests/targets/` |
 | [Static checks](#static-checks) | That Zule compiles and links cleanly for target cores, and passes static analysis, including MISRA C:2012. Nothing runs. | `zule/tests/static/` |
 
 The commands below assume the development environment from
@@ -75,6 +76,33 @@ not depend on host timing, so it is the stable smoke test; the showcase also
 prints every task's name, and its tick check can fault on a heavily loaded
 host.
 
+## Target tests
+
+Target tests run on a target, for now QEMU's emulation of Arm's
+[`mps2-an385`](zule/tests/targets/mps2-an385/README.md) reference board, a
+Cortex-M3. Each is a standalone project, since it builds with the target's
+toolchain, with a preset per machine and `ctest` running QEMU:
+
+```sh
+cd zule/ports/cortex_m/tests/qemu
+cmake --preset mps2-an385
+cmake --build --preset mps2-an385
+ctest --preset mps2-an385
+```
+
+The [Cortex-M port](zule/ports/cortex_m/README.md)'s target tests check what its
+host tests cannot: that ticks arrive at the programmed rate against an
+independent timer, that critical sections hold ticks off, including nested
+ones, that idle wakes for each tick and loses none, and that stopping leaves no
+tick pending. The last test runs the real scheduler on the port until a task
+overruns on purpose.
+
+QEMU runs with `-icount`, so guest time follows executed instructions and every
+run is the same, whatever the host's load. Tests report through semihosting,
+which also sets QEMU's exit status. QEMU shows the logic against its model of
+the hardware, not real timing, interrupt latency, or behaviour a model may not
+capture; those need hardware.
+
 ## Static checks
 
 The static checks build Zule with a target compiler, currently
@@ -123,8 +151,10 @@ code rather than suppress the finding; see
 - **Core or module behaviour:** a test in `zule/core/tests/`, added with
   `zule_add_test()`, in a test configuration with the settings it needs.
 - **A port:** host tests in the port's `tests/`, or `tests/host/` for a port that
-  also has tests that run on its target. [Testing a port](doc/port.md#testing-a-port)
+  also has target tests, in `tests/qemu/`. [Testing a port](doc/port.md#testing-a-port)
   lists what to cover.
+- **Support for another emulated board:** a directory in `zule/tests/targets/`,
+  like `mps2-an385/`, with its startup code, linker script, and CMake helper.
 - **The schedule tool:** a test module in `zule/tools/schedule/tests/`, with JSON
   cases in its `fixtures/`.
 - **A static check for a new core, port, or feature set:** a preset in
@@ -141,6 +171,7 @@ every step inside it:
 | Tests and formatting | Handwritten and generated C formatting, the schedule tool tests, the core and port tests, and the examples on POSIX. |
 | Tests under sanitizers | The core and port tests with the `sanitize` preset. |
 | Static checks | Every static check preset. |
+| Target tests | The Cortex-M port's target tests in QEMU. |
 
 CI runs for pushes and pull requests, and the
 [CI workflow](.github/workflows/ci.yml) can also be run manually.

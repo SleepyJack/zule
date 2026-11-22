@@ -159,6 +159,38 @@ jobs:
           cmake --build --preset "$preset";
           done'
 
+  target:
+    name: Target tests
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download development image
+        uses: actions/download-artifact@v4
+        with:
+          name: zule-dev-image
+          path: ${{ runner.temp }}
+
+      - name: Load development image
+        run: docker load --input "${{ runner.temp }}/zule-dev.tar"
+
+      # Run as the runner's user, so build output in the workspace is not owned by
+      # root.
+      - name: Run Cortex-M port tests in QEMU
+        run: >-
+          docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
+          --volume "$PWD:/work" --workdir /work/zule/ports/cortex_m/tests/qemu zule-dev:ci
+          sh -c 'set -e;
+          cmake --preset mps2-an385;
+          cmake --build --preset mps2-an385;
+          ctest --preset mps2-an385'
+
   sanitize:
     name: Tests under sanitizers
     needs: image

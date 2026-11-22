@@ -198,18 +198,21 @@ tools and configurations.
 ## Additional ports
 
 The [Cortex-M port](../zule/ports/cortex_m/README.md) provides critical
-sections, the tick, and idle. Remaining steps:
+sections, the tick, and idle, with [target tests](../TESTING.md#target-tests) in
+QEMU. Remaining steps:
 
-- A QEMU harness that runs the port's tests on `mps2-an385` (Cortex-M3) in CI:
-  tick delivery, critical-section nesting, idle wake-up, and that stop leaves no
-  tick pending.
 - Provide the timebase from SysTick, at the same clock frequency. The count is
   the tick count times the reload period, plus the elapsed part of the current
   period from the SysTick counter. A read must account for a counter wrap whose
   interrupt is still pending. The DWT cycle counter is optional in the
   architecture and often stops during `WFI`, so it is not suitable as the
   timebase. With the timebase, add all-features static check presets for the
-  port.
+  port, and target tests of the timebase, including reads across counter
+  wraps.
+- Run the core's unit tests on a target too, in QEMU, to catch differences in
+  type sizes and arithmetic. They use the C library's `assert()` and `abort()`,
+  so they need newlib in the development image, as the showcase's embedded
+  target does.
 - The `mps2-an385` [example](#examples) target.
 - Verify on hardware what QEMU cannot show, on a board such as the
   NUCLEO-G431RB (Cortex-M4): tick timing and interrupt latency, `WFI` waking
