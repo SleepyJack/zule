@@ -1,4 +1,4 @@
-/* Link check for cross-compiled checks; see CMakeLists.txt. Provides the task
+/* Program for the static checks; see CMakeLists.txt. Provides the task
  * the schedule names, the user hooks when enabled, and an entry point that
  * reaches the public API, so every enabled part of Zule is linked. */
 #include "zule.h"

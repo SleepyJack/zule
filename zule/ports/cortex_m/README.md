@@ -72,9 +72,9 @@ have preempted until it finished, so no callback is in flight when it returns.
 
 ## Tests
 
-[`tests/`](tests) checks the port's C on the host, against fake registers and
-instructions: critical-section nesting, reload values and slot limits at two
-clock frequencies and both clock sources, tick start and stop, and idle. The
-[cross-compiled checks](../../../CONTRIBUTING.md#cross-compiled-checks) build
-it for Cortex-M0+ and Cortex-M3, with static analysis. It has not yet run on a
-Cortex-M core; QEMU tests are planned.
+[`tests/host/`](tests/host) checks the port's C on the host, against fake
+registers and instructions: critical-section nesting, reload values and slot
+limits at two clock frequencies and both clock sources, tick start and stop, and
+idle. The [static checks](../../../TESTING.md#static-checks) build it for
+Cortex-M0+ and Cortex-M3, with static analysis. See [TESTING.md](../../../TESTING.md)
+for how to run them.

@@ -1,13 +1,14 @@
 cmake_minimum_required(VERSION 3.31)
-project(zule_cross_check LANGUAGES C)
+project(zule_static_check LANGUAGES C)
 
-# Link check for cross-compiled checks, a standalone project like the examples. It
+# Static checks; see TESTING.md. A standalone project, like the examples, that
 # links the Zule library, a port, and a generated schedule into a freestanding
 # program with no C library, so problems that only appear with the target
-# compiler fail the build. Nothing runs it. The presets choose the port, the
-# core, and the features; the settings below apply to every build. Nothing here
-# is specific to Arm: the presets choose the toolchain, currently the Arm GNU
-# toolchain, so other GCC-based targets can join as presets.
+# compiler fail the build, then analyses them. Nothing runs it. The presets
+# choose the port, the core, and the features; the settings below apply to every
+# build. Nothing here is specific to Arm: the presets choose the toolchain,
+# currently the Arm GNU toolchain, so other GCC-based targets can join as
+# presets.
 set(ZULE_PORT stub CACHE STRING "Zule port")
 # Static analysis below reads the compile database; enable it before any target.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -15,13 +16,13 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 string(APPEND CMAKE_C_FLAGS " -ffreestanding -Wconversion -Wshadow -Wstrict-prototypes")
 add_subdirectory(../.. zule)
 
-add_executable(zule_cross_check zule_cross_check.c zule_cross_runtime.c)
-zule_add_schedule(zule_cross_check SCHEDULE schedule.json)
+add_executable(zule_static_check zule_static_check.c zule_static_runtime.c)
+zule_add_schedule(zule_static_check SCHEDULE schedule.json)
 # No startup files or C library. libgcc supplies compiler support routines, such
 # as 64-bit division, and comes after the libraries that need it.
-target_link_options(zule_cross_check PRIVATE -nostdlib)
+target_link_options(zule_static_check PRIVATE -nostdlib)
 # The port is listed explicitly so it comes before libgcc too.
-target_link_libraries(zule_cross_check PRIVATE zule::zule zule::port zule_warnings gcc)
+target_link_libraries(zule_static_check PRIVATE zule::zule zule::port zule_warnings gcc)
 
 # Static analysis: after the build, Cppcheck with its MISRA C:2012 addon analyses
 # the Zule library, the selected port, and the generated schedule as one
@@ -36,8 +37,8 @@ find_program(ZULE_CPPCHECK cppcheck REQUIRED)
 add_custom_target(zule_cppcheck ALL
     COMMAND "${ZULE_CPPCHECK}"
         "--project=${CMAKE_BINARY_DIR}/compile_commands.json"
-        "--suppress=*:${CMAKE_CURRENT_SOURCE_DIR}/zule_cross_check.c"
-        "--suppress=*:${CMAKE_CURRENT_SOURCE_DIR}/zule_cross_runtime.c"
+        "--suppress=*:${CMAKE_CURRENT_SOURCE_DIR}/zule_static_check.c"
+        "--suppress=*:${CMAKE_CURRENT_SOURCE_DIR}/zule_static_runtime.c"
         --std=c99
         # 32-bit int, long, and pointers, as on Cortex-M.
         --platform=unix32
@@ -52,4 +53,4 @@ add_custom_target(zule_cppcheck ALL
     COMMENT "Analysing Zule with Cppcheck and its MISRA C:2012 addon"
     VERBATIM)
 # The generated schedule must exist before analysis.
-add_dependencies(zule_cppcheck zule_cross_check)
+add_dependencies(zule_cppcheck zule_static_check)

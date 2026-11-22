@@ -15,7 +15,8 @@ standard's features fails the build. Public headers must stay C99-compatible.
 
 ## MISRA C
 
-Zule follows MISRA C:2012. The cross-compiled checks enforce the rules that
+Zule follows MISRA C:2012. The [static checks](../TESTING.md#static-checks)
+enforce the rules that
 Cppcheck's free MISRA addon checks, which are a subset of the guidelines, so a
 clean build does not by itself establish full compliance. Generated code
 follows the same rules; fix the generator, not its output.

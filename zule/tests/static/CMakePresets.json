@@ -3,23 +3,23 @@
   "cmakeMinimumRequired": { "major": 3, "minor": 31, "patch": 0 },
   "configurePresets": [
     {
-      "name": "cross",
+      "name": "static",
       "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/../../../build/cross-${presetName}",
+      "binaryDir": "${sourceDir}/../../../build/static-${presetName}",
       "toolchainFile": "${sourceDir}/../../ports/cortex_m/arm-none-eabi.cmake",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
     {
       "name": "stub",
       "hidden": true,
-      "inherits": "cross",
+      "inherits": "static",
       "cacheVariables": { "ZULE_PORT": "stub" }
     },
     {
       "name": "cortex-m",
       "hidden": true,
-      "inherits": "cross",
+      "inherits": "static",
       "cacheVariables": {
         "ZULE_PORT": "cortex_m",
         "ZULE_USER_PORT_CONFIG_DIR": "${sourceDir}/port_config/cortex_m"

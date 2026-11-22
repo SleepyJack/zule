@@ -156,7 +156,8 @@ The documentation follows the components of the [architecture](doc/architecture.
 | [Modules](doc/modules.md) | Optional on-target consumers of scheduler events. |
 | [Port](doc/port.md) | The port contract, and creating and linking a custom port. |
 
-To work on Zule itself, see [CONTRIBUTING.md](CONTRIBUTING.md).
+To work on Zule itself, see [CONTRIBUTING.md](CONTRIBUTING.md) and
+[TESTING.md](TESTING.md).
 
 ## Licence
 

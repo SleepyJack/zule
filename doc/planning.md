@@ -8,8 +8,9 @@ decisions or a committed order of delivery.
 Zule's main product is the Zule library cross-compiled for embedded ports, so
 verification centres on the target compiler and on static analysis rather than
 host-specific tools. The sections below depend on each other: the development
-environment provides the tools, the cross build and static analysis are the
-main checks, and CI runs everything with the same tools and configurations.
+environment provides the tools, the [static checks](../TESTING.md#static-checks)
+and tests on targets are the main checks, and CI runs everything with the same
+tools and configurations.
 
 ### Development environment
 
@@ -20,7 +21,7 @@ main checks, and CI runs everything with the same tools and configurations.
   run, with cached layers, and passes it to its jobs as an artifact.
 - Consider pinning the base image by digest as well as tag.
 
-### Cross-compilation
+### Static checks
 
 - Keep the stub port alongside real ports. It checks the Zule library alone, so
   a finding cannot come from port code or vendor headers; it is the only way to
@@ -43,10 +44,10 @@ main checks, and CI runs everything with the same tools and configurations.
 - Generated code: the application is responsible for checking its generated
   schedule, and Zule makes that easy rather than validating the generator.
   - Provide a one-step check that runs Zule's static analysis, with the same
-    options as the cross-compiled checks, on an application's generated
+    options as the static checks, on an application's generated
     schedule and build settings.
   - Analyse a reference schedule that exercises every generator branch in the
-    cross-compiled checks: many tasks, a task in several windows, an unused
+    static checks: many tasks, a task in several windows, an unused
     task, the longest names, and values near their limits.
   - Document the generated code's structure, which parts vary with the input,
     and the application's responsibility for checking the result.
@@ -57,7 +58,7 @@ main checks, and CI runs everything with the same tools and configurations.
   [examples](#examples).
 - Considered and not planned: ThreadSanitizer, which would only cover the POSIX
   port, a development and demonstration target; and Clang as a second host
-  compiler, which adds little beyond the cross-compiled checks.
+  compiler, which adds little beyond the static checks.
 
 ### Examples
 
@@ -207,7 +208,7 @@ sections, the tick, and idle. Remaining steps:
   period from the SysTick counter. A read must account for a counter wrap whose
   interrupt is still pending. The DWT cycle counter is optional in the
   architecture and often stops during `WFI`, so it is not suitable as the
-  timebase. With the timebase, add all-features cross-compiled presets for the
+  timebase. With the timebase, add all-features static check presets for the
   port.
 - The `mps2-an385` [example](#examples) target.
 - Verify on hardware what QEMU cannot show, on a board such as the
