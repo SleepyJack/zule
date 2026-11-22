@@ -15,7 +15,7 @@ standard's features fails the build. Public headers must stay C99-compatible.
 
 ## MISRA C
 
-Zule follows MISRA C:2012. The cross-compiled builds enforce the rules that
+Zule follows MISRA C:2012. The cross-compiled checks enforce the rules that
 Cppcheck's free MISRA addon checks, which are a subset of the guidelines, so a
 clean build does not by itself establish full compliance. Generated code
 follows the same rules; fix the generator, not its output.
@@ -92,3 +92,7 @@ python tools/format.py --check build/examples/showcase/posix/zule_showcase_sched
   `slot_us`. Document any conversions and their overflow assumptions.
 - State validation assumptions explicitly, including nonzero divisors, valid
   array indexes, and the lifetime of referenced configuration data.
+- Avoid division and remainder (`/` and `%`) in code that runs on every tick or
+  dispatch, including hooks and modules. Some targets, such as Cortex-M0 and
+  M0+, have no divide instruction and call a library routine instead. Wrap
+  counters by incrementing and comparing. Division is fine at initialization.

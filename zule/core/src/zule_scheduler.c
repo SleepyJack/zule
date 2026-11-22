@@ -172,9 +172,13 @@ static void process_tick(void) {
     start_tick();
     const zule_window_t *active_window = &scheduler.schedule->windows[scheduler.active_window_ind];
 
-    // Check for end of the current active window
-    const uint32_t active_window_end_slot =
-        (active_window->start_slot + active_window->budget_slots) % scheduler.schedule->cycle_slots;
+    // Check for end of the current active window. Validation keeps every window within
+    // the cycle, so a window ends at most at the cycle's end, which is slot 0 of the next.
+    // The tick avoids division, as the coding guidelines require.
+    uint32_t active_window_end_slot = active_window->start_slot + active_window->budget_slots;
+    if (active_window_end_slot == scheduler.schedule->cycle_slots) {
+        active_window_end_slot = 0U;
+    }
     if (scheduler.slot == active_window_end_slot) {
         if (scheduler.exec.state == ZULE_TASK_COMPLETED) {
             // Note that even if task completion is late we will return to Idle. Overrun fault
@@ -190,8 +194,10 @@ static void process_tick(void) {
 
         // Prevent window advance in case of active faults
         if (scheduler.exec.fault == ZULE_RESULT_OK) {
-            scheduler.active_window_ind =
-                (scheduler.active_window_ind + 1U) % scheduler.schedule->window_count;
+            ++scheduler.active_window_ind;
+            if (scheduler.active_window_ind == scheduler.schedule->window_count) {
+                scheduler.active_window_ind = 0U;
+            }
             active_window = &scheduler.schedule->windows[scheduler.active_window_ind];
         }
     }
@@ -215,8 +221,9 @@ static void process_tick(void) {
     // Halt the scheduler in case of active faults
     if (scheduler.exec.fault == ZULE_RESULT_OK) {
         // Advance the slot
-        scheduler.slot = (scheduler.slot + 1U) % scheduler.schedule->cycle_slots;
-        if (scheduler.slot == 0U) {
+        ++scheduler.slot;
+        if (scheduler.slot == scheduler.schedule->cycle_slots) {
+            scheduler.slot = 0U;
             ++scheduler.cycle_count;
         }
     }
