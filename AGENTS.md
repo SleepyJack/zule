@@ -25,10 +25,13 @@ routine convention fixes within the requested scope.
 ## Validation
 
 Use the project's Python environment and the commands documented in
-[CONTRIBUTING.md](CONTRIBUTING.md). Choose checks appropriate to the change:
+[CONTRIBUTING.md](CONTRIBUTING.md) and [TESTING.md](TESTING.md). Choose checks
+appropriate to the change:
 
 - For C changes, run `python tools/format.py --check` and compile the affected
   targets. The formatter is independent of CMake.
+- For changes to the core, modules, ports, or generated C, build the static
+  check presets in `zule/tests/static/`, which include static analysis.
 - For schedule-tool changes, run `python -m unittest discover -s tests -v`
   from `zule/tools/schedule/`.
 - For CMake changes, configure and build both `zule/` (with tests) and each

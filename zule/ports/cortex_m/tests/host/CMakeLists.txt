@@ -1,7 +1,7 @@
 # Host tests of the Cortex-M port's C, whichever port the build selects. They
 # compile zule_port.c against fake registers and instructions, in place of the
 # assembly file, so they check the port's logic, not the hardware.
-set(zule_cortex_m_port_dir "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set(zule_cortex_m_port_dir "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 
 # zule_add_cortex_m_port_test(<name> <definition>...)
 function(zule_add_cortex_m_port_test name)

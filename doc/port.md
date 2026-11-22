@@ -10,7 +10,7 @@ by an integrator is owned by the user (see [ownership](architecture.md#ownership
 | --- | --- |
 | [`cortex_m`](../zule/ports/cortex_m/README.md) | Arm Cortex-M (Armv6-M, Armv7-M, and Armv8-M), using SysTick, PRIMASK, and `WFI`. |
 | [`posix`](../zule/ports/posix/README.md) | Native development on POSIX hosts, using a timer thread and a mutex. |
-| [`stub`](../zule/ports/stub/README.md) | Compile check for any target: links but does nothing, for the cross-compiled checks. |
+| [`stub`](../zule/ports/stub/README.md) | Compile check for any target: links but does nothing, for the [static checks](../TESTING.md#static-checks). |
 
 ## Contract
 
@@ -189,8 +189,8 @@ custom port, plus tests in `tests/` built when `ZULE_BUILD_TESTS` is on. See
 
 ### Testing a port
 
-Core tests use a deterministic test port and do not exercise a real port. Test
-each port on its target for:
+[TESTING.md](../TESTING.md#adding-tests) describes where a port's tests live and
+how to run them. Test each port, on its target where it has one, for:
 
 - nested critical sections, restoring pre-existing exclusion;
 - mutual exclusion between the tick callback and critical sections;

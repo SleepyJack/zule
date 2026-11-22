@@ -56,4 +56,5 @@ the examples built with it.
 
 The tests in `tests/` cover critical-section nesting and exclusion, tick
 delivery, restart and shutdown, idle waiting, and the timebase. They build their
-own copy of the port with the timebase enabled.
+own copy of the port with the timebase enabled. See [TESTING.md](../../../TESTING.md)
+to run them.

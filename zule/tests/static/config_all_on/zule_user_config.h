@@ -1,7 +1,7 @@
 #ifndef ZULE_USER_CONFIG_H
 #define ZULE_USER_CONFIG_H
 
-/* Every optional feature, so the cross-compiled checks compile all of Zule. */
+/* Every optional feature, so the static checks compile all of Zule. */
 #define ZULE_CONFIG_TASK_NAMES 1
 #define ZULE_CONFIG_TIMEBASE 1
 #define ZULE_CONFIG_USER_HOOK_TICK_START 1

@@ -21,5 +21,6 @@ runs it briefly as the smoke test, since it does not depend on host timing.
 | Target | Build and run |
 | --- | --- |
 | `posix` | `cmake --preset posix`, `cmake --build --preset posix`, then `../../build/examples/minimal/posix/zule_minimal`; stop it with Ctrl-C. |
+| `qemu-mps2-an385` | `cmake --preset qemu-mps2-an385`, `cmake --build --preset qemu-mps2-an385`, then `qemu-system-arm -machine mps2-an385 -nographic -semihosting-config enable=on,target=native -kernel ../../build/examples/minimal/qemu-mps2-an385/zule_minimal`; stop it with Ctrl-A, then X. Its port settings give the board's 25 MHz clock. |
 
 See [examples](../README.md#targets) for how targets work.

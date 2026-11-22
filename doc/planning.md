@@ -8,8 +8,9 @@ decisions or a committed order of delivery.
 Zule's main product is the Zule library cross-compiled for embedded ports, so
 verification centres on the target compiler and on static analysis rather than
 host-specific tools. The sections below depend on each other: the development
-environment provides the tools, the cross build and static analysis are the
-main checks, and CI runs everything with the same tools and configurations.
+environment provides the tools, the [static checks](../TESTING.md#static-checks)
+and tests on targets are the main checks, and CI runs everything with the same
+tools and configurations.
 
 ### Development environment
 
@@ -20,7 +21,7 @@ main checks, and CI runs everything with the same tools and configurations.
   run, with cached layers, and passes it to its jobs as an artifact.
 - Consider pinning the base image by digest as well as tag.
 
-### Cross-compilation
+### Static checks
 
 - Keep the stub port alongside real ports. It checks the Zule library alone, so
   a finding cannot come from port code or vendor headers; it is the only way to
@@ -43,10 +44,10 @@ main checks, and CI runs everything with the same tools and configurations.
 - Generated code: the application is responsible for checking its generated
   schedule, and Zule makes that easy rather than validating the generator.
   - Provide a one-step check that runs Zule's static analysis, with the same
-    options as the cross-compiled checks, on an application's generated
+    options as the static checks, on an application's generated
     schedule and build settings.
   - Analyse a reference schedule that exercises every generator branch in the
-    cross-compiled checks: many tasks, a task in several windows, an unused
+    static checks: many tasks, a task in several windows, an unused
     task, the longest names, and values near their limits.
   - Document the generated code's structure, which parts vary with the input,
     and the application's responsibility for checking the result.
@@ -57,21 +58,19 @@ main checks, and CI runs everything with the same tools and configurations.
   [examples](#examples).
 - Considered and not planned: ThreadSanitizer, which would only cover the POSIX
   port, a development and demonstration target; and Clang as a second host
-  compiler, which adds little beyond the cross-compiled checks.
+  compiler, which adds little beyond the static checks.
 
 ### Examples
 
-- With the Cortex-M port, add an `mps2-an385` target (Cortex-M3, in QEMU) to the
-  minimal and showcase examples, with the code they share in
-  `examples/common/targets/mps2-an385/`. The showcase prints with `printf`, so
-  this target needs the Arm toolchain's C library, newlib, in the development
-  image, with its output routed to the board's UART. Run both in CI with `-icount`, so guest
-  time follows executed instructions and timing, including the tick check, is
-  deterministic regardless of runner load. This also exercises SysTick and the
-  idle wait, though QEMU's models do not prove behaviour on silicon.
+- Add a `qemu-mps2-an385` target to the showcase, once the Cortex-M port provides
+  the timebase, and run it in CI in QEMU with `-icount`, like the minimal
+  example, so its timing, including the tick check, is deterministic regardless
+  of runner load. It prints with `printf`, so this target needs the Arm
+  toolchain's C library, newlib, in the development image, with its output
+  routed to the board's UART.
 - Until then, the showcase keeps the tick check enabled in CI on the host, with
   a half-slot tolerance; an occasional failure on a heavily loaded runner is
-  acceptable. The minimal example is the stable smoke test.
+  acceptable.
 - Consider an example for measuring and checking timing on a target, such as
   setting budgets and the tick timing tolerance from the modules' measurements.
 
@@ -197,19 +196,22 @@ main checks, and CI runs everything with the same tools and configurations.
 ## Additional ports
 
 The [Cortex-M port](../zule/ports/cortex_m/README.md) provides critical
-sections, the tick, and idle. Remaining steps:
+sections, the tick, and idle, with [target tests](../TESTING.md#target-tests) in
+QEMU. Remaining steps:
 
-- A QEMU harness that runs the port's tests on `mps2-an385` (Cortex-M3) in CI:
-  tick delivery, critical-section nesting, idle wake-up, and that stop leaves no
-  tick pending.
 - Provide the timebase from SysTick, at the same clock frequency. The count is
   the tick count times the reload period, plus the elapsed part of the current
   period from the SysTick counter. A read must account for a counter wrap whose
   interrupt is still pending. The DWT cycle counter is optional in the
   architecture and often stops during `WFI`, so it is not suitable as the
-  timebase. With the timebase, add all-features cross-compiled presets for the
-  port.
-- The `mps2-an385` [example](#examples) target.
+  timebase. With the timebase, add all-features static check presets for the
+  port, and target tests of the timebase, including reads across counter
+  wraps.
+- Run the core's unit tests on a target too, in QEMU, to catch differences in
+  type sizes and arithmetic. They use the C library's `assert()` and `abort()`,
+  so they need newlib in the development image, as the showcase's embedded
+  target does.
+- The showcase's `qemu-mps2-an385` [example](#examples) target.
 - Verify on hardware what QEMU cannot show, on a board such as the
   NUCLEO-G431RB (Cortex-M4): tick timing and interrupt latency, `WFI` waking
   while masked, and the timebase across counter wraps, cross-checked against the

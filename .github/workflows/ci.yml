@@ -125,8 +125,8 @@ jobs:
           run("showcase", ("sense", "control", "output"))
           '
 
-  cross:
-    name: Cross-compiled checks
+  static:
+    name: Static checks
     needs: image
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -148,16 +148,68 @@ jobs:
 
       # Run as the runner's user, so build output in the workspace is not owned by
       # root.
-      - name: Build Cortex-M link checks
+      - name: Build and analyse for target cores
         run: >-
           docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
-          --volume "$PWD:/work" --workdir /work/zule/tests/cross zule-dev:ci
+          --volume "$PWD:/work" --workdir /work/zule/tests/static zule-dev:ci
           sh -c 'set -e;
           for preset in stub-m3 stub-m3-all stub-m0plus stub-m0plus-all
           cortex-m-m3 cortex-m-m0plus; do
           cmake --preset "$preset";
           cmake --build --preset "$preset";
           done'
+
+  target:
+    name: Target tests
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download development image
+        uses: actions/download-artifact@v4
+        with:
+          name: zule-dev-image
+          path: ${{ runner.temp }}
+
+      - name: Load development image
+        run: docker load --input "${{ runner.temp }}/zule-dev.tar"
+
+      # Run as the runner's user, so build output in the workspace is not owned by
+      # root.
+      - name: Run Cortex-M port tests in QEMU
+        run: >-
+          docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
+          --volume "$PWD:/work" --workdir /work/zule/ports/cortex_m/tests/qemu zule-dev:ci
+          sh -c 'set -e;
+          cmake --preset qemu-mps2-an385;
+          cmake --build --preset qemu-mps2-an385;
+          ctest --preset qemu-mps2-an385'
+
+      # The minimal example returns only on a fault, so it must still be running
+      # after two seconds. It prints nothing, so QEMU's exception log shows it is
+      # ticking: SysTick is exception 15, due every 10 ms slot.
+      - name: Run the minimal example in QEMU
+        run: >-
+          docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
+          --volume "$PWD:/work" --workdir /work/examples/minimal zule-dev:ci
+          sh -c 'set -e;
+          cmake --preset qemu-mps2-an385;
+          cmake --build --preset qemu-mps2-an385;
+          status=0;
+          timeout 2 qemu-system-arm -machine mps2-an385 -nographic -monitor none
+          -semihosting-config enable=on,target=native -icount shift=0
+          -d int -D /tmp/qemu.log
+          -kernel ../../build/examples/minimal/qemu-mps2-an385/zule_minimal || status=$?;
+          ticks=$(grep -c "exception 15" /tmp/qemu.log || true);
+          echo "Exit status $status after 2 s, with $ticks ticks";
+          test "$status" -eq 124;
+          test "$ticks" -ge 50'
 
   sanitize:
     name: Tests under sanitizers
