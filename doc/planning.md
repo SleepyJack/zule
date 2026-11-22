@@ -62,12 +62,11 @@ tools and configurations.
 
 ### Examples
 
-- Add a `qemu-mps2-an385` target to the showcase, once the Cortex-M port provides
-  the timebase, and run it in CI in QEMU with `-icount`, like the minimal
-  example, so its timing, including the tick check, is deterministic regardless
-  of runner load. It prints with `printf`, so this target needs the Arm
-  toolchain's C library, newlib, in the development image, with its output
-  routed to the board's UART.
+- Add a `qemu-mps2-an385` target to the showcase, and run it in CI in QEMU with
+  `-icount` and `sleep=off`, like the minimal example, so its timing, including
+  the tick check, is deterministic regardless of runner load. It prints with
+  `printf`, so this target needs the Arm toolchain's C library, newlib, in the
+  development image, with its output routed to the board's UART.
 - Until then, the showcase keeps the tick check enabled in CI on the host, with
   a half-slot tolerance; an occasional failure on a heavily loaded runner is
   acceptable.
@@ -196,17 +195,9 @@ tools and configurations.
 ## Additional ports
 
 The [Cortex-M port](../zule/ports/cortex_m/README.md) provides critical
-sections, the tick, and idle, with [target tests](../TESTING.md#target-tests) in
-QEMU. Remaining steps:
+sections, the tick, idle, and the timebase, with
+[target tests](../TESTING.md#target-tests) in QEMU. Remaining steps:
 
-- Provide the timebase from SysTick, at the same clock frequency. The count is
-  the tick count times the reload period, plus the elapsed part of the current
-  period from the SysTick counter. A read must account for a counter wrap whose
-  interrupt is still pending. The DWT cycle counter is optional in the
-  architecture and often stops during `WFI`, so it is not suitable as the
-  timebase. With the timebase, add all-features static check presets for the
-  port, and target tests of the timebase, including reads across counter
-  wraps.
 - Run the core's unit tests on a target too, in QEMU, to catch differences in
   type sizes and arithmetic. They use the C library's `assert()` and `abort()`,
   so they need newlib in the development image, as the showcase's embedded

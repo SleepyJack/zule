@@ -5,8 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Generic Cortex-M port: PRIMASK for critical sections, SysTick for the tick, and
- * WFI for idle; see README.md. Single core: masking interrupts excludes the tick. */
+/* Generic Cortex-M port: PRIMASK for critical sections, SysTick for the tick and
+ * the timebase, and WFI for idle; see README.md. Single core: masking interrupts
+ * excludes the tick. */
 
 #define ZULE_PORT_CORTEX_M_MICROSECONDS_PER_SECOND 1000000U
 
@@ -24,6 +25,16 @@
 static zule_port_tick_callback_t volatile tick_callback;
 /* Whether SysTick is delivering ticks. Only application context changes it. */
 static bool tick_running;
+
+#if ZULE_CONFIG_TIMEBASE
+/* The timebase counts SysTick's clock across periods: the timebase count when the
+ * current period started, which the handler advances by one period each tick, and
+ * the period's length in counts, set by tick init while ticks are stopped. Both
+ * are volatile, like the callback, so their writes stay ordered with the
+ * register writes and reads around them. */
+static volatile uint32_t period_start_counts;
+static volatile uint32_t period_counts;
+#endif
 
 zule_port_critical_state_t zule_port_critical_enter(void) {
     const zule_port_critical_state_t state = {.primask = zule_port_cortex_m_interrupts_disable()};
@@ -63,6 +74,9 @@ zule_port_result_t zule_port_tick_init(uint32_t slot_us, zule_port_tick_callback
 #endif
     if (valid) {
         tick_callback = callback;
+#if ZULE_CONFIG_TIMEBASE
+        period_counts = reload + 1U;
+#endif
         zule_port_cortex_m_systick.rvr = reload;
         /* Any write clears the counter, so the first tick comes one full period
          * after the counter starts. */
@@ -105,8 +119,52 @@ zule_port_result_t zule_port_idle(void) {
  * analysis cannot see. */
 /* cppcheck-suppress unusedFunction */
 void SysTick_Handler(void) {
+#if ZULE_CONFIG_TIMEBASE
+    /* A new period started at the reload that raised this tick. Advance first, so
+     * the callback's reads of the timebase include it. */
+    period_start_counts += period_counts;
+#endif
     /* The callback is set whenever the interrupt is enabled: tick init checks it
      * and stores it before enabling SysTick, and only init enables it. Scheduler
      * results remain core policy, so the port discards them. */
     (void)tick_callback();
 }
+
+#if ZULE_CONFIG_TIMEBASE
+uint32_t zule_port_time_hz(void) {
+    return (uint32_t)ZULE_PORT_CORTEX_M_SYSTICK_HZ;
+}
+
+/* The count when the current period started, plus the counts elapsed in it.
+ * Interrupts are masked for the read, so the handler cannot advance the period
+ * start in the middle of it, and the previous mask is restored, so the exclusion
+ * state is unchanged.
+ *
+ * SysTick counts down to 0 and then reloads with period - 1, and it raises the
+ * tick when the counter reaches 0, one count before the reload. So a period
+ * starts when the counter reaches 0: the counter reads 0, then period - 1, down
+ * to 1, and counts elapsed are 0 at 0 and period - SYST_CVR otherwise.
+ *
+ * While the tick is held off, by this read's own masking or a caller's, the
+ * handler has not yet advanced the period start for a period that has begun. The
+ * pending SysTick flag shows that, and the read then adds one period. The counter
+ * is read again after the flag, since the first read may predate the start of the
+ * period that set it. Only one pending flag exists, so if the tick is held off
+ * for longer than a whole period, the periods after the first are lost until the
+ * next tick; the port's README documents this limit. */
+uint32_t zule_port_time_get(void) {
+    const zule_port_critical_state_t state = zule_port_critical_enter();
+    const uint32_t period = period_counts;
+    uint32_t start = period_start_counts;
+    uint32_t current = zule_port_cortex_m_systick.cvr;
+    const uint32_t icsr = zule_port_cortex_m_scb.icsr;
+    if ((icsr & ZULE_PORT_CORTEX_M_ICSR_PENDSTSET) != 0U) {
+        current = zule_port_cortex_m_systick.cvr;
+        start += period;
+    }
+    zule_port_critical_exit(state);
+    const uint32_t elapsed = (current == 0U) ? 0U : (period - current);
+    /* Unsigned arithmetic wraps the count modulo 2^32, as the contract requires. */
+    return start + elapsed;
+}
+#endif

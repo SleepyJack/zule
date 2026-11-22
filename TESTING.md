@@ -76,8 +76,8 @@ for two seconds and checks it is still running:
 - **On POSIX,** the minimal example is the stable smoke test, since it does not
   depend on host timing. The showcase must also print every task's name, and its
   tick check can fault on a heavily loaded host.
-- **On `qemu-mps2-an385`,** the minimal example runs in QEMU with `-icount`, so
-  its timing is deterministic. It prints nothing, so CI also counts SysTick
+- **On `qemu-mps2-an385`,** the minimal example runs in QEMU with `-icount`
+  and `sleep=off`, so its timing is deterministic. It prints nothing, so CI also counts SysTick
   exceptions in QEMU's exception log (`-d int`), to tell a running scheduler
   from a stuck program. A fault ends QEMU with a failure status.
 
@@ -101,10 +101,15 @@ host tests cannot: that ticks arrive at the programmed rate against an
 independent timer, that critical sections hold ticks off, including nested
 ones, that idle wakes for each tick and loses none, and that stopping leaves no
 tick pending. The last test runs the real scheduler on the port until a task
-overruns on purpose.
+overruns on purpose. The `qemu-mps2-an385-all` preset also enables every
+feature: it checks the timebase against the independent timer and across
+millions of reads, and runs the scheduler with every hook, the tick timing
+check, and both modules.
 
-QEMU runs with `-icount`, so guest time follows executed instructions and every
-run is the same, whatever the host's load. Tests report through semihosting,
+QEMU runs with `-icount shift=0,sleep=off`: guest time follows executed
+instructions, and jumps to the next timer event while the guest waits in `WFI`,
+so every run is the same, whatever the host's load. Without `sleep=off`, waits
+follow the host's clock, and tick timing varies between runs. Tests report through semihosting,
 which also sets QEMU's exit status. QEMU shows the logic against its model of
 the hardware, not real timing, interrupt latency, or behaviour a model may not
 capture; those need hardware.
@@ -131,7 +136,9 @@ features:
 | `stub-m0plus` | Stub | Cortex-M0+ (Armv6-M) | Defaults |
 | `stub-m0plus-all` | Stub | Cortex-M0+ (Armv6-M) | All enabled |
 | `cortex-m-m3` | [Cortex-M](zule/ports/cortex_m/README.md) | Cortex-M3 (Armv7-M) | Defaults |
+| `cortex-m-m3-all` | Cortex-M | Cortex-M3 (Armv7-M) | All enabled |
 | `cortex-m-m0plus` | Cortex-M | Cortex-M0+ (Armv6-M) | Defaults |
+| `cortex-m-m0plus-all` | Cortex-M | Cortex-M0+ (Armv6-M) | All enabled |
 
 The stub port checks the Zule library alone; a real port's presets check it with
 the library.

@@ -28,13 +28,14 @@ endfunction()
 # zule_target_qemu_mps2_an385_add_test(<name> <executable>)
 #
 # Run <executable> in QEMU as the test <name>. -icount makes guest time follow
-# executed instructions, so timing in the guest is deterministic whatever the
-# host's load; each instruction takes 1 ns of guest time.
+# executed instructions, each taking 1 ns, and sleep=off makes it jump to the
+# next timer event while the guest waits in WFI, rather than follow the host's
+# clock. Together they make every run the same, whatever the host's load.
 function(zule_target_qemu_mps2_an385_add_test name executable)
     add_test(NAME ${name} COMMAND "${ZULE_QEMU_SYSTEM_ARM}"
         -machine mps2-an385 -nographic -monitor none
         -semihosting-config enable=on,target=native
-        -icount shift=0
+        -icount shift=0,sleep=off
         -kernel "$<TARGET_FILE:${executable}>")
     set_tests_properties(${name} PROPERTIES TIMEOUT 60)
 endfunction()

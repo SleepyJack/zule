@@ -4,7 +4,7 @@
   "configurePresets": [
     {
       "name": "qemu-mps2-an385",
-      "displayName": "Cortex-M port tests on QEMU's mps2-an385 (Cortex-M3)",
+      "displayName": "Cortex-M port tests on QEMU's mps2-an385 (Cortex-M3), default features",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/../../../../../build/cortex-m-${presetName}",
       "toolchainFile": "${sourceDir}/../../arm-none-eabi.cmake",
@@ -12,15 +12,29 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_FLAGS": "-mcpu=cortex-m3 -mthumb"
       }
+    },
+    {
+      "name": "qemu-mps2-an385-all",
+      "displayName": "Cortex-M port tests on QEMU's mps2-an385 (Cortex-M3), all features",
+      "inherits": "qemu-mps2-an385",
+      "cacheVariables": { "ZULE_USER_CONFIG_DIR": "${sourceDir}/config_all" }
     }
   ],
-  "buildPresets": [{ "name": "qemu-mps2-an385", "configurePreset": "qemu-mps2-an385" }],
+  "buildPresets": [
+    { "name": "qemu-mps2-an385", "configurePreset": "qemu-mps2-an385" },
+    { "name": "qemu-mps2-an385-all", "configurePreset": "qemu-mps2-an385-all" }
+  ],
   "testPresets": [
     {
       "name": "qemu-mps2-an385",
       "configurePreset": "qemu-mps2-an385",
       "output": { "outputOnFailure": true, "verbosity": "verbose" },
       "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "qemu-mps2-an385-all",
+      "inherits": "qemu-mps2-an385",
+      "configurePreset": "qemu-mps2-an385-all"
     }
   ]
 }

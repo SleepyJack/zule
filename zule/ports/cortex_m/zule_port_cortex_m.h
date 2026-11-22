@@ -29,8 +29,10 @@ typedef struct {
     volatile uint32_t icsr;
 } zule_port_cortex_m_scb_t;
 
-/* ICSR's write-one-to-clear bit for a pending SysTick exception; writing zero to
- * its other bits has no effect. */
+/* ICSR's bits for a pending SysTick exception: PENDSTSET reads as set while one
+ * is pending, and writing PENDSTCLR clears it. Writing zero to the other bits has
+ * no effect. */
+#define ZULE_PORT_CORTEX_M_ICSR_PENDSTSET 0x04000000U
 #define ZULE_PORT_CORTEX_M_ICSR_PENDSTCLR 0x02000000U
 
 /* The registers. zule_port_cortex_m.S places them at their architecture-defined
