@@ -189,7 +189,6 @@ custom port, plus tests in `tests/` built when `ZULE_BUILD_TESTS` is on. See
 
 ### Testing a port
 
-Core tests use a deterministic test port and do not exercise a real port.
 [TESTING.md](../TESTING.md#adding-tests) describes where a port's tests live and
 how to run them. Test each port, on its target where it has one, for:
 
