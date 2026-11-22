@@ -8,8 +8,9 @@ by an integrator is owned by the user (see [ownership](architecture.md#ownership
 
 | Port | Target |
 | --- | --- |
+| [`cortex_m`](../zule/ports/cortex_m/README.md) | Arm Cortex-M (Armv6-M, Armv7-M, and Armv8-M), using SysTick, PRIMASK, and `WFI`. It does not provide the timebase yet. |
 | [`posix`](../zule/ports/posix/README.md) | Native development on POSIX hosts, using a timer thread and a mutex. |
-| [`stub`](../zule/ports/stub/README.md) | Arm Cortex-M compile check: links but does nothing, for the cross-compiled builds. |
+| [`stub`](../zule/ports/stub/README.md) | Compile check for any target: links but does nothing, for the cross-compiled builds. |
 
 ## Contract
 

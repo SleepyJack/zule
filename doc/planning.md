@@ -26,12 +26,6 @@ main checks, and CI runs everything with the same tools and configurations.
   a finding cannot come from port code or vendor headers; it is the only way to
   check targets without a port; and it shows the smallest valid port. Real ports
   check their own code and, in QEMU, behaviour, which the stub cannot.
-- The cross-compiled builds become combinations of port, core, and features:
-  each real port joins as presets alongside the stub's. Compiler warnings and
-  static analysis apply to whichever port is selected, so real ports are
-  covered as soon as they are added.
-- When the Cortex-M port arrives, move the Arm toolchain file into it. The stub
-  port then becomes architecture-neutral, used with any toolchain.
 - Consider presets for combinations of features between the defaults and
   everything enabled, such as the tick check without hooks, if code depends on
   how settings combine. The host tests already build each feature in its own
@@ -186,8 +180,6 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ## Core and port configuration
 
-- The Cortex-M port will add the first required port setting, the timer clock
-  frequency; see [additional ports](#additional-ports).
 - Consider opt-in diagnostics for applied defaults, keeping normal builds quiet.
   Check compiler support for `#warning` in the supported C99 toolchains and avoid
   excessive repeated diagnostics across compilation units.
@@ -204,40 +196,25 @@ main checks, and CI runs everything with the same tools and configurations.
 
 ## Additional ports
 
-- Add a generic Cortex-M port, `zule/ports/cortex_m`, using only what the
-  architecture defines: SysTick, PRIMASK, and `WFI`. Written to the Armv6-M
-  subset, it serves Armv6-M, Armv7-M, and Armv8-M. It joins the cross-compiled
-  builds as presets alongside the stub port, for Cortex-M0+ and Cortex-M3, which
-  also brings it under static analysis, takes over the Arm toolchain file (see
-  [cross-compilation](#cross-compilation)), and enables tests and the
-  [examples](#examples) in QEMU (`mps2-an385`).
-- Deliver it in steps: the port's critical sections, periodic tick, and idle,
-  with host tests against fake SysTick registers; a QEMU harness that runs the
-  port's tests in CI; the timebase; and the `mps2-an385` example target.
-- Proposed, to settle with the first step: no CMSIS dependency, defining the
-  few registers the port uses; the port exports a tick handler that the
-  application's `SysTick_Handler` calls, since vendor HALs often use SysTick
-  themselves; and the few instructions C cannot express, such as `cpsid` and
-  `wfi`, live in a small assembly file, keeping the C strict C99.
-- Implement saved-state critical sections, periodic timer delivery, and the
-  atomic idle wait against the generic port contract.
-- For idle, `WFI` inside a PRIMASK critical section meets the contract: a
-  pending interrupt wakes it even while masked, and the tick handler runs when
-  the core exits the critical section. Interrupts masked through BASEPRI do not
-  wake `WFI`, so a BASEPRI-based port must mask with PRIMASK and lift BASEPRI
-  around the `WFI`.
-- Require the SysTick clock frequency as a port setting in
-  `zule_user_port_config.h`: the tick needs it to convert `slot_us` to a reload
-  value. Tick init fails unless a slot is a whole number of clock counts that
-  fits SysTick's 24 bits.
-- Provide the timebase from SysTick, at the same clock frequency. The
-  count is the tick count times the reload period, plus the elapsed part of the
-  current period from the SysTick counter. A read must account for a counter
-  wrap whose interrupt is still pending. The DWT cycle counter is optional in the architecture and
-  often stops during `WFI`, so it is not suitable as the timebase.
-- Verify nesting, ordering barriers, timer start/stop behavior, and bounded
-  execution and interrupt latency on the selected target.
-- Document assumptions specific to the port in its README, including that its
-  critical sections mask every interrupt for their short duration, and that
-  SysTick is optional on Armv6-M and Armv8-M Baseline, though almost every
-  part has it.
+The [Cortex-M port](../zule/ports/cortex_m/README.md) provides critical
+sections, the tick, and idle. Remaining steps:
+
+- A QEMU harness that runs the port's tests on `mps2-an385` (Cortex-M3) in CI:
+  tick delivery, critical-section nesting, idle wake-up, and that stop leaves no
+  tick pending.
+- Provide the timebase from SysTick, at the same clock frequency. The count is
+  the tick count times the reload period, plus the elapsed part of the current
+  period from the SysTick counter. A read must account for a counter wrap whose
+  interrupt is still pending. The DWT cycle counter is optional in the
+  architecture and often stops during `WFI`, so it is not suitable as the
+  timebase. With the timebase, add all-features cross-compiled presets for the
+  port.
+- The `mps2-an385` [example](#examples) target.
+- Verify on hardware what QEMU cannot show, on a board such as the
+  NUCLEO-G431RB (Cortex-M4): tick timing and interrupt latency, `WFI` waking
+  while masked, and the timebase across counter wraps, cross-checked against the
+  DWT cycle counter and a logic analyser.
+- Consider masking only the tick and lower priorities through BASEPRI on Armv7-M
+  and later, so critical sections do not delay higher-priority interrupts.
+  Interrupts masked through BASEPRI do not wake `WFI`, so idle would still mask
+  with PRIMASK and lift BASEPRI around the `WFI`.

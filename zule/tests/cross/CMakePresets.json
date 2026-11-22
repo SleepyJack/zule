@@ -7,44 +7,76 @@
       "hidden": true,
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/../../../build/cross-${presetName}",
-      "toolchainFile": "${sourceDir}/../../ports/stub/arm-none-eabi.cmake",
+      "toolchainFile": "${sourceDir}/../../ports/cortex_m/arm-none-eabi.cmake",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
     {
-      "name": "m3",
-      "displayName": "Cortex-M3 (Armv7-M), default features",
+      "name": "stub",
+      "hidden": true,
       "inherits": "cross",
+      "cacheVariables": { "ZULE_PORT": "stub" }
+    },
+    {
+      "name": "cortex-m",
+      "hidden": true,
+      "inherits": "cross",
+      "cacheVariables": {
+        "ZULE_PORT": "cortex_m",
+        "ZULE_USER_PORT_CONFIG_DIR": "${sourceDir}/port_config/cortex_m"
+      }
+    },
+    {
+      "name": "m3",
+      "hidden": true,
       "cacheVariables": { "CMAKE_C_FLAGS": "-mcpu=cortex-m3 -mthumb" }
     },
     {
-      "name": "m3-all",
-      "displayName": "Cortex-M3 (Armv7-M), all features",
-      "inherits": "cross",
-      "cacheVariables": {
-        "CMAKE_C_FLAGS": "-mcpu=cortex-m3 -mthumb",
-        "ZULE_USER_CONFIG_DIR": "${sourceDir}/config_all_on"
-      }
-    },
-    {
       "name": "m0plus",
-      "displayName": "Cortex-M0+ (Armv6-M), default features",
-      "inherits": "cross",
+      "hidden": true,
       "cacheVariables": { "CMAKE_C_FLAGS": "-mcpu=cortex-m0plus -mthumb" }
     },
     {
-      "name": "m0plus-all",
-      "displayName": "Cortex-M0+ (Armv6-M), all features",
-      "inherits": "cross",
-      "cacheVariables": {
-        "CMAKE_C_FLAGS": "-mcpu=cortex-m0plus -mthumb",
-        "ZULE_USER_CONFIG_DIR": "${sourceDir}/config_all_on"
-      }
+      "name": "all-features",
+      "hidden": true,
+      "cacheVariables": { "ZULE_USER_CONFIG_DIR": "${sourceDir}/config_all_on" }
+    },
+    {
+      "name": "stub-m3",
+      "displayName": "Stub port, Cortex-M3 (Armv7-M), default features",
+      "inherits": ["stub", "m3"]
+    },
+    {
+      "name": "stub-m3-all",
+      "displayName": "Stub port, Cortex-M3 (Armv7-M), all features",
+      "inherits": ["stub", "m3", "all-features"]
+    },
+    {
+      "name": "stub-m0plus",
+      "displayName": "Stub port, Cortex-M0+ (Armv6-M), default features",
+      "inherits": ["stub", "m0plus"]
+    },
+    {
+      "name": "stub-m0plus-all",
+      "displayName": "Stub port, Cortex-M0+ (Armv6-M), all features",
+      "inherits": ["stub", "m0plus", "all-features"]
+    },
+    {
+      "name": "cortex-m-m3",
+      "displayName": "Cortex-M port, Cortex-M3 (Armv7-M), default features",
+      "inherits": ["cortex-m", "m3"]
+    },
+    {
+      "name": "cortex-m-m0plus",
+      "displayName": "Cortex-M port, Cortex-M0+ (Armv6-M), default features",
+      "inherits": ["cortex-m", "m0plus"]
     }
   ],
   "buildPresets": [
-    { "name": "m3", "configurePreset": "m3" },
-    { "name": "m3-all", "configurePreset": "m3-all" },
-    { "name": "m0plus", "configurePreset": "m0plus" },
-    { "name": "m0plus-all", "configurePreset": "m0plus-all" }
+    { "name": "stub-m3", "configurePreset": "stub-m3" },
+    { "name": "stub-m3-all", "configurePreset": "stub-m3-all" },
+    { "name": "stub-m0plus", "configurePreset": "stub-m0plus" },
+    { "name": "stub-m0plus-all", "configurePreset": "stub-m0plus-all" },
+    { "name": "cortex-m-m3", "configurePreset": "cortex-m-m3" },
+    { "name": "cortex-m-m0plus", "configurePreset": "cortex-m-m0plus" }
   ]
 }

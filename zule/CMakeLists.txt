@@ -123,4 +123,9 @@ target_link_libraries(zule
 
 add_subdirectory(core)
 
+if(ZULE_BUILD_TESTS)
+    # The Cortex-M port's logic, tested on the host against fake registers.
+    add_subdirectory(ports/cortex_m/tests cortex_m_port_tests)
+endif()
+
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ZuleSchedule.cmake")

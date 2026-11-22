@@ -153,7 +153,8 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
           --volume "$PWD:/work" --workdir /work/zule/tests/cross zule-dev:ci
           sh -c 'set -e;
-          for preset in m3 m3-all m0plus m0plus-all; do
+          for preset in stub-m3 stub-m3-all stub-m0plus stub-m0plus-all
+          cortex-m-m3 cortex-m-m0plus; do
           cmake --preset "$preset";
           cmake --build --preset "$preset";
           done'

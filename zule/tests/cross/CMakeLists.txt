@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.31)
 project(zule_cross_check LANGUAGES C)
 
 # Link check for cross-compiled builds, a standalone project like the examples. It
-# links the Zule library, the stub port, and a generated schedule into a
-# freestanding program with no C library, so problems that only appear with the
-# target compiler fail the build. Nothing runs it. The presets choose the core
-# and the features; the settings below apply to every build.
+# links the Zule library, a port, and a generated schedule into a freestanding
+# program with no C library, so problems that only appear with the target
+# compiler fail the build. Nothing runs it. The presets choose the port, the
+# core, and the features; the settings below apply to every build.
 set(ZULE_PORT stub CACHE STRING "Zule port")
 # Static analysis below reads the compile database; enable it before any target.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -18,7 +18,8 @@ zule_add_schedule(zule_cross_check SCHEDULE schedule.json)
 # No startup files or C library. libgcc supplies compiler support routines, such
 # as 64-bit division, and comes after the libraries that need it.
 target_link_options(zule_cross_check PRIVATE -nostdlib)
-target_link_libraries(zule_cross_check PRIVATE zule::zule zule_warnings gcc)
+# The port is listed explicitly so it comes before libgcc too.
+target_link_libraries(zule_cross_check PRIVATE zule::zule zule::port zule_warnings gcc)
 
 # Static analysis: after the build, Cppcheck with its MISRA C:2012 addon analyses
 # the Zule library, the selected port, and the generated schedule as one
