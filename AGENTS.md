@@ -5,9 +5,9 @@ reviewing C code, public headers, or the C generator. It is the reference for
 project conventions; `.clang-format` is authoritative for layout.
 
 Apply the guidelines strictly to the scheduler core, eventual ports, and
-generated scheduler C. Demo application code should follow them where practical;
-do not enforce strict compliance there. Generated code used by a demo remains
-in scope.
+generated scheduler C. Example application code should follow them where
+practical; do not enforce strict compliance there. Generated code used by an
+example remains in scope.
 
 ## Guideline review
 
@@ -31,10 +31,11 @@ Use the project's Python environment and the commands documented in
   targets. The formatter is independent of CMake.
 - For schedule-tool changes, run `python -m unittest discover -s tests -v`
   from `zule/tools/schedule/`.
-- For CMake changes, configure and build both `zule/` (with tests) and `demo/`.
-- For generator or API changes, rebuild the demo (CMake regenerates its
-  schedule), check generated C formatting, and run the demo. Keep the public headers, generator,
-  example JSON, and demo consistent.
+- For CMake changes, configure and build both `zule/` (with tests) and each
+  example under `examples/`.
+- For generator or API changes, rebuild the examples (CMake regenerates their
+  schedules), check generated C formatting, and run them. Keep the public
+  headers, generator, example JSON, and examples consistent.
 - Fix generated-code issues in `zule/tools/schedule/zule_schedule/generation.py`,
   not in build output.
 - Documentation-only changes need reference and consistency checks rather

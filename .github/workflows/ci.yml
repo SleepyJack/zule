@@ -80,34 +80,49 @@ jobs:
       - name: Run C unit tests
         run: $IN_IMAGE sh -c 'cd zule && ctest --preset tests'
 
-      - name: Build demo
-        run: $IN_IMAGE sh -c 'cd demo && cmake --preset demo && cmake --build --preset demo'
+      - name: Build examples for POSIX
+        run: >-
+          $IN_IMAGE sh -c 'set -e;
+          for example in minimal showcase; do
+          cd "examples/$example";
+          cmake --preset posix;
+          cmake --build --preset posix;
+          cd ../..;
+          done'
 
       - name: Check generated C formatting
         run: >-
           $IN_IMAGE python tools/format.py --check
-          build/demo/zule_demo_schedule/zule_schedule_definition.c
-          build/demo/zule_demo_schedule/zule_task_ids.h
+          build/examples/minimal/posix/zule_minimal_schedule/zule_schedule_definition.c
+          build/examples/minimal/posix/zule_minimal_schedule/zule_task_ids.h
+          build/examples/showcase/posix/zule_showcase_schedule/zule_schedule_definition.c
+          build/examples/showcase/posix/zule_showcase_schedule/zule_task_ids.h
 
-      # The script is passed with -c, since the container has no terminal input.
-      - name: Run demo
+      # Each example must keep running, since it returns only on a fault; the
+      # showcase must also print every task's name. The minimal example has no
+      # timing-sensitive checks, so it is the stable smoke test. The script is
+      # passed with -c, since the container has no terminal input.
+      - name: Run examples on POSIX
         run: |
           $IN_IMAGE python -c '
           import subprocess
-          process = subprocess.Popen(
-              ["./build/demo/zule_demo"], stdout=subprocess.PIPE,
-              stderr=subprocess.PIPE, text=True,
-          )
-          try:
-              output, errors = process.communicate(timeout=2)
-          except subprocess.TimeoutExpired:
-              process.terminate()
-              output, errors = process.communicate(timeout=5)
-          else:
-              raise SystemExit(f"Demo exited unexpectedly: {process.returncode}\n{output}\n{errors}")
-          print(output, end="")
-          if errors or not all(task in output.splitlines() for task in ("sense", "control", "output")):
-              raise SystemExit(f"Demo smoke test failed: {errors}")
+          def run(example, expected):
+              process = subprocess.Popen(
+                  [f"./build/examples/{example}/posix/zule_{example}"],
+                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+              )
+              try:
+                  output, errors = process.communicate(timeout=2)
+              except subprocess.TimeoutExpired:
+                  process.terminate()
+                  output, errors = process.communicate(timeout=5)
+              else:
+                  raise SystemExit(f"{example} exited unexpectedly: {process.returncode}\n{output}\n{errors}")
+              print(output, end="")
+              if errors or not all(line in output.splitlines() for line in expected):
+                  raise SystemExit(f"{example} check failed: {errors}")
+          run("minimal", ())
+          run("showcase", ("sense", "control", "output"))
           '
 
   cross:

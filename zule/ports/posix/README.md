@@ -22,7 +22,7 @@ serialized, and initialization must finish before either context starts.
 `zule_port_tick_init()` starts a timer thread with the supplied period and
 callback. It uses absolute `CLOCK_MONOTONIC` deadlines and invokes the callback
 under the critical mutex. The thread knows nothing about schedules, task states,
-or demo duration. Callback results are discarded: scheduler faults are latched
+or application run time. Callback results are discarded: scheduler faults are latched
 and handled by the core runner, independently of timer failures.
 Deadlines stay on a fixed grid, so after a host delay the
 overdue ticks arrive back to back. The port does not judge tick timing; enable
@@ -51,8 +51,8 @@ a read fails only on a broken host, so a failure aborts, like a mutex failure.
 
 Timer errors return `ZULE_PORT_RESULT_ERROR`; synchronization failures or an
 unrecoverable join failure abort rather than falsely report exclusion or
-quiescence. Neither this development port nor the demo provides hard real-time
-guarantees.
+quiescence. This development port provides no hard real-time guarantees, and neither do
+the examples built with it.
 
 The tests in `tests/` cover critical-section nesting and exclusion, tick
 delivery, restart and shutdown, idle waiting, and the timebase. They build their

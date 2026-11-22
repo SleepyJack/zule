@@ -54,13 +54,15 @@ cmake --build --preset sanitize
 ctest --preset sanitize
 ```
 
-Build and run the demo, which also regenerates its schedule:
+Build and run an [example](examples/README.md), which also regenerates its
+schedule. Each example has a preset for each target it supports, and builds to
+`build/examples/<example>/<target>/`:
 
 ```sh
-cd demo
-cmake --preset demo
-cmake --build --preset demo
-../build/demo/zule_demo
+cd examples/showcase
+cmake --preset posix
+cmake --build --preset posix
+../../build/examples/showcase/posix/zule_showcase
 ```
 
 Run the schedule tool's tests:
@@ -79,7 +81,7 @@ own sources once in its `CMakeLists.txt`.
 
 The cross-compiled builds check the Zule library with the target compiler,
 `arm-none-eabi-gcc`. They are a standalone project in
-[`zule/tests/cross/`](zule/tests/cross), like the demo. Each links the library,
+[`zule/tests/cross/`](zule/tests/cross), like the examples. Each links the library,
 the [stub port](zule/ports/stub/README.md), and a generated schedule into a
 small program that nothing runs: freestanding, with no C library, and with
 warnings as errors, including `-Wconversion`, `-Wshadow`, and
@@ -127,16 +129,16 @@ python tools/format.py --check
 ```
 
 By default, the script formats handwritten C sources and headers under `zule/`
-and `demo/`. `--check` reports differences without editing and returns a failure
+and `examples/`. `--check` reports differences without editing and returns a failure
 status if formatting is needed. Paths are resolved from the script, so it can
 be invoked from any working directory. Explicit file arguments are relative
 to the caller's working directory.
 
-Generated files are excluded by default. After building the demo, check its
+Generated files are excluded by default. After building an example, check its
 generated schedule explicitly:
 
 ```sh
-python tools/format.py --check build/demo/zule_demo_schedule/zule_schedule_definition.c build/demo/zule_demo_schedule/zule_task_ids.h
+python tools/format.py --check build/examples/showcase/posix/zule_showcase_schedule/*.[ch]
 ```
 
 Generated formatting fixes belong in the Python generator, never in generated
@@ -155,7 +157,7 @@ against those guidelines.
 GitHub Actions first builds the container image, caching its layers between
 runs, and passes it to the other jobs, which run every step inside it. One job
 runs the C and Python unit tests, checks handwritten and generated C
-formatting, and builds and smoke-tests the demo; another runs the C unit tests
+formatting, and builds and runs the examples; another runs the C unit tests
 under the sanitizers; and another runs the cross-compiled builds. CI runs for
 pushes and pull requests, and the [CI workflow](.github/workflows/ci.yml) can
 also be run manually.

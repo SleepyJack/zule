@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="902" height="240" viewBox="0 0 902 240" role="img" aria-labelledby="title description">
-  <title id="title">Zule demo schedule</title>
+  <title id="title">Zule example schedule</title>
   <desc id="description">A repeating cycle of ten slots. Task sense runs in slots 0 and 1, control in slots 2 to 4, and output in slots 5 and 6. Slots 7 to 9 are idle. The cycle then repeats.</desc>
   <defs>
     <style>

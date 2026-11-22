@@ -74,7 +74,7 @@ int main(void) {
         (void)fputs("Zule configuration failed\n", stderr);
         return 1;
     }
-    puts("Zule demo: running until a fault; press Ctrl-C to exit");
+    puts("Zule showcase: running until a fault");
     const zule_result_t result = zule_run();
     (void)fprintf(stderr, "Zule stopped: %u\n", (unsigned int)result);
     if (fault_seen) {

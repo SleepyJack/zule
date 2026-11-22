@@ -8,19 +8,19 @@ It consists of:
   `zule_user_config.h`, and for the selected port in `zule_user_port_config.h`,
   or as compiler definitions.
 
-Keep both in an application-owned directory, such as the demo's
-[`demo/config/`](../demo/config). Runtime settings, such as the fault handler,
+Keep both in an application-owned directory, such as the showcase example's
+[`examples/showcase/config/`](../examples/showcase/config). Runtime settings, such as the fault handler,
 are part of the [application](application.md#fault-handler).
 
 ## Schedule
 
 A schedule describes one repeating cycle of slots. Each task has a budget in
 slots, and each window places one invocation of a task at a start slot. For
-example, the demo schedule:
+example, the showcase example's schedule:
 
 ```json
 {
-  "$schema": "../../zule/tools/schedule/zule_schedule/schedule.schema.json",
+  "$schema": "../../../zule/tools/schedule/zule_schedule/schedule.schema.json",
   "slot_us": 50000,
   "tasks": {
     "sense": {
@@ -156,10 +156,13 @@ settings, applies defaults, validates them, and fails compilation if a required
 setting is missing rather than guessing it, for example a timer clock frequency
 that depends on the board. For overrides, create `zule_user_port_config.h` in an
 application-owned directory. Each user header is optional, and when both are
-used they can share a directory.
+used they can share a directory, or each have its own, for example when the
+port settings belong to the board and the build settings to the application.
 
 With CMake, `ZULE_USER_CONFIG_DIR` detects either header, or both, and defines
-the matching `ZULE_USE_USER_...` setting. Other build systems define
+the matching `ZULE_USE_USER_...` setting. To keep the port settings in their
+own directory, set `ZULE_USER_PORT_CONFIG_DIR` to it as well; only one of the
+two directories may hold `zule_user_port_config.h`. Other build systems define
 `ZULE_USE_USER_PORT_CONFIG=1` for every component when the header is present.
 Like core settings, port settings must be the same for every component.
 
