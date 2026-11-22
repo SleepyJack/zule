@@ -62,17 +62,15 @@ tools and configurations.
 
 ### Examples
 
-- With the Cortex-M port, add an `mps2-an385` target (Cortex-M3, in QEMU) to the
-  minimal and showcase examples, with the code they share in
-  `examples/common/targets/mps2-an385/`. The showcase prints with `printf`, so
-  this target needs the Arm toolchain's C library, newlib, in the development
-  image, with its output routed to the board's UART. Run both in CI with `-icount`, so guest
-  time follows executed instructions and timing, including the tick check, is
-  deterministic regardless of runner load. This also exercises SysTick and the
-  idle wait, though QEMU's models do not prove behaviour on silicon.
+- Add an `mps2-an385` target to the showcase, once the Cortex-M port provides
+  the timebase, and run it in CI in QEMU with `-icount`, like the minimal
+  example, so its timing, including the tick check, is deterministic regardless
+  of runner load. It prints with `printf`, so this target needs the Arm
+  toolchain's C library, newlib, in the development image, with its output
+  routed to the board's UART.
 - Until then, the showcase keeps the tick check enabled in CI on the host, with
   a half-slot tolerance; an occasional failure on a heavily loaded runner is
-  acceptable. The minimal example is the stable smoke test.
+  acceptable.
 - Consider an example for measuring and checking timing on a target, such as
   setting budgets and the tick timing tolerance from the modules' measurements.
 
@@ -213,7 +211,7 @@ QEMU. Remaining steps:
   type sizes and arithmetic. They use the C library's `assert()` and `abort()`,
   so they need newlib in the development image, as the showcase's embedded
   target does.
-- The `mps2-an385` [example](#examples) target.
+- The showcase's `mps2-an385` [example](#examples) target.
 - Verify on hardware what QEMU cannot show, on a board such as the
   NUCLEO-G431RB (Cortex-M4): tick timing and interrupt latency, `WFI` waking
   while masked, and the timebase across counter wraps, cross-checked against the

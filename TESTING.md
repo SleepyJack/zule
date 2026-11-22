@@ -70,11 +70,16 @@ cmake --build --preset posix
 ../../build/examples/showcase/posix/zule_showcase
 ```
 
-On POSIX, an example runs until stopped. CI runs each for two seconds and checks
-it is still running, since it returns only on a fault. The minimal example does
-not depend on host timing, so it is the stable smoke test; the showcase also
-prints every task's name, and its tick check can fault on a heavily loaded
-host.
+An example runs until stopped, since it returns only on a fault, so CI runs each
+for two seconds and checks it is still running:
+
+- **On POSIX,** the minimal example is the stable smoke test, since it does not
+  depend on host timing. The showcase must also print every task's name, and its
+  tick check can fault on a heavily loaded host.
+- **On `mps2-an385`, in QEMU,** the minimal example runs with `-icount`, so its
+  timing is deterministic. It prints nothing, so CI also counts SysTick
+  exceptions in QEMU's exception log (`-d int`), to tell a running scheduler
+  from a stuck program. A fault ends QEMU with a failure status.
 
 ## Target tests
 
@@ -171,7 +176,7 @@ every step inside it:
 | Tests and formatting | Handwritten and generated C formatting, the schedule tool tests, the core and port tests, and the examples on POSIX. |
 | Tests under sanitizers | The core and port tests with the `sanitize` preset. |
 | Static checks | Every static check preset. |
-| Target tests | The Cortex-M port's target tests in QEMU. |
+| Target tests | The Cortex-M port's target tests, and the minimal example, in QEMU. |
 
 CI runs for pushes and pull requests, and the
 [CI workflow](.github/workflows/ci.yml) can also be run manually.
