@@ -17,4 +17,4 @@ endfunction()
 # reference clock at 1.5 MHz, where only even slots are whole counts.
 zule_add_cortex_m_port_test(zule_cortex_m_port ZULE_PORT_CORTEX_M_SYSTICK_HZ=1000000U)
 zule_add_cortex_m_port_test(zule_cortex_m_port_reference_clock
-    ZULE_PORT_CORTEX_M_SYSTICK_HZ=1500000U ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK=0)
+    ZULE_PORT_CORTEX_M_SYSTICK_HZ=1500000U ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK=1)

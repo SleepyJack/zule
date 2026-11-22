@@ -21,15 +21,16 @@
 #error "ZULE_PORT_CORTEX_M_SYSTICK_HZ must be from 1 to 4294967295"
 #endif
 
-/* SysTick's clock: 1 for the processor clock, or 0 for the implementation-defined
- * reference clock, such as the processor clock divided by 8 on many parts. */
-#ifndef ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK
-#define ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK 1
+/* Set to 1 to clock SysTick from the external reference clock, which the
+ * implementation defines, such as the processor clock divided by 8 on many parts,
+ * instead of the processor clock. */
+#ifndef ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK
+#define ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK 0
 #endif
 
-#if ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK != 0 &&                                             \
-    ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK != 1
-#error "ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK must be 0 or 1"
+#if ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK != 0 &&                                         \
+    ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK != 1
+#error "ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK must be 0 or 1"
 #endif
 
 #if ZULE_CONFIG_TIMEBASE

@@ -40,10 +40,10 @@ static zule_result_t on_tick(void) {
     return ZULE_RESULT_DISPATCH_MISSED;
 }
 
-#if ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK
-#define EXPECTED_CSR 0x7U
-#else
+#if ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK
 #define EXPECTED_CSR 0x3U
+#else
+#define EXPECTED_CSR 0x7U
 #endif
 
 /* Set registers to values the port must overwrite, then start ticks and check

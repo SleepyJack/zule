@@ -10,10 +10,12 @@
 
 #define ZULE_PORT_CORTEX_M_MICROSECONDS_PER_SECOND 1000000U
 
-#if ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK
-#define ZULE_PORT_CORTEX_M_CLOCK_SOURCE ZULE_PORT_CORTEX_M_SYST_CSR_CLKSOURCE
-#else
+/* SYST_CSR's CLKSOURCE bit selects the processor clock when set, and the
+ * reference clock when clear. */
+#if ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK
 #define ZULE_PORT_CORTEX_M_CLOCK_SOURCE 0U
+#else
+#define ZULE_PORT_CORTEX_M_CLOCK_SOURCE ZULE_PORT_CORTEX_M_SYST_CSR_CLKSOURCE
 #endif
 
 /* Written in application context while ticks are stopped, and read by the

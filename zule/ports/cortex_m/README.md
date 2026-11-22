@@ -33,7 +33,7 @@ Set these in `zule_user_port_config.h`; see
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `ZULE_PORT_CORTEX_M_SYSTICK_HZ` | None, required | The frequency of SysTick's clock, in Hz, from 1 to 2^32 - 1. |
-| `ZULE_PORT_CORTEX_M_SYSTICK_PROCESSOR_CLOCK` | `1` | `1` to clock SysTick from the processor clock, or `0` for the implementation-defined reference clock, such as the processor clock divided by 8 on many parts. Set `ZULE_PORT_CORTEX_M_SYSTICK_HZ` to match. |
+| `ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK` | `0` | `1` to clock SysTick from the external reference clock instead of the processor clock. The implementation defines the reference clock, such as the processor clock divided by 8 on many parts. Set `ZULE_PORT_CORTEX_M_SYSTICK_HZ` to match. |
 
 Tick init fails, and `zule_run()` returns `ZULE_RESULT_PORT_ERROR`, unless a
 slot is a whole number of SysTick clock counts, so ticks do not drift, and from
