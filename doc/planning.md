@@ -69,7 +69,9 @@ main checks, and CI runs everything with the same tools and configurations.
 
 - With the Cortex-M port, add an `mps2-an385` target (Cortex-M3, in QEMU) to the
   minimal and showcase examples, with the code they share in
-  `examples/common/targets/mps2-an385/`. Run both in CI with `-icount`, so guest
+  `examples/common/targets/mps2-an385/`. The showcase prints with `printf`, so
+  this target needs the Arm toolchain's C library, newlib, in the development
+  image, with its output routed to the board's UART. Run both in CI with `-icount`, so guest
   time follows executed instructions and timing, including the tick check, is
   deterministic regardless of runner load. This also exercises SysTick and the
   idle wait, though QEMU's models do not prove behaviour on silicon.

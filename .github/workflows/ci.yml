@@ -80,7 +80,7 @@ jobs:
       - name: Run C unit tests
         run: $IN_IMAGE sh -c 'cd zule && ctest --preset tests'
 
-      - name: Build examples
+      - name: Build examples for POSIX
         run: >-
           $IN_IMAGE sh -c 'set -e;
           for example in minimal showcase; do
@@ -102,7 +102,7 @@ jobs:
       # showcase must also print every task's name. The minimal example has no
       # timing-sensitive checks, so it is the stable smoke test. The script is
       # passed with -c, since the container has no terminal input.
-      - name: Run examples
+      - name: Run examples on POSIX
         run: |
           $IN_IMAGE python -c '
           import subprocess

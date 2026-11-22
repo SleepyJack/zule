@@ -16,7 +16,10 @@ add_executable(zule_minimal main.c)
 set_target_properties(zule_minimal PROPERTIES C_EXTENSIONS OFF)
 target_link_libraries(zule_minimal PRIVATE zule::zule)
 zule_add_schedule(zule_minimal SCHEDULE config/schedule.json)
-example_target_configure(zule_minimal)
+# A target that needs its own sources or options defines this function.
+if(COMMAND example_target_configure)
+    example_target_configure(zule_minimal)
+endif()
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(zule_minimal PRIVATE -Wall -Wextra -Wpedantic)

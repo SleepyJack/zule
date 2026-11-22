@@ -9,9 +9,6 @@ runs:
   task's mean and longest execution time and worst dispatch latency, and the
   busiest cycle, from the task statistics module, and the worst tick deviations
   and longest tick, from the tick timing module.
-- [`example_console.h`](example_console.h): the console the showcase prints to.
-  Each target implements it, so the showcase itself uses no C library and formats
-  numbers itself.
 - [`config/`](config): the [configuration](../../doc/configuration.md). It
   contains the schedule `schedule.json` and the build settings
   `zule_user_config.h`, which enables task names, the timebase, the
@@ -23,6 +20,10 @@ runs:
   `../../zule`, includes the selected target, and points Zule at `config/`.
 - [`targets/`](targets): the targets it runs on; see
   [examples](../README.md#targets).
+
+The showcase prints with the C library's `printf`, so each of its targets needs
+a C library whose output goes somewhere visible: standard output on the host,
+and a serial port on an embedded target.
 
 The schedule is a 500 ms cycle of ten 50 ms slots: `sense`, `control`, and
 `output`, followed by idle time. The slow slots suit ordinary host scheduling.
@@ -45,7 +46,7 @@ to stop it; there is no public stop API yet. The fault handler only copies the
 snapshot; `main()` prints it after `zule_run()` returns, rather than logging
 from tick context.
 
-| Target | Console |
+| Target | Output |
 | --- | --- |
 | `posix` | Standard output. The [POSIX port](../../zule/ports/posix/README.md) runs ticks on a timer thread and gives no hard real-time guarantees. |
 

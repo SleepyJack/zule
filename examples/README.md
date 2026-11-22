@@ -7,7 +7,7 @@ purpose, and each lists the targets it runs on.
 | Example | Purpose | Targets |
 | --- | --- | --- |
 | [`minimal`](minimal/README.md) | The smallest complete application: tasks, a fault handler, and `zule_run()`, with no optional features and no output. | `posix` |
-| [`showcase`](showcase/README.md) | A tour of Zule's features, with task names, the tick timing check, and the modules' timing reports printed to a console. What [Getting started](../README.md#getting-started) runs. | `posix` |
+| [`showcase`](showcase/README.md) | A tour of Zule's features, with task names, the tick timing check, and the modules' timing reports printed with the C library's `printf`. What [Getting started](../README.md#getting-started) runs. | `posix` |
 
 ## Targets
 
@@ -17,9 +17,9 @@ what that example needs on that target:
 
 - `target.cmake`, included before Zule is added, which selects the port and can
   point `ZULE_USER_PORT_CONFIG_DIR` at the target's port settings;
-- `example_target_configure(<executable>)`, defined in `target.cmake`, which adds
-  the target's parts of the example to its executable, such as the
-  implementation of the showcase's console.
+- when the target needs its own sources or options, such as startup code, an
+  `example_target_configure(<executable>)` function, defined in `target.cmake`,
+  which the example calls to add them to its executable.
 
 Each example has a CMake preset for each of its targets, named after the target,
 and builds to `build/examples/<example>/<target>/`:
