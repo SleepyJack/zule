@@ -76,23 +76,24 @@ for two seconds and checks it is still running:
 - **On POSIX,** the minimal example is the stable smoke test, since it does not
   depend on host timing. The showcase must also print every task's name, and its
   tick check can fault on a heavily loaded host.
-- **On `mps2-an385`, in QEMU,** the minimal example runs with `-icount`, so its
-  timing is deterministic. It prints nothing, so CI also counts SysTick
+- **On `qemu-mps2-an385`,** the minimal example runs in QEMU with `-icount`, so
+  its timing is deterministic. It prints nothing, so CI also counts SysTick
   exceptions in QEMU's exception log (`-d int`), to tell a running scheduler
   from a stuck program. A fault ends QEMU with a failure status.
 
 ## Target tests
 
-Target tests run on a target, for now QEMU's emulation of Arm's
-[`mps2-an385`](zule/tests/targets/mps2-an385/README.md) reference board, a
-Cortex-M3. Each is a standalone project, since it builds with the target's
-toolchain, with a preset per machine and `ctest` running QEMU:
+Target tests run on a target, for now
+[`qemu-mps2-an385`](zule/tests/targets/qemu-mps2-an385/README.md): QEMU's
+emulation of Arm's MPS2 reference board with a Cortex-M3. Each is a standalone
+project, since it builds with the target's toolchain, with a preset per target
+and `ctest` running QEMU:
 
 ```sh
 cd zule/ports/cortex_m/tests/qemu
-cmake --preset mps2-an385
-cmake --build --preset mps2-an385
-ctest --preset mps2-an385
+cmake --preset qemu-mps2-an385
+cmake --build --preset qemu-mps2-an385
+ctest --preset qemu-mps2-an385
 ```
 
 The [Cortex-M port](zule/ports/cortex_m/README.md)'s target tests check what its
@@ -159,7 +160,7 @@ code rather than suppress the finding; see
   also has target tests, in `tests/qemu/`. [Testing a port](doc/port.md#testing-a-port)
   lists what to cover.
 - **Support for another emulated board:** a directory in `zule/tests/targets/`,
-  like `mps2-an385/`, with its startup code, linker script, and CMake helper.
+  like `qemu-mps2-an385/`, with its startup code, linker script, and CMake helper.
 - **The schedule tool:** a test module in `zule/tools/schedule/tests/`, with JSON
   cases in its `fixtures/`.
 - **A static check for a new core, port, or feature set:** a preset in

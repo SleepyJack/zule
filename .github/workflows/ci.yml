@@ -187,9 +187,9 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
           --volume "$PWD:/work" --workdir /work/zule/ports/cortex_m/tests/qemu zule-dev:ci
           sh -c 'set -e;
-          cmake --preset mps2-an385;
-          cmake --build --preset mps2-an385;
-          ctest --preset mps2-an385'
+          cmake --preset qemu-mps2-an385;
+          cmake --build --preset qemu-mps2-an385;
+          ctest --preset qemu-mps2-an385'
 
       # The minimal example returns only on a fault, so it must still be running
       # after two seconds. It prints nothing, so QEMU's exception log shows it is
@@ -199,13 +199,13 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
           --volume "$PWD:/work" --workdir /work/examples/minimal zule-dev:ci
           sh -c 'set -e;
-          cmake --preset mps2-an385;
-          cmake --build --preset mps2-an385;
+          cmake --preset qemu-mps2-an385;
+          cmake --build --preset qemu-mps2-an385;
           status=0;
           timeout 2 qemu-system-arm -machine mps2-an385 -nographic -monitor none
           -semihosting-config enable=on,target=native -icount shift=0
           -d int -D /tmp/qemu.log
-          -kernel ../../build/examples/minimal/mps2-an385/zule_minimal || status=$?;
+          -kernel ../../build/examples/minimal/qemu-mps2-an385/zule_minimal || status=$?;
           ticks=$(grep -c "exception 15" /tmp/qemu.log || true);
           echo "Exit status $status after 2 s, with $ticks ticks";
           test "$status" -eq 124;

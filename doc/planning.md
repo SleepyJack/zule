@@ -62,7 +62,7 @@ tools and configurations.
 
 ### Examples
 
-- Add an `mps2-an385` target to the showcase, once the Cortex-M port provides
+- Add a `qemu-mps2-an385` target to the showcase, once the Cortex-M port provides
   the timebase, and run it in CI in QEMU with `-icount`, like the minimal
   example, so its timing, including the tick check, is deterministic regardless
   of runner load. It prints with `printf`, so this target needs the Arm
@@ -211,7 +211,7 @@ QEMU. Remaining steps:
   type sizes and arithmetic. They use the C library's `assert()` and `abort()`,
   so they need newlib in the development image, as the showcase's embedded
   target does.
-- The showcase's `mps2-an385` [example](#examples) target.
+- The showcase's `qemu-mps2-an385` [example](#examples) target.
 - Verify on hardware what QEMU cannot show, on a board such as the
   NUCLEO-G431RB (Cortex-M4): tick timing and interrupt latency, `WFI` waking
   while masked, and the timebase across counter wraps, cross-checked against the
