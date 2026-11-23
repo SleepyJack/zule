@@ -9,10 +9,9 @@ It provides building blocks and knows nothing about the examples:
 
 - [`startup.S`](startup.S): the vector table and reset entry, with weak exception
   handlers. Zule's Cortex-M port defines `SysTick_Handler`.
-- [`board.c`](board.c): start-up, which enables the UART, runs `main()`, and ends
-  QEMU with its result through semihosting; and the system calls the C library
-  needs, with output on the board's first UART, a CMSDK APB UART that QEMU
-  connects to its standard output.
+- [`board.c`](board.c): start-up, which runs `main()`; and the system calls the C
+  library needs, with output and exit through semihosting, so output appears on
+  QEMU's standard output and a program's result becomes QEMU's exit status.
 - [`qemu-mps2-an385.ld`](qemu-mps2-an385.ld): the linker script.
 - [`board.cmake`](board.cmake): `example_qemu_mps2_an385_board()` adds all of
   the above to an example's executable, which links with newlib-nano, the Arm

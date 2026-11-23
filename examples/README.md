@@ -42,7 +42,7 @@ about the examples.
 | `posix` | [POSIX](../zule/ports/posix/README.md) | The host, with no real-time guarantees. Runs until stopped with Ctrl-C. |
 | `qemu-mps2-an385` | [Cortex-M](../zule/ports/cortex_m/README.md) | QEMU's emulation of Arm's MPS2 board with a Cortex-M3, using the [board support](common/targets/qemu-mps2-an385/README.md) in `common/targets/`. Needs the Arm GNU toolchain and QEMU, which the development image has. A fault ends QEMU with a failure status; otherwise it runs until stopped with Ctrl-A, then X. |
 
-On `qemu-mps2-an385`, output goes to the board's UART, which QEMU shows on its
-standard output, and with `-icount shift=0,sleep=off` added, every run's timing
+On `qemu-mps2-an385`, output goes to QEMU's standard output through
+semihosting, and with `-icount shift=0,sleep=off` added, every run's timing
 is the same; see [target tests](../TESTING.md#target-tests). Without
 `sleep=off`, QEMU keeps to real time.

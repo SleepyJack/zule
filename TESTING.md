@@ -80,7 +80,7 @@ for two seconds and checks it is still running:
   `sleep=off`, so their timing is deterministic, and a fault ends QEMU with a
   failure status. The minimal example prints nothing, so CI also counts SysTick
   exceptions in QEMU's exception log (`-d int`), to tell a running scheduler
-  from a stuck program. The showcase prints through the board's UART: CI checks
+  from a stuck program. The showcase prints through semihosting: CI checks
   every task's name, and that its tick timing report shows no deviation, which
   only QEMU's exact timing can promise.
 

@@ -1,27 +1,17 @@
-/* Board support for QEMU's mps2-an385 machine: start-up, the C library's system
- * calls, with output on the board's first UART, and ending the program through
- * semihosting, which QEMU performs on the host. A program's exit status becomes
- * QEMU's: 0 for success, nonzero otherwise. QEMU only: on a real board without a
- * debugger, semihosting stops the core. */
+/* Board support for QEMU's mps2-an385 machine: start-up, and the C library's
+ * system calls, with output and exit through semihosting, which QEMU performs on
+ * the host. Output goes to QEMU's standard output, and a program's exit status
+ * becomes QEMU's: 0 for success, nonzero otherwise. QEMU only: on a real board
+ * without a debugger, semihosting stops the core. */
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/stat.h>
 
+#define SEMIHOSTING_SYS_WRITE0 0x04U
 #define SEMIHOSTING_SYS_EXIT 0x18U
 #define SEMIHOSTING_APPLICATION_EXIT 0x20026U
 #define SEMIHOSTING_RUN_TIME_ERROR 0x20023U
-
-/* The board's first UART, an Arm CMSDK APB UART, which QEMU connects to its
- * serial output. */
-#define UART_DATA (*(volatile uint32_t *)0x40004000U)
-#define UART_STATE (*(volatile uint32_t *)0x40004004U)
-#define UART_CTRL (*(volatile uint32_t *)0x40004008U)
-#define UART_BAUDDIV (*(volatile uint32_t *)0x40004010U)
-#define UART_STATE_TX_FULL 0x1U
-#define UART_CTRL_TX_ENABLE 0x1U
-/* 115200 baud from the 25 MHz peripheral clock. */
-#define UART_BAUDDIV_115200 217U
 
 /* From the linker script. */
 extern uint32_t board_data_start[];
@@ -43,8 +33,8 @@ static void board_exit(int status) {
     }
 }
 
-/* Called from Reset_Handler: initialise data and bss, enable the UART, run the
- * application, and end QEMU with its result. */
+/* Called from Reset_Handler: initialise data and bss, run the application, and
+ * end QEMU with its result. */
 void board_start(void) {
     const uint32_t *source = board_data_load;
     for (uint32_t *word = board_data_start; word < board_data_end; ++word) {
@@ -54,8 +44,6 @@ void board_start(void) {
     for (uint32_t *word = board_bss_start; word < board_bss_end; ++word) {
         *word = 0U;
     }
-    UART_BAUDDIV = UART_BAUDDIV_115200;
-    UART_CTRL = UART_CTRL_TX_ENABLE;
     board_exit(main());
 }
 
@@ -65,7 +53,7 @@ void board_unexpected_exception(void) {
 }
 
 /* System calls the C library, newlib, needs from the board. Output, standard and
- * error alike, goes to the UART, and exit ends QEMU. The heap, for the C
+ * error alike, goes to QEMU's standard output, and exit ends QEMU. The heap, for the C
  * library's own buffers, grows from the end of bss towards the stack. There are
  * no files, input, or processes, so the remaining calls fail. */
 int _write(int file, const char *data, int length);
@@ -79,12 +67,20 @@ int _kill(int process, int signal);
 void *_sbrk(ptrdiff_t increment);
 void _exit(int status);
 
+/* Semihosting writes null-terminated strings, so write in terminated chunks. */
 int _write(int file, const char *data, int length) {
     (void)file;
-    for (int index = 0; index < length; ++index) {
-        while ((UART_STATE & UART_STATE_TX_FULL) != 0U) {
+    char chunk[65];
+    int written = 0;
+    while (written < length) {
+        size_t size = 0U;
+        while ((size < (sizeof(chunk) - 1U)) && (written < length)) {
+            chunk[size] = data[written];
+            ++size;
+            ++written;
         }
-        UART_DATA = (uint32_t)(unsigned char)data[index];
+        chunk[size] = '\0';
+        (void)board_semihosting(SEMIHOSTING_SYS_WRITE0, (uintptr_t)chunk);
     }
     return length;
 }

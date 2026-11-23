@@ -223,7 +223,8 @@ jobs:
           test "$ticks" -ge 50'
 
       # The showcase must still be running after two seconds, print every task's
-      # name, and report its timing. In QEMU, with -icount and sleep=off, every
+      # name, and report its timing. Semihosting output goes to QEMU's standard
+      # error, so both streams are captured. In QEMU, with -icount and sleep=off, every
       # tick is exactly on time, so its tick timing reports no deviation.
       - name: Run the showcase in QEMU
         run: >-
@@ -236,7 +237,7 @@ jobs:
           timeout 2 qemu-system-arm -machine mps2-an385 -nographic -monitor none
           -semihosting-config enable=on,target=native -icount shift=0,sleep=off
           -kernel ../../build/examples/showcase/qemu-mps2-an385/zule_showcase
-          > /tmp/showcase.log || status=$?;
+          > /tmp/showcase.log 2>&1 || status=$?;
           grep -v -x -e sense -e control -e output /tmp/showcase.log | head -n 6;
           echo "Exit status $status after 2 s";
           test "$status" -eq 124;
