@@ -10,11 +10,13 @@ uses it only in QEMU.
   handler is weak, so a port or test defines the ones it uses, such as
   `SysTick_Handler`; the others fail the test.
 - [`zule_target.h`](zule_target.h) and [`zule_target.c`](zule_target.c): output
-  and exit through semihosting, startup initialisation, and the memory functions
-  GCC may call. `main()` returns 0 for success.
+  and exit through semihosting, startup initialisation, and the system calls the
+  C library needs, so tests can use `assert()` and `printf()`. `main()` returns 0
+  for success, and a failed assertion or a call to `abort()` fails the test.
 - [`qemu-mps2-an385.ld`](qemu-mps2-an385.ld): the linker script.
 - [`target.cmake`](target.cmake): `zule_target_qemu_mps2_an385_executable()`
-  adds the above to a test program, and `zule_target_qemu_mps2_an385_add_test()`
+  adds the above to a test program, linked with newlib-nano, the Arm GNU
+  toolchain's small C library, and `zule_target_qemu_mps2_an385_add_test()`
   runs it in QEMU with `-icount shift=0,sleep=off`, so every run is the same;
   see [target tests](../../../../TESTING.md#target-tests).
 

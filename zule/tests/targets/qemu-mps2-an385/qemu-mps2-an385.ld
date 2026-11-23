@@ -1,6 +1,8 @@
 /* Memory layout of QEMU's mps2-an385 machine for Zule's target tests: code and
  * read-only data in the first 4 MiB of SRAM, at address 0 where the vector table
- * must be, and data and the stack in the second. There is no heap. */
+ * must be, and data, the C library's heap, and the stack in the second. The heap
+ * starts at `end`, where the C library's sbrk() expects it, and grows up towards
+ * the stack. */
 MEMORY
 {
     CODE (rx) : ORIGIN = 0x00000000, LENGTH = 4M
@@ -17,6 +19,18 @@ SECTIONS
         *(.text*)
         *(.rodata*)
         *(.ARM.exidx*)
+        KEEP(*(.init))
+        KEEP(*(.fini))
+        . = ALIGN(4);
+        __preinit_array_start = .;
+        KEEP(*(.preinit_array))
+        __preinit_array_end = .;
+        __init_array_start = .;
+        KEEP(*(.init_array*))
+        __init_array_end = .;
+        __fini_array_start = .;
+        KEEP(*(.fini_array*))
+        __fini_array_end = .;
     } > CODE
 
     .data :
@@ -34,6 +48,9 @@ SECTIONS
         *(COMMON)
         zule_target_bss_end = .;
     } > RAM
+
+    . = ALIGN(8);
+    end = .;
 
     zule_target_stack_top = ORIGIN(RAM) + LENGTH(RAM);
 }
