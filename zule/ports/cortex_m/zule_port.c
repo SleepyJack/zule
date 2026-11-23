@@ -75,6 +75,10 @@ zule_port_result_t zule_port_tick_init(uint32_t slot_us, zule_port_tick_callback
     if (valid) {
         tick_callback = callback;
 #if ZULE_CONFIG_TIMEBASE
+        /* SysTick counts down from the reload value and raises the tick when it
+         * reaches 0, then reloads on the next count, so each period is reload + 1
+         * counts. The timebase starts a period at that 0, with the tick, not at
+         * the reload one count later; see zule_port_time_get(). */
         period_counts = reload + 1U;
 #endif
         zule_port_cortex_m_systick.rvr = reload;
