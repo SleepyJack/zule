@@ -13,6 +13,13 @@
 #include "zule_target.h"
 #include "zule_task_ids.h"
 
+#if ZULE_CONFIG_MODULE_TASK_STATS
+#include "zule_task_stats.h"
+#endif
+#if ZULE_CONFIG_MODULE_TICK_TIMING
+#include "zule_tick_timing.h"
+#endif
+
 /* A slot of 40 us is 1000 SysTick counts at the machine's 25 MHz. */
 #define SLOT_US 40U
 #define SLOT_COUNTS 1000U
@@ -160,6 +167,85 @@ static void test_stop(void) {
     stop_ticks();
 }
 
+#if ZULE_CONFIG_TIMEBASE
+/* Read the timebase and the reference clock together, with the tick held off,
+ * so both describe the same moment. */
+static void read_both(uint32_t *time_counts, uint32_t *reference_counts) {
+    const zule_port_critical_state_t state = zule_port_critical_enter();
+    *time_counts = zule_port_time_get();
+    *reference_counts = reference_now();
+    zule_port_critical_exit(state);
+}
+
+static void check_elapsed(uint32_t time_elapsed, uint32_t reference_elapsed, const char *message) {
+    /* Both clocks run at 25 MHz; allow for the instructions between the reads. */
+    const uint32_t difference = (time_elapsed > reference_elapsed)
+                                    ? (time_elapsed - reference_elapsed)
+                                    : (reference_elapsed - time_elapsed);
+    check(difference <= 20U, message);
+}
+
+/* The timebase runs at its stated frequency: over 100 periods, it advances as
+ * much as the independent reference clock. */
+static void test_timebase_rate(void) {
+    check(zule_port_time_hz() == 25000000U, "the timebase frequency is SysTick's clock");
+    start_ticks();
+    wait_ticks(1U);
+    uint32_t time0;
+    uint32_t reference0;
+    read_both(&time0, &reference0);
+    wait_ticks(101U);
+    uint32_t time1;
+    uint32_t reference1;
+    read_both(&time1, &reference1);
+    stop_ticks();
+    check_elapsed(time1 - time0, reference0 - reference1, "the timebase rate");
+}
+
+/* Reads never go backwards and never jump, even when a reload happens in the
+ * middle of a read: back-to-back reads over 2000 periods differ by far less than
+ * the 1000-count period that a misread reload would add or lose. */
+static void test_timebase_monotonic(void) {
+    start_ticks();
+    uint32_t previous = zule_port_time_get();
+    uint32_t largest_step = 0U;
+    uint32_t reads = 0U;
+    while (ticks < 2000U) {
+        const uint32_t now = zule_port_time_get();
+        const uint32_t step = now - previous;
+        if (step > largest_step) {
+            largest_step = step;
+        }
+        previous = now;
+        ++reads;
+    }
+    stop_ticks();
+    zule_target_write("Timebase: ");
+    zule_target_write_number(reads);
+    zule_target_write(" reads over 2000 periods, largest step ");
+    zule_target_write_number(largest_step);
+    zule_target_write(" counts\n");
+    check(largest_step < 500U, "timebase reads never go backwards or jump");
+}
+
+/* With the tick held off past a reload, the pending tick still counts the period
+ * that ended, so the timebase keeps up with the reference clock. */
+static void test_timebase_masked(void) {
+    start_ticks();
+    wait_ticks(1U);
+    const zule_port_critical_state_t state = zule_port_critical_enter();
+    const uint32_t time0 = zule_port_time_get();
+    const uint32_t reference0 = reference_now();
+    wait_counts((3U * SLOT_COUNTS) / 2U);
+    const uint32_t time1 = zule_port_time_get();
+    const uint32_t reference1 = reference_now();
+    zule_port_critical_exit(state);
+    stop_ticks();
+    check_elapsed(time1 - time0, reference0 - reference1,
+                  "the timebase counts a reload while the tick is held off");
+}
+#endif
+
 /* The real scheduler on the port: tasks run each cycle until the first task
  * overruns its window on purpose, and zule_run() returns the fault with ticks
  * stopped. */
@@ -184,6 +270,56 @@ static void handle_fault(const zule_fault_info_t *info) {
     fault = *info;
 }
 
+/* User hooks count their calls; with every feature enabled, the core calls them
+ * from the tick and around each task. */
+#if ZULE_CONFIG_USER_HOOK_TICK_START
+static uint32_t hook_tick_starts;
+void zule_user_hook_tick_start(uint32_t time_counts, uint32_t slot, uint32_t cycle_count) {
+    (void)time_counts;
+    (void)slot;
+    (void)cycle_count;
+    ++hook_tick_starts;
+}
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TICK_END
+static uint32_t hook_tick_ends;
+void zule_user_hook_tick_end(uint32_t time_counts) {
+    (void)time_counts;
+    ++hook_tick_ends;
+}
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE
+static uint32_t hook_releases;
+void zule_user_hook_tick_task_release(uint32_t time_counts, uint32_t task_id, size_t window_index) {
+    (void)time_counts;
+    (void)task_id;
+    (void)window_index;
+    ++hook_releases;
+}
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TASK_START
+static uint32_t hook_task_starts;
+void zule_user_hook_task_start(uint32_t time_counts, uint32_t task_id, size_t window_index) {
+    (void)time_counts;
+    (void)task_id;
+    (void)window_index;
+    ++hook_task_starts;
+}
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TASK_END
+static uint32_t hook_task_ends;
+void zule_user_hook_task_end(uint32_t time_counts, uint32_t task_id, size_t window_index) {
+    (void)time_counts;
+    (void)task_id;
+    (void)window_index;
+    ++hook_task_ends;
+}
+#endif
+
 static void test_scheduler(void) {
     const zule_config_t config = {.on_fault = handle_fault};
     check(zule_configure(&config) == ZULE_RESULT_OK, "configure");
@@ -194,6 +330,49 @@ static void test_scheduler(void) {
     check(first_runs == (CYCLES_BEFORE_OVERRUN + 1U), "the first task ran each cycle");
     check(second_runs == CYCLES_BEFORE_OVERRUN, "the second task ran each cycle");
     check((SYST_CSR & 0x3U) == 0U, "ticks are stopped when zule_run() returns");
+
+#if ZULE_CONFIG_TIMEBASE
+    /* With the timebase, every feature runs: the hooks, the tick timing check,
+     * which must not fault, and both modules. */
+    const uint32_t task_runs = first_runs + second_runs;
+#if ZULE_CONFIG_USER_HOOK_TASK_START && ZULE_CONFIG_USER_HOOK_TASK_END
+    check(hook_task_starts == task_runs, "the task start hook runs for each task");
+    check(hook_task_ends == task_runs, "the task end hook runs for each task");
+#endif
+#if ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE
+    check(hook_releases >= task_runs, "the release hook runs for each window");
+#endif
+#if ZULE_CONFIG_USER_HOOK_TICK_START && ZULE_CONFIG_USER_HOOK_TICK_END
+    check((hook_tick_starts > 0U) && (hook_tick_starts == hook_tick_ends),
+          "the tick hooks run in pairs");
+#endif
+#if ZULE_CONFIG_MODULE_TASK_STATS
+    zule_task_stats_t stats;
+    check(zule_task_stats_get((uint32_t)ZULE_TASK_ID_FIRST, &stats), "first task statistics");
+    check(stats.executions == (CYCLES_BEFORE_OVERRUN + 1U), "first task executions");
+    check(stats.max_execution_counts >= (3U * 2500U), "the overrun is the longest execution");
+    check(zule_task_stats_get((uint32_t)ZULE_TASK_ID_SECOND, &stats), "second task statistics");
+    check(stats.executions == CYCLES_BEFORE_OVERRUN, "second task executions");
+    zule_task_stats_summary_t summary;
+    zule_task_stats_summary_get(&summary);
+    check(summary.cycles == CYCLES_BEFORE_OVERRUN, "completed cycles");
+#endif
+#if ZULE_CONFIG_MODULE_TICK_TIMING
+    zule_tick_timing_t timing;
+    zule_tick_timing_get(&timing);
+    zule_target_write("Tick timing: worst late ");
+    zule_target_write_number(timing.max_late_counts);
+    zule_target_write(", worst early ");
+    zule_target_write_number(timing.max_early_counts);
+    zule_target_write(", longest tick ");
+    zule_target_write_number(timing.max_tick_counts);
+    zule_target_write(" counts\n");
+    check(timing.ticks > 0U, "the tick timing module measures ticks");
+    check((timing.max_late_counts < 250U) && (timing.max_early_counts < 250U),
+          "ticks are within the tick check's tolerance");
+#endif
+    (void)task_runs;
+#endif
 }
 
 int main(void) {
@@ -205,6 +384,11 @@ int main(void) {
     test_critical_sections();
     test_idle();
     test_stop();
+#if ZULE_CONFIG_TIMEBASE
+    test_timebase_rate();
+    test_timebase_monotonic();
+    test_timebase_masked();
+#endif
     test_scheduler();
 
     zule_target_write(failed ? "Cortex-M port target tests failed\n"

@@ -166,8 +166,66 @@ static void test_clock_availability(void) {
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
 }
 
+#if ZULE_CONFIG_TIMEBASE
+/* The timebase counts the period start, which the handler advances by one period,
+ * plus the counts elapsed in the current period, from SysTick's down counter. As
+ * on hardware, the counter raises the tick on reaching 0, one count before it
+ * reloads, so a period starts at 0. A pending tick means a period began before
+ * the handler ran, so a read adds a period. Reads leave the interrupt mask as
+ * they found it. */
+static void test_timebase(void) {
+    assert(zule_port_time_hz() == 1000000U);
+    /* A 1000 us slot is 1000 counts: tick init clears the counter to 0, and it
+     * then counts from 999 down to 0. */
+    assert(zule_port_tick_init(1000U, on_tick) == ZULE_PORT_RESULT_OK);
+    zule_port_cortex_m_scb.icsr = 0U;
+    assert(zule_port_cortex_m_systick.cvr == 0U);
+    const uint32_t start = zule_port_time_get();
+    zule_port_cortex_m_systick.cvr = 999U;
+    assert(zule_port_time_get() == start + 1U);
+    zule_port_cortex_m_systick.cvr = 899U;
+    assert(zule_port_time_get() == start + 101U);
+    zule_port_cortex_m_systick.cvr = 1U;
+    assert(zule_port_time_get() == start + 999U);
+
+    /* Reaching 0 starts the next period and raises the tick, which is pending
+     * until the handler runs; the count keeps advancing by one either way. */
+    zule_port_cortex_m_systick.cvr = 0U;
+    zule_port_cortex_m_scb.icsr = ZULE_PORT_CORTEX_M_ICSR_PENDSTSET;
+    assert(zule_port_time_get() == start + 1000U);
+    zule_port_cortex_m_systick.cvr = 999U;
+    assert(zule_port_time_get() == start + 1001U);
+    zule_port_cortex_m_scb.icsr = 0U;
+    SysTick_Handler();
+    assert(zule_port_time_get() == start + 1001U);
+    zule_port_cortex_m_systick.cvr = 0U;
+    SysTick_Handler();
+    assert(zule_port_time_get() == start + 2000U);
+
+    /* Reads leave the mask as they found it, inside a critical section or not. */
+    primask = 0U;
+    (void)zule_port_time_get();
+    assert(primask == 0U);
+    primask = 1U;
+    (void)zule_port_time_get();
+    assert(primask == 1U);
+    primask = 0U;
+
+    /* The count wraps modulo 2^32: it keeps advancing by whole periods. */
+    for (uint32_t tick = 0U; tick < 5000000U; ++tick) {
+        SysTick_Handler();
+    }
+    const uint32_t expected = start + 2000U + (uint32_t)(5000000000ULL % 4294967296ULL);
+    assert(zule_port_time_get() == expected);
+    assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
+}
+#endif
+
 int main(void) {
     test_critical_sections();
+#if ZULE_CONFIG_TIMEBASE
+    test_timebase();
+#endif
     test_clock_availability();
     test_tick_periods();
     test_tick_lifecycle();

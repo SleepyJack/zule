@@ -10,14 +10,14 @@ architecture defines, with no vendor or CMSIS code:
 - **Idle** executes `WFI` inside the core's critical section. A pending tick ends
   the wait even while masked, and its handler runs once the core leaves the
   critical section, so no tick is missed.
+- **The [timebase](../../../doc/port.md#timebase)**, when enabled, counts
+  SysTick's clock across periods; see [Timebase](#timebase).
 
 It is written for Armv6-M, whose instructions Armv7-M and Armv8-M also provide,
 so it serves Cortex-M0, M0+, M3, M4, M7, M23, M33, and later cores. It assumes a
 single core, where masking interrupts excludes the tick, and a SysTick timer,
 which is optional on Armv6-M and Armv8-M Baseline, though almost every part has
-one. It does not provide the
-[timebase](../../../doc/port.md#timebase) yet, so the timebase, hooks, the tick
-timing check, and modules cannot be enabled with it.
+one.
 
 Select it with `ZULE_PORT=cortex_m`. Build with the Arm GNU toolchain, for
 example through [`arm-none-eabi.cmake`](arm-none-eabi.cmake), with flags for the
@@ -41,6 +41,27 @@ slot is a whole number of SysTick clock counts, so ticks do not drift, and from
 also fails on a part that has none, which SysTick's calibration register
 reports, rather than leaving ticks never arriving. For example, at 170 MHz the longest
 slot is about 98 ms; from the reference clock at 21.25 MHz, it is about 789 ms.
+
+## Timebase
+
+With `ZULE_CONFIG_TIMEBASE` enabled, `zule_port_time_hz()` returns
+`ZULE_PORT_CORTEX_M_SYSTICK_HZ`, and `zule_port_time_get()` counts SysTick's
+clock: the handler adds a period for each tick, and a read adds the counts
+elapsed in the current period, from SysTick's counter. Its resolution is one
+clock count, and it wraps every 2^32 counts, about 171 s at 25 MHz or 25 s at
+170 MHz.
+
+SysTick raises the tick when its counter reaches 0, one count before it reloads,
+so a period starts there. A read masks interrupts briefly, so the handler cannot
+run in the middle of it, and restores the previous mask. While the tick is held
+off, for example inside a critical section, the pending tick shows that a period
+has started that the handler has not yet counted, and the read counts it.
+
+**Limit:** SysTick has a single pending flag, so if the tick is held off for
+longer than a whole period, the periods after the first are not counted, and the
+count falls behind until the next tick. Keep critical sections, and anything
+else that masks interrupts, shorter than one slot; the tick itself also needs
+that.
 
 ## Application responsibilities
 
@@ -75,12 +96,16 @@ have preempted until it finished, so no callback is in flight when it returns.
 - [`tests/host/`](tests/host) checks the port's C on the host, against fake
   registers and instructions: critical-section nesting, reload values and slot
   limits at two clock frequencies and both clock sources, tick start and stop,
-  and idle.
+  idle, and the timebase's arithmetic.
 - [`tests/qemu/`](tests/qemu) runs the port on a Cortex-M3 in QEMU: the tick
   rate against an independent timer, critical sections holding ticks off, idle,
-  and stop, then the real scheduler.
+  and stop, then the real scheduler. With all features, it also checks that the
+  timebase keeps pace with the independent timer, never steps backwards across
+  millions of reads, and counts a period that starts while the tick is held off,
+  and runs the scheduler with every hook, the tick timing check, and both
+  modules.
 - The [static checks](../../../TESTING.md#static-checks) build it for Cortex-M0+
-  and Cortex-M3, with static analysis.
+  and Cortex-M3, with default and all features, with static analysis.
 
 See [TESTING.md](../../../TESTING.md) for how to run them. QEMU does not show
 real timing or interrupt latency, which need hardware.

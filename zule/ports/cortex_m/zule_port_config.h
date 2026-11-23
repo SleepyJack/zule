@@ -36,8 +36,4 @@
 #error "ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK must be 0 or 1"
 #endif
 
-#if ZULE_CONFIG_TIMEBASE
-#error "The Cortex-M port does not provide the timebase yet"
-#endif
-
 #endif

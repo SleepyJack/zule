@@ -15,7 +15,8 @@ uses it only in QEMU.
 - [`qemu-mps2-an385.ld`](qemu-mps2-an385.ld): the linker script.
 - [`target.cmake`](target.cmake): `zule_target_qemu_mps2_an385_executable()`
   adds the above to a test program, and `zule_target_qemu_mps2_an385_add_test()`
-  runs it in QEMU with `-icount`, so guest time follows executed instructions.
+  runs it in QEMU with `-icount shift=0,sleep=off`, so every run is the same;
+  see [target tests](../../../../TESTING.md#target-tests).
 
 Tests can use the machine's peripherals directly, such as its CMSDK APB timers at
 `0x40000000`, which count at 25 MHz, as an independent reference clock. SysTick's

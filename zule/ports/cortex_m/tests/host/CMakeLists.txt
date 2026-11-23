@@ -18,3 +18,6 @@ endfunction()
 zule_add_cortex_m_port_test(zule_cortex_m_port ZULE_PORT_CORTEX_M_SYSTICK_HZ=1000000U)
 zule_add_cortex_m_port_test(zule_cortex_m_port_reference_clock
     ZULE_PORT_CORTEX_M_SYSTICK_HZ=1500000U ZULE_PORT_CORTEX_M_SYSTICK_USE_REFERENCE_CLOCK=1)
+# The timebase, at the 1 MHz processor clock.
+zule_add_cortex_m_port_test(zule_cortex_m_port_timebase
+    ZULE_PORT_CORTEX_M_SYSTICK_HZ=1000000U ZULE_CONFIG_TIMEBASE=1)

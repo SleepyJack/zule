@@ -66,9 +66,19 @@
       "inherits": ["cortex-m", "m3"]
     },
     {
+      "name": "cortex-m-m3-all",
+      "displayName": "Cortex-M port, Cortex-M3 (Armv7-M), all features",
+      "inherits": ["cortex-m", "m3", "all-features"]
+    },
+    {
       "name": "cortex-m-m0plus",
       "displayName": "Cortex-M port, Cortex-M0+ (Armv6-M), default features",
       "inherits": ["cortex-m", "m0plus"]
+    },
+    {
+      "name": "cortex-m-m0plus-all",
+      "displayName": "Cortex-M port, Cortex-M0+ (Armv6-M), all features",
+      "inherits": ["cortex-m", "m0plus", "all-features"]
     }
   ],
   "buildPresets": [
@@ -77,6 +87,8 @@
     { "name": "stub-m0plus", "configurePreset": "stub-m0plus" },
     { "name": "stub-m0plus-all", "configurePreset": "stub-m0plus-all" },
     { "name": "cortex-m-m3", "configurePreset": "cortex-m-m3" },
-    { "name": "cortex-m-m0plus", "configurePreset": "cortex-m-m0plus" }
+    { "name": "cortex-m-m3-all", "configurePreset": "cortex-m-m3-all" },
+    { "name": "cortex-m-m0plus", "configurePreset": "cortex-m-m0plus" },
+    { "name": "cortex-m-m0plus-all", "configurePreset": "cortex-m-m0plus-all" }
   ]
 }
