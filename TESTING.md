@@ -120,11 +120,12 @@ check, and both modules.
 QEMU runs with `-icount shift=0,sleep=off`: guest time follows executed
 instructions, and jumps to the next timer event while the guest waits in `WFI`,
 so every run is the same, whatever the host's load. Without `sleep=off`, waits
-follow the host's clock, and tick timing varies between runs. Tests report
-through semihosting, which also sets QEMU's exit status, and link with newlib,
-the Arm GNU toolchain's C library, so they can use `assert()` and `printf()`. QEMU shows the logic against its model of
-the hardware, not real timing, interrupt latency, or behaviour a model may not
-capture; those need hardware.
+follow the host's clock, and tick timing varies between runs. Tests link with
+newlib, the Arm GNU toolchain's C library, and its semihosting system calls, so
+they use `printf()` and `assert()` as on the host, and their exit status
+becomes QEMU's. QEMU shows the logic against its model of the hardware, not
+real timing, interrupt latency, or behaviour a model may not capture; those
+need hardware.
 
 ## Static checks
 

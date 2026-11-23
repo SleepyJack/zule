@@ -223,9 +223,10 @@ jobs:
           test "$ticks" -ge 50'
 
       # The showcase must still be running after two seconds, print every task's
-      # name, and report its timing. Semihosting output goes to QEMU's standard
-      # error, so both streams are captured. In QEMU, with -icount and sleep=off, every
-      # tick is exactly on time, so its tick timing reports no deviation.
+      # name, and report its timing; both QEMU's output streams are captured, so
+      # the log also shows any error report. In QEMU, with -icount and
+      # sleep=off, every tick is exactly on time, so its tick timing reports no
+      # deviation.
       - name: Run the showcase in QEMU
         run: >-
           docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp

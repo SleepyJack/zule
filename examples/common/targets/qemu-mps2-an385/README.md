@@ -9,13 +9,15 @@ It provides building blocks and knows nothing about the examples:
 
 - [`startup.S`](startup.S): the vector table and reset entry, with weak exception
   handlers. Zule's Cortex-M port defines `SysTick_Handler`.
-- [`board.c`](board.c): start-up, which runs `main()`; and the system calls the C
-  library needs, with output and exit through semihosting, so output appears on
-  QEMU's standard output and a program's result becomes QEMU's exit status.
+- [`board.c`](board.c): start-up, which initialises memory and the standard
+  streams, then exits with `main()`'s result.
 - [`qemu-mps2-an385.ld`](qemu-mps2-an385.ld): the linker script.
 - [`board.cmake`](board.cmake): `example_qemu_mps2_an385_board()` adds all of
   the above to an example's executable, which links with newlib-nano, the Arm
-  GNU toolchain's small C library, so examples can use `printf()`.
+  GNU toolchain's small C library, and rdimon, its system calls over
+  semihosting. QEMU then performs the program's input and output on the host:
+  `printf()` appears on QEMU's standard output, and the program's exit status
+  becomes QEMU's.
 
 Semihosting only works under a debugger or emulator, so on a real board the
 program would stop at its first semihosting call. A real board's target would

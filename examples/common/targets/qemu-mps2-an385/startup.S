@@ -55,12 +55,3 @@ board_default_handler:
     weak_handler DebugMon_Handler
     weak_handler PendSV_Handler
     weak_handler SysTick_Handler
-
-/* uint32_t board_semihosting(uint32_t operation, uintptr_t argument) */
-    .global board_semihosting
-    .type board_semihosting, %function
-    .thumb_func
-board_semihosting:
-    bkpt 0xab
-    bx lr
-    .size board_semihosting, . - board_semihosting

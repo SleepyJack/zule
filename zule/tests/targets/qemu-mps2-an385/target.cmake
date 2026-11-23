@@ -5,15 +5,14 @@ find_program(ZULE_QEMU_SYSTEM_ARM qemu-system-arm REQUIRED)
 
 # zule_target_qemu_mps2_an385_executable(<executable>)
 #
-# Add the startup code, semihosting support, and linker script to <executable>,
-# which links with newlib-nano, the Arm GNU toolchain's small C library, and
-# provides the system calls it needs.
+# Add the start-up code and linker script to <executable>, which links with
+# newlib-nano, the Arm GNU toolchain's small C library, and rdimon, its system
+# calls over semihosting.
 function(zule_target_qemu_mps2_an385_executable executable)
     target_sources(${executable} PRIVATE
         "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/startup.S" "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/zule_target.c")
-    target_include_directories(${executable} PRIVATE "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}")
     target_link_options(${executable} PRIVATE
-        -nostartfiles --specs=nano.specs
+        -nostartfiles --specs=nano.specs --specs=rdimon.specs
         "-T${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/qemu-mps2-an385.ld")
     set_property(TARGET ${executable} APPEND PROPERTY
         LINK_DEPENDS "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/qemu-mps2-an385.ld")
