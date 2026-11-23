@@ -62,14 +62,6 @@ tools and configurations.
 
 ### Examples
 
-- Add a `qemu-mps2-an385` target to the showcase, and run it in CI in QEMU with
-  `-icount` and `sleep=off`, like the minimal example, so its timing, including
-  the tick check, is deterministic regardless of runner load. It prints with
-  `printf`, so this target needs the Arm toolchain's C library, newlib, in the
-  development image, with its output routed to the board's UART.
-- Until then, the showcase keeps the tick check enabled in CI on the host, with
-  a half-slot tolerance; an occasional failure on a heavily loaded runner is
-  acceptable.
 - Consider an example for measuring and checking timing on a target, such as
   setting budgets and the tick timing tolerance from the modules' measurements.
 
@@ -198,15 +190,11 @@ The [Cortex-M port](../zule/ports/cortex_m/README.md) provides critical
 sections, the tick, idle, and the timebase, with
 [target tests](../TESTING.md#target-tests) in QEMU. Remaining steps:
 
-- Run the core's unit tests on a target too, in QEMU, to catch differences in
-  type sizes and arithmetic. They use the C library's `assert()` and `abort()`,
-  so they need newlib in the development image, as the showcase's embedded
-  target does.
-- The showcase's `qemu-mps2-an385` [example](#examples) target.
-- Verify on hardware what QEMU cannot show, on a board such as the
-  NUCLEO-G431RB (Cortex-M4): tick timing and interrupt latency, `WFI` waking
-  while masked, and the timebase across counter wraps, cross-checked against the
-  DWT cycle counter and a logic analyser.
+- Verify on hardware what QEMU cannot show, on a NUCLEO-F411RE (Cortex-M4):
+  tick timing and interrupt latency, `WFI` waking while masked, and the
+  timebase, including a period starting between its counter and pending-flag
+  reads, which QEMU does not reach. Cross-check against the DWT cycle counter
+  and a logic analyser, and add the board as a target for the examples.
 - Consider masking only the tick and lower priorities through BASEPRI on Armv7-M
   and later, so critical sections do not delay higher-priority interrupts.
   Interrupts masked through BASEPRI do not wake `WFI`, so idle would still mask

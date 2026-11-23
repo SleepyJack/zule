@@ -76,10 +76,13 @@ for two seconds and checks it is still running:
 - **On POSIX,** the minimal example is the stable smoke test, since it does not
   depend on host timing. The showcase must also print every task's name, and its
   tick check can fault on a heavily loaded host.
-- **On `qemu-mps2-an385`,** the minimal example runs in QEMU with `-icount`
-  and `sleep=off`, so its timing is deterministic. It prints nothing, so CI also counts SysTick
+- **On `qemu-mps2-an385`,** both examples run in QEMU with `-icount` and
+  `sleep=off`, so their timing is deterministic, and a fault ends QEMU with a
+  failure status. The minimal example prints nothing, so CI also counts SysTick
   exceptions in QEMU's exception log (`-d int`), to tell a running scheduler
-  from a stuck program. A fault ends QEMU with a failure status.
+  from a stuck program. The showcase prints through the board's UART: CI checks
+  every task's name, and that its tick timing report shows no deviation, which
+  only QEMU's exact timing can promise.
 
 ## Target tests
 
@@ -96,6 +99,14 @@ cmake --build --preset qemu-mps2-an385
 ctest --preset qemu-mps2-an385
 ```
 
+The **core tests** also run on the target, from
+[`zule/core/tests/qemu/`](zule/core/tests/qemu): the same tests, in the same
+configurations, against the same deterministic test port as on the host, listed
+once in [`zule/core/tests/tests.cmake`](zule/core/tests/tests.cmake). They show
+that the core behaves the same with the target's compiler, type sizes, and
+arithmetic. Each test is its own program, run in QEMU, and a failed `assert()`
+prints its condition and fails the test.
+
 The [Cortex-M port](zule/ports/cortex_m/README.md)'s target tests check what its
 host tests cannot: that ticks arrive at the programmed rate against an
 independent timer, that critical sections hold ticks off, including nested
@@ -109,8 +120,9 @@ check, and both modules.
 QEMU runs with `-icount shift=0,sleep=off`: guest time follows executed
 instructions, and jumps to the next timer event while the guest waits in `WFI`,
 so every run is the same, whatever the host's load. Without `sleep=off`, waits
-follow the host's clock, and tick timing varies between runs. Tests report through semihosting,
-which also sets QEMU's exit status. QEMU shows the logic against its model of
+follow the host's clock, and tick timing varies between runs. Tests report
+through semihosting, which also sets QEMU's exit status, and link with newlib,
+the Arm GNU toolchain's C library, so they can use `assert()` and `printf()`. QEMU shows the logic against its model of
 the hardware, not real timing, interrupt latency, or behaviour a model may not
 capture; those need hardware.
 
@@ -162,7 +174,8 @@ code rather than suppress the finding; see
 ## Adding tests
 
 - **Core or module behaviour:** a test in `zule/core/tests/`, added with
-  `zule_add_test()`, in a test configuration with the settings it needs.
+  `zule_add_test()` in `tests.cmake`, in a test configuration with the settings
+  it needs. It then runs on the host and on the target.
 - **A port:** host tests in the port's `tests/`, or `tests/host/` for a port that
   also has target tests, in `tests/qemu/`. [Testing a port](doc/port.md#testing-a-port)
   lists what to cover.
@@ -184,7 +197,7 @@ every step inside it:
 | Tests and formatting | Handwritten and generated C formatting, the schedule tool tests, the core and port tests, and the examples on POSIX. |
 | Tests under sanitizers | The core and port tests with the `sanitize` preset. |
 | Static checks | Every static check preset. |
-| Target tests | The Cortex-M port's target tests, and the minimal example, in QEMU. |
+| Target tests | The Cortex-M port's target tests, the core tests, and both examples, in QEMU. |
 
 CI runs for pushes and pull requests, and the
 [CI workflow](.github/workflows/ci.yml) can also be run manually.
