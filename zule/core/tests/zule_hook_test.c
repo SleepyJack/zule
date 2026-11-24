@@ -77,18 +77,21 @@ static const zule_task_t tasks[] = {
 };
 static const zule_window_t windows[] = {{&tasks[0], 0U, 2U}, {&tasks[1], 2U, 1U}};
 static const zule_schedule_t schedule = {
-    .slot_us = 100U,
     .cycle_slots = 4U,
     .windows = windows,
     .window_count = sizeof(windows) / sizeof(windows[0]),
-    .tasks = tasks,
-    .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
-static const zule_schedule_set_t schedule_set = {.schedules = &schedule, .schedule_count = 1U};
+static const zule_schedules_t schedules = {
+    .slot_us = 100U,
+    .tasks = tasks,
+    .task_count = sizeof(tasks) / sizeof(tasks[0]),
+    .schedules = &schedule,
+    .schedule_count = 1U,
+};
 
-const zule_schedule_set_t *zule_schedule_set_get(void) {
-    return &schedule_set;
+const zule_schedules_t *zule_schedules_get(void) {
+    return &schedules;
 }
 
 /* Check the recorded events against expectations. Every hook runs with the tick
@@ -109,7 +112,7 @@ static void start(void) {
     zule_test_port_reset();
     event_count = 0U;
     assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_OK);
-    assert(zule_port_tick_init(schedule.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
+    assert(zule_port_tick_init(schedules.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
 }
 
 int main(void) {

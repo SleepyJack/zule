@@ -11,19 +11,8 @@ static zule_config_t configuration;
 /* Whether a schedule ID names one of the application's schedules. Init checks
  * again, after validating the schedules. */
 static bool schedule_id_valid(uint32_t schedule_id) {
-    const zule_schedule_set_t *set = zule_schedule_set_get();
-    return (set != NULL) && ((size_t)schedule_id < set->schedule_count);
-}
-
-/* The schedule whose task table names tasks: the first, since every schedule
- * shares it. NULL if there is none. */
-static const zule_schedule_t *task_schedule(void) {
-    const zule_schedule_set_t *set = zule_schedule_set_get();
-    const zule_schedule_t *schedule = NULL;
-    if ((set != NULL) && (set->schedules != NULL) && (set->schedule_count != 0U)) {
-        schedule = &set->schedules[0];
-    }
-    return schedule;
+    const zule_schedules_t *schedules = zule_schedules_get();
+    return (schedules != NULL) && ((size_t)schedule_id < schedules->schedule_count);
 }
 
 zule_result_t zule_configure(const zule_config_t *config) {
@@ -41,11 +30,11 @@ zule_result_t zule_configure(const zule_config_t *config) {
 const char *zule_task_name_get(uint32_t task_id) {
     const char *name = NULL;
 #if ZULE_CONFIG_TASK_NAMES
-    const zule_schedule_t *schedule = task_schedule();
-    /* Task IDs are task array indexes; check the entry in case the schedule is invalid. */
-    if ((schedule != NULL) && (schedule->tasks != NULL) &&
-        ((size_t)task_id < schedule->task_count) && (schedule->tasks[task_id].id == task_id)) {
-        name = schedule->tasks[task_id].name;
+    const zule_schedules_t *schedules = zule_schedules_get();
+    /* Task IDs are task array indexes; check the entry in case the schedules are invalid. */
+    if ((schedules != NULL) && (schedules->tasks != NULL) &&
+        ((size_t)task_id < schedules->task_count) && (schedules->tasks[task_id].id == task_id)) {
+        name = schedules->tasks[task_id].name;
     }
 #else
     (void)task_id;
@@ -65,9 +54,8 @@ zule_result_t zule_run(void) {
         running = true;
         result = zule_scheduler_init(configuration.on_fault, configuration.schedule_id);
         if (result == ZULE_RESULT_OK) {
-            /* Validated by init; every schedule shares the slot length. */
-            const zule_schedule_t *schedule = task_schedule();
-            if (zule_port_tick_init(schedule->slot_us, zule_scheduler_tick) !=
+            const zule_schedules_t *schedules = zule_schedules_get();
+            if (zule_port_tick_init(schedules->slot_us, zule_scheduler_tick) !=
                 ZULE_PORT_RESULT_OK) {
                 result = ZULE_RESULT_PORT_ERROR;
             } else {

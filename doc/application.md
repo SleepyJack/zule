@@ -65,17 +65,16 @@ zule_configure(&config);
 | Member | Meaning |
 | --- | --- |
 | `on_fault` | The [fault handler](#fault-handler). Null disables notification; faults still latch. |
-| `schedule_id` | The schedule `zule_run()` starts, a `ZULE_SCHEDULE_ID_<NAME>` constant from the generated `zule_schedule_ids.h`; see [several schedules](configuration.md#several-schedules). |
+| `schedule_id` | The schedule `zule_run()` starts, a `ZULE_SCHEDULE_ID_<NAME>` constant from the generated `zule_schedule_ids.h`; see [multiple schedules](configuration.md#multiple-schedules). |
 
 `zule_configure()` copies the configuration, which persists across runs. A null
 configuration, or a schedule ID that names no schedule, returns
 `ZULE_RESULT_INVALID_CONFIG` and keeps the previous settings. Calling it while
 running returns `ZULE_RESULT_ALREADY_RUNNING`.
 
-Members left out of an initializer are zero. A schedule ID of 0 is the first
-schedule by name, which may not be the intended one, so set the ID explicitly.
-Without any configuration, `zule_run()` runs the schedule with ID 0 and no
-fault handler.
+Set the schedule ID explicitly: ID 0 is the first schedule by name, which may
+not be the intended one. Without any configuration, `zule_run()` runs the
+schedule with ID 0 and no fault handler.
 
 ## Fault handler
 
@@ -157,7 +156,7 @@ The generated header `zule_task_ids.h` defines `zule_task_id_t` and constants
 such as `ZULE_TASK_ID_SENSE`, for comparison with `zule_fault_info_t.task_id`.
 IDs are specific to a build; see [task names and IDs](configuration.md#task-names-and-ids).
 Likewise, `zule_schedule_ids.h` defines `zule_schedule_id_t` and constants such
-as `ZULE_SCHEDULE_ID_MAIN`; see [several schedules](configuration.md#several-schedules).
+as `ZULE_SCHEDULE_ID_MAIN`; see [multiple schedules](configuration.md#multiple-schedules).
 
 `zule_task_name_get(task_id)` returns a task's name, or `NULL` for an unknown ID
 or when [task names](configuration.md#task-names) are disabled. It can be called
@@ -207,7 +206,7 @@ Zule provides:
 | Name | Use |
 | --- | --- |
 | `zule::zule` | The Zule library to link: the core and the [modules](modules.md). It carries the public include path and the build settings, so the application, Zule, the port, and the generated schedule share them. |
-| `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time, compiles it, and links it into `<target>`, whose sources can then include `zule_task_ids.h` and `zule_schedule_ids.h`. Output defaults to `<target>_schedule/` in the calling binary directory. One schedule file per application is supported; it can define [several schedules](configuration.md#several-schedules). |
+| `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time, compiles it, and links it into `<target>`, whose sources can then include `zule_task_ids.h` and `zule_schedule_ids.h`. Output defaults to `<target>_schedule/` in the calling binary directory. One schedule file per application is supported; it can define [multiple schedules](configuration.md#multiple-schedules). |
 
 `zule_add_schedule()` needs Python 3.10 or later with
 [`zule/tools/schedule/requirements.txt`](../zule/tools/schedule/requirements.txt)

@@ -45,12 +45,11 @@ static zule_scheduler_t scheduler;
 #if ZULE_HOOKS_USED || ZULE_CONFIG_TICK_CHECK
 /* Check that the timebase can represent what the enabled features measure, in
  * every schedule, since a run may switch to any of them. The frequency is
- * constant and valid at any time, so this runs before ticks start. Schedules
- * share their slot length. */
-static zule_result_t check_timebase_limits(const zule_schedule_set_t *set) {
+ * constant and valid at any time, so this runs before ticks start. */
+static zule_result_t check_timebase_limits(const zule_schedules_t *schedules) {
     zule_result_t result = ZULE_RESULT_OK;
     const uint64_t hz = zule_port_time_hz();
-    const uint32_t slot_us = set->schedules[0].slot_us;
+    const uint32_t slot_us = schedules->slot_us;
     /* Slot length in counts, scaled by one million; both factors are below 2^32,
      * so the product fits. */
     const uint64_t slot_scaled_counts = (uint64_t)slot_us * hz;
@@ -65,8 +64,9 @@ static zule_result_t check_timebase_limits(const zule_schedule_set_t *set) {
     if ((result == ZULE_RESULT_OK) && (slot_scaled_counts >= wrap_scaled_counts)) {
         result = ZULE_RESULT_INVALID_CONFIG;
     }
-    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < set->schedule_count); ++index) {
-        if ((uint64_t)set->schedules[index].cycle_slots >
+    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < schedules->schedule_count);
+         ++index) {
+        if ((uint64_t)schedules->schedules[index].cycle_slots >
             ((wrap_scaled_counts - 1U) / slot_scaled_counts)) {
             result = ZULE_RESULT_INVALID_CONFIG;
         }
@@ -95,24 +95,24 @@ static zule_result_t check_timebase_limits(const zule_schedule_set_t *set) {
 
 zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault, uint32_t schedule_id) {
     scheduler.initialized = false;
-    const zule_schedule_set_t *set = zule_schedule_set_get();
-    zule_result_t result = zule_schedule_set_validate(set);
+    const zule_schedules_t *schedules = zule_schedules_get();
+    zule_result_t result = zule_schedules_validate(schedules);
     const zule_schedule_t *schedule = NULL;
     if (result == ZULE_RESULT_OK) {
-        if ((size_t)schedule_id < set->schedule_count) {
-            schedule = &set->schedules[schedule_id];
+        if ((size_t)schedule_id < schedules->schedule_count) {
+            schedule = &schedules->schedules[schedule_id];
         } else {
             result = ZULE_RESULT_INVALID_CONFIG;
         }
     }
 #if ZULE_HOOKS_USED || ZULE_CONFIG_TICK_CHECK
     if (result == ZULE_RESULT_OK) {
-        result = check_timebase_limits(set);
+        result = check_timebase_limits(schedules);
     }
 #endif
 #if ZULE_MODULES_ANY
     if (result == ZULE_RESULT_OK) {
-        result = zule_modules_init(schedule);
+        result = zule_modules_init(schedules);
     }
 #endif
     if (result == ZULE_RESULT_OK) {

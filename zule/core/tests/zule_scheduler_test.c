@@ -51,12 +51,9 @@ static const zule_window_t windows[] = {
 };
 
 static const zule_schedule_t schedule = {
-    .slot_us = 100U,
     .cycle_slots = 4U,
     .windows = windows,
     .window_count = sizeof(windows) / sizeof(windows[0]),
-    .tasks = tasks,
-    .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
 static const zule_window_t boundary_windows[] = {
@@ -65,31 +62,30 @@ static const zule_window_t boundary_windows[] = {
 };
 
 static const zule_schedule_t boundary_schedule = {
-    .slot_us = 100U,
     .cycle_slots = 4U,
     .windows = boundary_windows,
     .window_count = sizeof(boundary_windows) / sizeof(boundary_windows[0]),
-    .tasks = tasks,
-    .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
 static const zule_schedule_t *schedule_definition = &schedule;
 
 static const zule_schedule_t invalid_schedule = {
-    .slot_us = 100U,
     .cycle_slots = 0U,
     .windows = windows,
     .window_count = sizeof(windows) / sizeof(windows[0]),
+};
+
+/* One schedule, or none while schedule_definition is null. */
+static zule_schedules_t schedules = {
+    .slot_us = 100U,
     .tasks = tasks,
     .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
-/* One schedule, or none while schedule_definition is null. */
-const zule_schedule_set_t *zule_schedule_set_get(void) {
-    static zule_schedule_set_t set;
-    set.schedules = schedule_definition;
-    set.schedule_count = (schedule_definition != NULL) ? 1U : 0U;
-    return &set;
+const zule_schedules_t *zule_schedules_get(void) {
+    schedules.schedules = schedule_definition;
+    schedules.schedule_count = (schedule_definition != NULL) ? 1U : 0U;
+    return &schedules;
 }
 
 int main(void) {
@@ -257,7 +253,7 @@ int main(void) {
     zule_test_port_reset();
     zule_test_port_control.idle_limit = UINT32_MAX;
     assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
-    assert(zule_port_tick_init(schedule.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
+    assert(zule_port_tick_init(schedules.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
     const uint32_t first_before = first_calls;
     assert(zule_scheduler_idle() == ZULE_RESULT_OK);
     assert(zule_test_port_control.idle_calls == 1U);

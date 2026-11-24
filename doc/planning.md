@@ -124,14 +124,8 @@ tools and configurations.
 - Stop and quiesce tick delivery before returning. Define allowed caller
   contexts, treatment of an executing task, and precedence between termination
   requests and faults.
-- Not needed for [switching schedules](#multiple-schedules), which keeps tick
-  delivery running.
 
 ## Multiple schedules
-
-Defining [several schedules](configuration.md#several-schedules) and selecting
-the initial one through `zule_configure()` are done. The remaining steps, each
-its own change:
 
 - **Switching at run time.** Add an API for tasks to request the next schedule,
   by schedule ID; the last request before the boundary wins. Tick context

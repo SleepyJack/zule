@@ -53,12 +53,12 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     # Declaration order does not depend on JSON object key order.
     for name in task_names:
         lines.append(f"extern void zule_task_{name}(void);")
-    # The tables are used only by zule_schedule_set_get(), so they are defined
+    # The tables are used only by zule_schedules_get(), so they are defined
     # inside it (MISRA C:2012 rule 8.9); as static const objects they keep static
     # storage. Every schedule shares the one task table.
     lines.extend([
         "",
-        "const zule_schedule_set_t *zule_schedule_set_get(void) {",
+        "const zule_schedules_t *zule_schedules_get(void) {",
         "    static const zule_task_t zule_tasks[] = {",
     ])
     for name in task_names:
@@ -87,29 +87,29 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     # initializers are designated (MISRA C:2012 rule 9.5).
     lines.extend([
         "",
-        f"    static const zule_schedule_t zule_schedules[{len(cycles)}U] = {{",
+        f"    static const zule_schedule_t zule_schedule_table[{len(cycles)}U] = {{",
     ])
     for name, cycle, _ in cycles:
         lines.extend([
             f"        [ZULE_SCHEDULE_ID_{name.upper()}] =",
             "            {",
-            f"                .slot_us = {int(schedule['slot_us'])}U,",
             f"                .cycle_slots = {int(cycle['slots'])}U,",
             f"                .windows = zule_windows_{name},",
             f"                .window_count = sizeof(zule_windows_{name}) / sizeof(zule_windows_{name}[0]),",
-            "                .tasks = zule_tasks,",
-            "                .task_count = sizeof(zule_tasks) / sizeof(zule_tasks[0]),",
             "            },",
         ])
     lines.extend([
         "    };",
         "",
-        "    static const zule_schedule_set_t zule_schedule_set = {",
-        "        .schedules = zule_schedules,",
-        "        .schedule_count = sizeof(zule_schedules) / sizeof(zule_schedules[0]),",
+        "    static const zule_schedules_t zule_schedules = {",
+        f"        .slot_us = {int(schedule['slot_us'])}U,",
+        "        .tasks = zule_tasks,",
+        "        .task_count = sizeof(zule_tasks) / sizeof(zule_tasks[0]),",
+        "        .schedules = zule_schedule_table,",
+        "        .schedule_count = sizeof(zule_schedule_table) / sizeof(zule_schedule_table[0]),",
         "    };",
         "",
-        "    return &zule_schedule_set;",
+        "    return &zule_schedules;",
         "}",
         "",
         # Storage for modules that keep data for each task, sized by the task

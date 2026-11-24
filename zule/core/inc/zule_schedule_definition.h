@@ -3,9 +3,9 @@
 
 #include "zule_schedule.h"
 
-/* Implemented by the generated schedule: return the application's schedules,
- * indexed by schedule ID. They must remain alive and immutable throughout use.
- * The core checks them with zule_schedule_set_validate() before running any. */
-const zule_schedule_set_t *zule_schedule_set_get(void);
+/* Implemented by the generated schedule: return the application's schedules.
+ * They must remain alive and immutable throughout use. The core checks them
+ * with zule_schedules_validate() before running any. */
+const zule_schedules_t *zule_schedules_get(void);
 
 #endif

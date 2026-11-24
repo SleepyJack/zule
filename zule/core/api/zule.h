@@ -47,7 +47,7 @@ typedef struct {
     zule_fault_handler_t on_fault;
     /* The schedule zule_run() starts, as a schedule ID from the generated
      * zule_schedule_ids.h, such as ZULE_SCHEDULE_ID_MAIN for a single schedule.
-     * Left at 0, it selects the schedule with ID 0, the first by name. */
+     * ID 0 is the first schedule by name. */
     uint32_t schedule_id;
 } zule_config_t;
 

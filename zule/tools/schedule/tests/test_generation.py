@@ -54,17 +54,16 @@ void zule_task_control(void) { called = 2; }
 void zule_task_output(void) { called = 3; }
 int main(void) {
     /* A single cycle is the one schedule, main, with ID 0. */
-    const zule_schedule_set_t *set = zule_schedule_set_get();
-    assert(set == zule_schedule_set_get());
-    assert(set->schedule_count == 1U);
+    const zule_schedules_t *schedules = zule_schedules_get();
+    assert(schedules == zule_schedules_get());
+    assert(schedules->schedule_count == 1U);
     assert(ZULE_SCHEDULE_ID_MAIN == 0);
-    assert(zule_schedule_set_validate(set) == ZULE_RESULT_OK);
-    const zule_schedule_t *schedule = &set->schedules[ZULE_SCHEDULE_ID_MAIN];
-    assert(schedule->slot_us == 100U);
+    assert(zule_schedules_validate(schedules) == ZULE_RESULT_OK);
+    assert(schedules->slot_us == 100U);
+    assert(schedules->task_count == 3U);
+    const zule_schedule_t *schedule = &schedules->schedules[ZULE_SCHEDULE_ID_MAIN];
     assert(schedule->cycle_slots == 10U);
     assert(schedule->window_count == 3U);
-    assert(schedule->task_count == 3U);
-    assert(zule_schedule_validate(schedule) == ZULE_RESULT_OK);
     const uint32_t starts[] = {0U, 2U, 5U};
     const uint32_t budgets[] = {2U, 3U, 2U};
     assert(ZULE_TASK_ID_CONTROL == 0);
@@ -172,15 +171,15 @@ int main(void) {
 void zule_task_sense(void) {}
 void zule_task_control(void) {}
 int main(void) {
-    const zule_schedule_t *schedule = &zule_schedule_set_get()->schedules[ZULE_SCHEDULE_ID_MAIN];
-    assert(zule_schedule_validate(schedule) == ZULE_RESULT_OK);
+    assert(zule_schedules_validate(zule_schedules_get()) == ZULE_RESULT_OK);
+    const zule_schedule_t *schedule = &zule_schedules_get()->schedules[ZULE_SCHEDULE_ID_MAIN];
 ''' + "\n".join(checks) + "\n    return 0;\n}\n")
                 executable = Path(directory) / "test"
                 subprocess.run([*compile_command(compiler, harness, output, executable), "-DZULE_CONFIG_TASK_NAMES=1"], check=True, capture_output=True, text=True)
                 subprocess.run([str(executable)], check=True, capture_output=True, text=True)
 
-    def test_several_schedules(self):
-        """Named schedules share the task table and slot length, and take IDs in name order."""
+    def test_multiple_schedules(self):
+        """Named schedules take IDs in name order, with the shared task table and slot length."""
         compiler = shutil.which("cc")
         if compiler is None:
             self.skipTest("C compiler is required for generated-code integration test")
@@ -199,15 +198,14 @@ void zule_task_sense(void) {}
 void zule_task_control(void) {}
 void zule_task_mode_manager(void) {}
 int main(void) {
-    const zule_schedule_set_t *set = zule_schedule_set_get();
-    assert(set->schedule_count == 2U);
-    assert(zule_schedule_set_validate(set) == ZULE_RESULT_OK);
-    const zule_schedule_t *operational = &set->schedules[ZULE_SCHEDULE_ID_OPERATIONAL];
-    const zule_schedule_t *startup = &set->schedules[ZULE_SCHEDULE_ID_STARTUP];
+    const zule_schedules_t *schedules = zule_schedules_get();
+    assert(schedules->schedule_count == 2U);
+    assert(zule_schedules_validate(schedules) == ZULE_RESULT_OK);
+    assert(schedules->slot_us == 1000U && schedules->task_count == 3U);
+    const zule_schedule_t *operational = &schedules->schedules[ZULE_SCHEDULE_ID_OPERATIONAL];
+    const zule_schedule_t *startup = &schedules->schedules[ZULE_SCHEDULE_ID_STARTUP];
     assert(operational->cycle_slots == 10U && operational->window_count == 3U);
     assert(startup->cycle_slots == 5U && startup->window_count == 1U);
-    assert(startup->slot_us == 1000U && operational->slot_us == 1000U);
-    assert(startup->tasks == operational->tasks && startup->task_count == 3U);
     assert(startup->windows[0].task->id == ZULE_TASK_ID_MODE_MANAGER);
     assert(startup->windows[0].start_slot == 4U && startup->windows[0].budget_slots == 1U);
     assert(operational->windows[2].task->id == ZULE_TASK_ID_MODE_MANAGER);

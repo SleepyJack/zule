@@ -37,13 +37,13 @@ safety tool.
 `generate <schedule.json> <output_dir>` creates the output directory if needed
 and writes:
 
-- `zule_schedule_definition.c`, implementing `zule_schedule_set_get()` from
-  the core's internal `zule_schedule_definition.h`, with one schedule per
-  schedule ID, all sharing one task table;
+- `zule_schedule_definition.c`, implementing `zule_schedules_get()` from the
+  core's internal `zule_schedule_definition.h`: the slot length and task table,
+  shared by every schedule, and the schedules, indexed by schedule ID;
 - `zule_task_ids.h`, a standalone application header with the
   [task ID constants](../../../doc/configuration.md#task-names-and-ids);
 - `zule_schedule_ids.h`, a standalone application header with the
-  [schedule ID constants](../../../doc/configuration.md#several-schedules).
+  [schedule ID constants](../../../doc/configuration.md#multiple-schedules).
 
 All input is validated before any file is written, so validation failures
 leave existing outputs untouched. Each file is staged before replacing its

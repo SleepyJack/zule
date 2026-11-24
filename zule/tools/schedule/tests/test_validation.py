@@ -60,7 +60,7 @@ class ValidationTests(unittest.TestCase):
         issues = validate_schedule(read_fixture("invalid/nested-overlap.json"))
         self.assertTrue(any(i.path == "/cycle/windows/2" and "overlaps" in i.message for i in issues))
 
-    def test_several_schedules(self):
+    def test_multiple_schedules(self):
         self.assertEqual(validate_schedule(read_fixture("valid/modes.json")), [])
 
     def test_exactly_one_schedule_form(self):

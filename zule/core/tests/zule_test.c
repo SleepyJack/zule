@@ -59,28 +59,21 @@ static const zule_task_t tasks[] = {
 
 static const zule_window_t windows[] = {{&tasks[0], 0U, 2U}, {&tasks[1], 2U, 1U}};
 static const zule_schedule_t schedule = {
-    .slot_us = 250U,
     .cycle_slots = 4U,
     .windows = windows,
     .window_count = sizeof(windows) / sizeof(windows[0]),
+};
+static const zule_schedules_t schedules = {
+    .slot_us = 250U,
     .tasks = tasks,
     .task_count = sizeof(tasks) / sizeof(tasks[0]),
+    .schedules = &schedule,
+    .schedule_count = 1U,
 };
-static const zule_schedule_t *definition = &schedule;
+static const zule_schedules_t *definition = &schedules;
 
-/* A set of several schedules, when a test sets one. */
-static const zule_schedule_set_t *several;
-
-/* The set of several schedules if there is one; otherwise one schedule, or none
- * while definition is null. */
-const zule_schedule_set_t *zule_schedule_set_get(void) {
-    if (several != NULL) {
-        return several;
-    }
-    static zule_schedule_set_t set;
-    set.schedules = definition;
-    set.schedule_count = (definition != NULL) ? 1U : 0U;
-    return &set;
+const zule_schedules_t *zule_schedules_get(void) {
+    return definition;
 }
 
 static void check_stopped(void) {
@@ -96,19 +89,20 @@ int main(void) {
 #if ZULE_CONFIG_TASK_NAMES
     const zule_task_t named_tasks[] = {{0U, first_task, "sample"}};
     const zule_window_t named_window[] = {{&named_tasks[0], 0U, 1U}};
-    const zule_schedule_t named = {100U, 1U, named_window, 1U, named_tasks, 1U};
-    assert(zule_schedule_validate(&named) == ZULE_RESULT_OK);
+    const zule_schedule_t named_schedule = {1U, named_window, 1U};
+    const zule_schedules_t named = {100U, named_tasks, 1U, &named_schedule, 1U};
+    assert(zule_schedules_validate(&named) == ZULE_RESULT_OK);
     definition = &named;
     assert(strcmp(zule_task_name_get(0U), "sample") == 0);
     assert(zule_task_name_get(1U) == NULL);
     assert(zule_task_name_get(UINT32_MAX) == NULL);
     /* An entry whose ID does not match its index is never returned. */
     const zule_task_t mismatched_tasks[] = {{1U, first_task, "mismatched"}};
-    const zule_schedule_t mismatched = {100U, 1U, named_window, 1U, mismatched_tasks, 1U};
+    const zule_schedules_t mismatched = {100U, mismatched_tasks, 1U, &named_schedule, 1U};
     definition = &mismatched;
     assert(zule_task_name_get(0U) == NULL);
 #endif
-    definition = &schedule;
+    definition = &schedules;
 
     assert(zule_configure(NULL) == ZULE_RESULT_INVALID_CONFIG);
     zule_test_port_reset();
@@ -116,7 +110,7 @@ int main(void) {
     assert(zule_run() == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_test_port_control.init_calls == 0U);
     assert(zule_test_port_control.stop_calls == 0U);
-    definition = &schedule;
+    definition = &schedules;
 
     zule_test_port_reset();
     zule_test_port_control.init_result = ZULE_PORT_RESULT_ERROR;
@@ -130,7 +124,7 @@ int main(void) {
     assert(zule_run() == ZULE_RESULT_PORT_ERROR);
     recurse = false;
     assert(first_calls == 1U && second_calls == 1U);
-    assert(zule_test_port_control.slot_us == schedule.slot_us);
+    assert(zule_test_port_control.slot_us == schedules.slot_us);
     check_stopped();
 
     zule_config_t config = {.on_fault = handle_fault};
@@ -188,15 +182,12 @@ int main(void) {
     assert(fault_calls == 3U);
     check_stopped();
 
-    /* With several schedules, the configured ID selects the one that runs. The
+    /* With multiple schedules, the configured ID selects the one that runs. The
      * second schedule runs only the second task. */
     static const zule_window_t second_only[] = {{&tasks[1], 0U, 1U}};
-    const zule_schedule_t pair[] = {
-        schedule,
-        {250U, 2U, second_only, 1U, tasks, sizeof(tasks) / sizeof(tasks[0])},
-    };
-    const zule_schedule_set_t two = {pair, 2U};
-    several = &two;
+    const zule_schedule_t pair[] = {schedule, {2U, second_only, 1U}};
+    const zule_schedules_t two = {250U, tasks, sizeof(tasks) / sizeof(tasks[0]), pair, 2U};
+    definition = &two;
     zule_config_t second_schedule = {.on_fault = NULL, .schedule_id = 1U};
     assert(zule_configure(&second_schedule) == ZULE_RESULT_OK);
     const uint32_t first_before = first_calls;
@@ -217,21 +208,9 @@ int main(void) {
 
     /* If the schedules no longer include the configured ID, the run fails before
      * ticks start. */
-    several = NULL;
+    definition = &schedules;
     zule_test_port_reset();
     assert(zule_run() == ZULE_RESULT_INVALID_CONFIG);
     assert(zule_test_port_control.init_calls == 0U);
-
-    /* Schedules that do not share the slot length fail validation. */
-    const zule_schedule_t mismatched_pair[] = {
-        schedule,
-        {500U, 2U, second_only, 1U, tasks, sizeof(tasks) / sizeof(tasks[0])},
-    };
-    const zule_schedule_set_t mismatched_set = {mismatched_pair, 2U};
-    several = &mismatched_set;
-    zule_test_port_reset();
-    assert(zule_run() == ZULE_RESULT_INVALID_SCHEDULE);
-    assert(zule_test_port_control.init_calls == 0U);
-    several = NULL;
     return 0;
 }

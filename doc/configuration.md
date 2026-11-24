@@ -4,7 +4,7 @@ Configuration is owned by the user (see [ownership](architecture.md#ownership)).
 It consists of:
 
 - the [schedule](#schedule): tasks, budgets, and window timing, in JSON, with
-  one or [several schedules](#several-schedules);
+  one or [multiple schedules](#multiple-schedules);
 - [build settings](#build-settings): compile-time options for the core in
   `zule_user_config.h`, and for the selected port in `zule_user_port_config.h`,
   or as compiler definitions.
@@ -56,7 +56,7 @@ example, the showcase example's schedule:
 | `tasks.<name>.description` | Optional free text. |
 | `cycle.slots` | Cycle length in slots, including idle time. |
 | `cycle.windows[]` | Windows in increasing `start_slot` order, each naming a declared `task`. |
-| `schedules.<name>` | Instead of `cycle`, a cycle per named schedule; see [several schedules](#several-schedules). |
+| `schedules.<name>` | Instead of `cycle`, a cycle per named schedule; see [multiple schedules](#multiple-schedules). |
 | `$schema` | Optional path to the schema, for editor support. Tools ignore it. |
 
 Each window occupies `[start_slot, start_slot + budget_slots)` of its task.
@@ -93,7 +93,7 @@ this, so tools and [modules](modules.md) can index per-task data by ID.
 They are specific to a build: adding, removing, or renaming a task may change
 other IDs. Interpret saved fault logs against the matching build or schedule.
 
-### Several schedules
+### Multiple schedules
 
 An application with several modes, such as start-up and normal operation, can
 define a schedule for each. Instead of `cycle`, a `schedules` object holds one
@@ -134,8 +134,7 @@ IDs start at zero in sorted schedule-name order, so the example gives
 `cycle` has one schedule, named `main`, with ID `ZULE_SCHEDULE_ID_MAIN`.
 
 The application selects the schedule to start with in its
-[configuration](application.md#configuration). An ID left unset is 0, the first
-schedule by name, which may not be the intended one, so set it explicitly.
+[configuration](application.md#configuration).
 
 ## Build settings
 

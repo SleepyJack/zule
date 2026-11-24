@@ -10,7 +10,7 @@
 #if ZULE_CONFIG_MODULE_TICK_TIMING
 /* Start a run: clear the reference. Fails with INVALID_CONFIG unless a slot is a
  * whole number of timebase counts below 2^31. Keeps accumulated results. */
-zule_result_t zule_tick_timing_init(const zule_schedule_t *schedule);
+zule_result_t zule_tick_timing_init(const zule_schedules_t *schedules);
 void zule_tick_timing_tick_start(uint32_t time_counts);
 void zule_tick_timing_tick_end(uint32_t time_counts);
 #endif

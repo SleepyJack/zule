@@ -47,7 +47,7 @@
     },
     "schedules": {
       "type": "object",
-      "description": "Several schedules, keyed by names with distinct uppercase forms for generated schedule ID constants. All share the tasks and slot_us.",
+      "description": "Multiple schedules, keyed by names with distinct uppercase forms for generated schedule ID constants. All share the tasks and slot_us.",
       "minProperties": 1,
       "propertyNames": {
         "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
