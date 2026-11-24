@@ -147,6 +147,12 @@ tools and configurations.
 - **An example, `modes`,** of the [startup delay pattern](#startup-delay-as-a-pattern):
   a startup schedule, a mode-manager task, and a switch to the operational
   schedule.
+- **Revisit naming** once switching and the example exist. It is not evident
+  what distinguishes the schedule definition (`zule_schedule_definition_t`:
+  the slot length, task table, and schedules) from a schedule (one cycle of
+  windows); one option is a distinct name for the container. Also review slot,
+  cycle, and window against established time-triggered terms (minor and major
+  frame, partition window).
 
 ### Startup delay as a pattern
 
