@@ -49,5 +49,9 @@ from tick context.
 | Target | Output |
 | --- | --- |
 | `posix` | Standard output. The [POSIX port](../../zule/ports/posix/README.md) runs ticks on a timer thread and gives no hard real-time guarantees. |
+| `qemu-mps2-an385` | QEMU's standard output, through semihosting. Build with `cmake --preset qemu-mps2-an385` and `cmake --build --preset qemu-mps2-an385`, then run `qemu-system-arm -machine mps2-an385 -nographic -semihosting-config enable=on,target=native -kernel ../../build/examples/showcase/qemu-mps2-an385/zule_showcase`; stop it with Ctrl-A, then X. Its port settings give the board's 25 MHz clock. |
 
-CI runs the showcase briefly and checks that all three tasks appear.
+CI runs the showcase briefly on both targets and checks that all three tasks
+appear. On `qemu-mps2-an385`, it runs with `-icount shift=0,sleep=off`, so every
+tick is exactly on time, and CI also checks that the tick timing report shows no
+deviation.

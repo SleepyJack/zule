@@ -7,10 +7,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "zule.h"
 #include "zule_port.h"
-#include "zule_target.h"
 #include "zule_task_ids.h"
 
 #if ZULE_CONFIG_MODULE_TASK_STATS
@@ -37,9 +37,7 @@ static bool failed;
 
 static void check(bool condition, const char *message) {
     if (!condition) {
-        zule_target_write("FAIL: ");
-        zule_target_write(message);
-        zule_target_write("\n");
+        (void)printf("FAIL: %s\n", message);
         failed = true;
     }
 }
@@ -98,11 +96,8 @@ static void test_tick_rate(void) {
     stop_ticks();
     const uint32_t measured = first_timed_tick_counts - last_timed_tick_counts;
     const uint32_t expected = (LAST_TIMED_TICK - FIRST_TIMED_TICK) * SLOT_COUNTS;
-    zule_target_write("Tick rate: ");
-    zule_target_write_number(measured);
-    zule_target_write(" counts for 100 ticks, expected ");
-    zule_target_write_number(expected);
-    zule_target_write("\n");
+    (void)printf("Tick rate: %lu counts for 100 ticks, expected %lu\n", (unsigned long)measured,
+                 (unsigned long)expected);
     check((measured >= (expected - 10U)) && (measured <= (expected + 10U)), "tick rate");
 }
 
@@ -220,11 +215,8 @@ static void test_timebase_monotonic(void) {
         ++reads;
     }
     stop_ticks();
-    zule_target_write("Timebase: ");
-    zule_target_write_number(reads);
-    zule_target_write(" reads over 2000 periods, largest step ");
-    zule_target_write_number(largest_step);
-    zule_target_write(" counts\n");
+    (void)printf("Timebase: %lu reads over 2000 periods, largest step %lu counts\n",
+                 (unsigned long)reads, (unsigned long)largest_step);
     check(largest_step < 500U, "timebase reads never go backwards or jump");
 }
 
@@ -360,13 +352,9 @@ static void test_scheduler(void) {
 #if ZULE_CONFIG_MODULE_TICK_TIMING
     zule_tick_timing_t timing;
     zule_tick_timing_get(&timing);
-    zule_target_write("Tick timing: worst late ");
-    zule_target_write_number(timing.max_late_counts);
-    zule_target_write(", worst early ");
-    zule_target_write_number(timing.max_early_counts);
-    zule_target_write(", longest tick ");
-    zule_target_write_number(timing.max_tick_counts);
-    zule_target_write(" counts\n");
+    (void)printf("Tick timing: worst late %lu, worst early %lu, longest tick %lu counts\n",
+                 (unsigned long)timing.max_late_counts, (unsigned long)timing.max_early_counts,
+                 (unsigned long)timing.max_tick_counts);
     check(timing.ticks > 0U, "the tick timing module measures ticks");
     check((timing.max_late_counts < 250U) && (timing.max_early_counts < 250U),
           "ticks are within the tick check's tolerance");
@@ -391,7 +379,8 @@ int main(void) {
 #endif
     test_scheduler();
 
-    zule_target_write(failed ? "Cortex-M port target tests failed\n"
-                             : "Cortex-M port target tests passed\n");
+    (void)fputs(failed ? "Cortex-M port target tests failed\n"
+                       : "Cortex-M port target tests passed\n",
+                stdout);
     return failed ? 1 : 0;
 }

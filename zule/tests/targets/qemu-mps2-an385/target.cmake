@@ -5,24 +5,17 @@ find_program(ZULE_QEMU_SYSTEM_ARM qemu-system-arm REQUIRED)
 
 # zule_target_qemu_mps2_an385_executable(<executable>)
 #
-# Add the startup code, semihosting support, and linker script to <executable>,
-# which links with no C library.
+# Add the start-up code and linker script to <executable>, which links with
+# newlib-nano, the Arm GNU toolchain's small C library, and rdimon, its system
+# calls over semihosting.
 function(zule_target_qemu_mps2_an385_executable executable)
     target_sources(${executable} PRIVATE
         "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/startup.S" "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/zule_target.c")
-    target_include_directories(${executable} PRIVATE "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}")
     target_link_options(${executable} PRIVATE
-        -nostdlib "-T${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/qemu-mps2-an385.ld")
+        -nostartfiles --specs=nano.specs --specs=rdimon.specs
+        "-T${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/qemu-mps2-an385.ld")
     set_property(TARGET ${executable} APPEND PROPERTY
         LINK_DEPENDS "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/qemu-mps2-an385.ld")
-    # zule_target.c implements memset() and its relatives, so GCC must not turn
-    # their loops, or start-up's, into calls to those same functions.
-    set_property(SOURCE "${ZULE_TARGET_QEMU_MPS2_AN385_DIR}/zule_target.c"
-        TARGET_DIRECTORY ${executable}
-        APPEND PROPERTY COMPILE_OPTIONS -fno-tree-loop-distribute-patterns)
-    # libgcc supplies compiler support routines, such as 64-bit division, and
-    # comes after the libraries that need them.
-    target_link_libraries(${executable} PRIVATE gcc)
 endfunction()
 
 # zule_target_qemu_mps2_an385_add_test(<name> <executable>)

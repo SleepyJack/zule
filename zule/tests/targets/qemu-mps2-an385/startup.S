@@ -55,13 +55,3 @@ zule_target_default_handler:
     weak_handler DebugMon_Handler
     weak_handler PendSV_Handler
     weak_handler SysTick_Handler
-
-/* uint32_t zule_target_semihosting(uint32_t operation, uintptr_t argument)
- * A semihosting call: QEMU performs the operation on the host. */
-    .global zule_target_semihosting
-    .type zule_target_semihosting, %function
-    .thumb_func
-zule_target_semihosting:
-    bkpt 0xab
-    bx lr
-    .size zule_target_semihosting, . - zule_target_semihosting

@@ -1,8 +1,8 @@
 # Development image
 
 [`Dockerfile`](Dockerfile) defines an image with every tool Zule's builds and
-checks use, at pinned versions: GCC, the Arm GNU toolchain, Cppcheck, QEMU,
-Python, and, from [`requirements-dev.txt`](../requirements-dev.txt), CMake,
+checks use, at pinned versions: GCC, the Arm GNU toolchain and its C library,
+newlib, Cppcheck, QEMU, Python, and, from [`requirements-dev.txt`](../requirements-dev.txt), CMake,
 Ninja, clang-format, and the schedule tool's dependencies. CI builds and runs in
 the same image.
 

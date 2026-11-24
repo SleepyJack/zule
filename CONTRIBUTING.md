@@ -4,8 +4,8 @@
 
 Development needs a C compiler and Python 3.10 or later; the
 [static checks](TESTING.md#static-checks) also need the Arm GNU toolchain and
-Cppcheck, and the [target tests](TESTING.md#target-tests) the Arm GNU toolchain
-and QEMU. Set up either with the container image
+Cppcheck, and the [target tests](TESTING.md#target-tests) the Arm GNU toolchain,
+its C library, newlib, and QEMU. Set up either with the container image
 or natively.
 
 ### Container image

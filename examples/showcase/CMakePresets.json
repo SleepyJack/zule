@@ -17,7 +17,17 @@
       "name": "posix",
       "displayName": "The showcase on the host, with the POSIX port",
       "inherits": "example"
+    },
+    {
+      "name": "qemu-mps2-an385",
+      "displayName": "The showcase on QEMU's mps2-an385 (Cortex-M3), with the Cortex-M port",
+      "inherits": "example",
+      "toolchainFile": "${sourceDir}/../../zule/ports/cortex_m/arm-none-eabi.cmake",
+      "cacheVariables": { "CMAKE_C_FLAGS": "-mcpu=cortex-m3 -mthumb" }
     }
   ],
-  "buildPresets": [{ "name": "posix", "configurePreset": "posix" }]
+  "buildPresets": [
+    { "name": "posix", "configurePreset": "posix" },
+    { "name": "qemu-mps2-an385", "configurePreset": "qemu-mps2-an385" }
+  ]
 }

@@ -9,14 +9,21 @@ uses it only in QEMU.
 - [`startup.S`](startup.S): the vector table and reset entry. Every exception
   handler is weak, so a port or test defines the ones it uses, such as
   `SysTick_Handler`; the others fail the test.
-- [`zule_target.h`](zule_target.h) and [`zule_target.c`](zule_target.c): output
-  and exit through semihosting, startup initialisation, and the memory functions
-  GCC may call. `main()` returns 0 for success.
+- [`zule_target.c`](zule_target.c): start-up, which initialises memory and the
+  standard streams, then exits with `main()`'s result. `main()` returns 0 for
+  success, and a failed assertion, a call to `abort()`, or an unexpected
+  exception fails the test.
 - [`qemu-mps2-an385.ld`](qemu-mps2-an385.ld): the linker script.
 - [`target.cmake`](target.cmake): `zule_target_qemu_mps2_an385_executable()`
-  adds the above to a test program, and `zule_target_qemu_mps2_an385_add_test()`
+  adds the above to a test program, linked with newlib-nano, the Arm GNU
+  toolchain's small C library, and rdimon, its system calls over semihosting,
+  and `zule_target_qemu_mps2_an385_add_test()`
   runs it in QEMU with `-icount shift=0,sleep=off`, so every run is the same;
   see [target tests](../../../../TESTING.md#target-tests).
+
+Through rdimon, QEMU performs the C library's input and output on the host, so a
+test's `printf()` and `fprintf(stderr, ...)` appear on QEMU's standard output and
+error, and its exit status becomes QEMU's.
 
 Tests can use the machine's peripherals directly, such as its CMSDK APB timers at
 `0x40000000`, which count at 25 MHz, as an independent reference clock. SysTick's
