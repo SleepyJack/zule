@@ -50,16 +50,15 @@ static const zule_schedule_t schedule = {
     .window_count = sizeof(windows) / sizeof(windows[0]),
 };
 
-static const zule_schedules_t schedules = {
+static const zule_schedule_definition_t definition = {
     .slot_us = 100U,
-    .tasks = tasks,
-    .task_count = sizeof(tasks) / sizeof(tasks[0]),
+    .tasks = {tasks, sizeof(tasks) / sizeof(tasks[0])},
     .schedules = &schedule,
     .schedule_count = 1U,
 };
 
-const zule_schedules_t *zule_schedules_get(void) {
-    return &schedules;
+const zule_schedule_definition_t *zule_schedule_definition_get(void) {
+    return &definition;
 }
 
 /* What the generated schedule defines: one entry per task. */
@@ -74,7 +73,7 @@ static void start(void) {
     fault_calls = 0U;
     task_overruns = false;
     assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
-    assert(zule_port_tick_init(schedules.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
+    assert(zule_port_tick_init(definition.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
 }
 
 static void stop(void) {

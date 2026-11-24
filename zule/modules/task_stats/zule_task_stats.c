@@ -88,7 +88,7 @@ void zule_task_stats_task_end(uint32_t time_counts, uint32_t task_id) {
 
 bool zule_task_stats_get(uint32_t task_id, zule_task_stats_t *stats) {
     bool found = false;
-    if ((size_t)task_id < zule_schedules_get()->task_count) {
+    if ((size_t)task_id < zule_schedule_definition_get()->tasks.count) {
         const zule_port_critical_state_t state = zule_port_critical_enter();
         *stats = *task_stats(task_id);
         zule_port_critical_exit(state);
@@ -105,7 +105,7 @@ void zule_task_stats_summary_get(zule_task_stats_summary_t *snapshot) {
 
 void zule_task_stats_reset(void) {
     zule_modules_task_data_t *const data = zule_modules_task_data_get();
-    const size_t task_count = zule_schedules_get()->task_count;
+    const size_t task_count = zule_schedule_definition_get()->tasks.count;
     const zule_port_critical_state_t state = zule_port_critical_enter();
     summary = (zule_task_stats_summary_t){0};
     for (size_t index = 0U; index < task_count; ++index) {

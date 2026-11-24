@@ -45,10 +45,10 @@ static const zule_window_t late_windows[] = {{&tasks[0], 2U, 1U}};
 static const zule_window_t single_window[] = {{&tasks[0], 0U, 1U}};
 
 static zule_schedule_t schedule;
-static zule_schedules_t schedules;
+static zule_schedule_definition_t definition;
 
-const zule_schedules_t *zule_schedules_get(void) {
-    return &schedules;
+const zule_schedule_definition_t *zule_schedule_definition_get(void) {
+    return &definition;
 }
 
 /* Use a single schedule. */
@@ -59,10 +59,9 @@ static void use_schedule(uint32_t slot_us, uint32_t cycle_slots, const zule_wind
         .windows = list,
         .window_count = window_count,
     };
-    schedules = (zule_schedules_t){
+    definition = (zule_schedule_definition_t){
         .slot_us = slot_us,
-        .tasks = tasks,
-        .task_count = sizeof(tasks) / sizeof(tasks[0]),
+        .tasks = {tasks, sizeof(tasks) / sizeof(tasks[0])},
         .schedules = &schedule,
         .schedule_count = 1U,
     };
@@ -78,7 +77,7 @@ static void start(void) {
     fault_calls = 0U;
     hook_calls = 0U;
     assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
-    assert(zule_port_tick_init(schedules.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
+    assert(zule_port_tick_init(definition.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
 }
 
 static void stop(void) {
@@ -149,8 +148,8 @@ static void test_init_limits(void) {
     use_default_schedule();
     zule_schedule_t long_cycles[] = {schedule, schedule};
     long_cycles[1].cycle_slots = 42949673U;
-    schedules.schedules = long_cycles;
-    schedules.schedule_count = 2U;
+    definition.schedules = long_cycles;
+    definition.schedule_count = 2U;
     check_init(ZULE_RESULT_INVALID_CONFIG, 1000000U);
     long_cycles[1].cycle_slots = 42949672U;
     check_init(ZULE_RESULT_OK, 1000000U);

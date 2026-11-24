@@ -2,29 +2,32 @@
 
 #include <stdbool.h>
 
-/* Return whether a window's task is an entry in the shared task array. */
-static bool window_task_declared(const zule_schedules_t *schedules, const zule_window_t *window) {
+/* Return whether a window's task is an entry in the task table. */
+static bool window_task_declared(const zule_task_table_t *tasks, const zule_window_t *window) {
     bool declared = false;
-    for (size_t index = 0U; (index < schedules->task_count) && !declared; ++index) {
-        declared = (window->task == &schedules->tasks[index]);
+    for (size_t index = 0U; (index < tasks->count) && !declared; ++index) {
+        declared = (window->task == &tasks->entries[index]);
     }
     return declared;
 }
 
-/* Each task's ID is its index in the task array, which also makes IDs unique. */
-static zule_result_t validate_tasks(const zule_schedules_t *schedules) {
+/* A nonempty table of callable tasks, each of whose ID is its index, which also
+ * makes IDs unique. */
+static zule_result_t validate_tasks(const zule_task_table_t *tasks) {
     zule_result_t result = ZULE_RESULT_OK;
-    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < schedules->task_count);
-         ++index) {
-        if ((schedules->tasks[index].function == NULL) ||
-            ((size_t)schedules->tasks[index].id != index)) {
+    if ((tasks->entries == NULL) || (tasks->count == 0U)) {
+        result = ZULE_RESULT_INVALID_SCHEDULE;
+    }
+    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < tasks->count); ++index) {
+        if ((tasks->entries[index].function == NULL) ||
+            ((size_t)tasks->entries[index].id != index)) {
             result = ZULE_RESULT_INVALID_SCHEDULE;
         }
     }
     return result;
 }
 
-static zule_result_t validate_schedule(const zule_schedules_t *schedules,
+static zule_result_t validate_schedule(const zule_task_table_t *tasks,
                                        const zule_schedule_t *schedule) {
     zule_result_t result = ZULE_RESULT_OK;
     if ((schedule->cycle_slots == 0U) || (schedule->windows == NULL) ||
@@ -36,7 +39,7 @@ static zule_result_t validate_schedule(const zule_schedules_t *schedules,
     for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < schedule->window_count);
          ++index) {
         const zule_window_t *window = &schedule->windows[index];
-        const bool declared = window_task_declared(schedules, window);
+        const bool declared = window_task_declared(tasks, window);
         /* The start is checked before the budget, so the subtraction cannot wrap,
          * and subtracting before adding means an overflowing end cannot pass. */
         if (!declared || (window->budget_slots == 0U) ||
@@ -51,19 +54,18 @@ static zule_result_t validate_schedule(const zule_schedules_t *schedules,
     return result;
 }
 
-zule_result_t zule_schedules_validate(const zule_schedules_t *schedules) {
+zule_result_t zule_schedule_definition_validate(const zule_schedule_definition_t *definition) {
     zule_result_t result = ZULE_RESULT_OK;
-    if ((schedules == NULL) || (schedules->slot_us == 0U) || (schedules->tasks == NULL) ||
-        (schedules->task_count == 0U) || (schedules->schedules == NULL) ||
-        (schedules->schedule_count == 0U)) {
+    if ((definition == NULL) || (definition->slot_us == 0U) || (definition->schedules == NULL) ||
+        (definition->schedule_count == 0U)) {
         result = ZULE_RESULT_INVALID_SCHEDULE;
     }
     if (result == ZULE_RESULT_OK) {
-        result = validate_tasks(schedules);
+        result = validate_tasks(&definition->tasks);
     }
-    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < schedules->schedule_count);
+    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < definition->schedule_count);
          ++index) {
-        result = validate_schedule(schedules, &schedules->schedules[index]);
+        result = validate_schedule(&definition->tasks, &definition->schedules[index]);
     }
     return result;
 }

@@ -53,12 +53,12 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     # Declaration order does not depend on JSON object key order.
     for name in task_names:
         lines.append(f"extern void zule_task_{name}(void);")
-    # The tables are used only by zule_schedules_get(), so they are defined
+    # The tables are used only by zule_schedule_definition_get(), so they are defined
     # inside it (MISRA C:2012 rule 8.9); as static const objects they keep static
     # storage. Every schedule shares the one task table.
     lines.extend([
         "",
-        "const zule_schedules_t *zule_schedules_get(void) {",
+        "const zule_schedule_definition_t *zule_schedule_definition_get(void) {",
         "    static const zule_task_t zule_tasks[] = {",
     ])
     for name in task_names:
@@ -101,15 +101,14 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     lines.extend([
         "    };",
         "",
-        "    static const zule_schedules_t zule_schedules = {",
+        "    static const zule_schedule_definition_t zule_schedule_definition = {",
         f"        .slot_us = {int(schedule['slot_us'])}U,",
-        "        .tasks = zule_tasks,",
-        "        .task_count = sizeof(zule_tasks) / sizeof(zule_tasks[0]),",
+        "        .tasks = {.entries = zule_tasks, .count = sizeof(zule_tasks) / sizeof(zule_tasks[0])},",
         "        .schedules = zule_schedule_table,",
         "        .schedule_count = sizeof(zule_schedule_table) / sizeof(zule_schedule_table[0]),",
         "    };",
         "",
-        "    return &zule_schedules;",
+        "    return &zule_schedule_definition;",
         "}",
         "",
         # Storage for modules that keep data for each task, sized by the task

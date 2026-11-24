@@ -11,8 +11,8 @@ static zule_tick_timing_t timing;
 static zule_tick_tracker_t tracker;
 static uint32_t tick_start_counts;
 
-zule_result_t zule_tick_timing_init(const zule_schedules_t *schedules) {
-    return zule_tick_tracker_init(&tracker, schedules->slot_us, zule_port_time_hz());
+zule_result_t zule_tick_timing_init(uint32_t slot_us) {
+    return zule_tick_tracker_init(&tracker, slot_us, zule_port_time_hz());
 }
 
 void zule_tick_timing_tick_start(uint32_t time_counts) {
