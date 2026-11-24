@@ -124,32 +124,35 @@ tools and configurations.
 - Stop and quiesce tick delivery before returning. Define allowed caller
   contexts, treatment of an executing task, and precedence between termination
   requests and faults.
-- Termination followed by `zule_configure()` and `zule_run()` is the initial way
-  to [switch schedules](#multiple-schedules).
+- Not needed for [switching schedules](#multiple-schedules), which keeps tick
+  delivery running.
 
 ## Multiple schedules
 
-- Allow an application to define several schedules, such as operating modes,
-  and select one per run. Keep the change in the JSON schema and generator; the
-  core still runs one validated schedule at a time.
-- Decide the JSON shape. A shared task set keeps task functions and IDs
-  consistent across schedules, and a single `slot_us` applies to all of them
-  (required for switching, below). Validate every schedule offline.
-- Select the initial schedule through `zule_configure()`, using a generated
-  schedule identifier, with a defined default.
-- Switch initially by [termination](#scheduler-termination-api), then
-  `zule_configure()` and `zule_run()`. This uses existing and planned APIs, but
-  restarts tick delivery, so each switch has the same first-cycle latency as
-  startup.
-- Fault information should identify the active schedule, since window indexes
-  are per schedule.
-- Add a switching API that keeps tick delivery running. A task requests the
-  next schedule from application context; tick context applies the request at
-  the next cycle boundary, so a switch takes effect within one cycle. At that
-  boundary, retire the old schedule's final window, then switch, then start the
-  new schedule's first window. Apply a switch only while no fault is latched.
-- Require a shared `slot_us`, so a switch never reprograms the port timer, and
-  validate every schedule at init, so tick context never validates.
+Defining [several schedules](configuration.md#several-schedules) and selecting
+the initial one through `zule_configure()` are done. The remaining steps, each
+its own change:
+
+- **Switching at run time.** Add an API for tasks to request the next schedule,
+  by schedule ID; the last request before the boundary wins. Tick context
+  applies it at the next cycle boundary, so a switch takes effect within one
+  cycle: it retires the old schedule's final window, switches, then starts the
+  new schedule's first window. Never switch while a fault is latched. All
+  schedules share `slot_us` and are validated at init, so a switch never
+  reprograms the port timer and tick context never validates.
+  - Add a schedule-switched hook, for modules and the application, and leave
+    the existing hooks unchanged, so single-schedule applications see no
+    difference.
+  - Add the active schedule ID to the fault information, since window indexes
+    are per schedule.
+  - In the [task statistics module](modules.md#task-statistics), keep a summary
+    per schedule (cycles, busy time, and the busiest cycle) in generated
+    per-schedule module storage, read with
+    `zule_task_stats_summary_get(schedule_id, &summary)`, which returns `false`
+    for an unknown ID. Per-task statistics stay as they are.
+- **An example, `modes`,** of the [startup delay pattern](#startup-delay-as-a-pattern):
+  a startup schedule, a mode-manager task, and a switch to the operational
+  schedule.
 
 ### Startup delay as a pattern
 
@@ -162,8 +165,6 @@ tools and configurations.
 - Until switching exists, leave the first slots of the schedule idle, as
   described in [scheduler initialisation](core.md#scheduler-initialisation).
   This absorbs startup latency at the cost of those slots in every cycle.
-- Cover the pattern with an example: a startup schedule, a mode-manager
-  task, and a switch to the operational schedule.
 - If switching is deferred indefinitely, reconsider a dedicated startup delay:
   a countdown of `n` slots in tick processing, without marking tasks pending,
   before the first cycle begins at slot zero.

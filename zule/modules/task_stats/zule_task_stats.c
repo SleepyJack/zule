@@ -31,6 +31,17 @@ typedef struct {
 
 static zule_task_stats_run_t run;
 
+/* The number of tasks, which every schedule shares, or 0 if there are no
+ * schedules. */
+static size_t task_count(void) {
+    const zule_schedule_set_t *set = zule_schedule_set_get();
+    size_t count = 0U;
+    if ((set != NULL) && (set->schedules != NULL) && (set->schedule_count != 0U)) {
+        count = set->schedules[0].task_count;
+    }
+    return count;
+}
+
 /* Return a task's statistics. Hooks pass valid IDs, and the API checks them. */
 static zule_task_stats_t *task_stats(uint32_t task_id) {
     return &zule_modules_task_data_get()[(size_t)task_id].task_stats;
@@ -88,7 +99,7 @@ void zule_task_stats_task_end(uint32_t time_counts, uint32_t task_id) {
 
 bool zule_task_stats_get(uint32_t task_id, zule_task_stats_t *stats) {
     bool found = false;
-    if ((size_t)task_id < zule_schedule_get()->task_count) {
+    if ((size_t)task_id < task_count()) {
         const zule_port_critical_state_t state = zule_port_critical_enter();
         *stats = *task_stats(task_id);
         zule_port_critical_exit(state);
@@ -105,10 +116,10 @@ void zule_task_stats_summary_get(zule_task_stats_summary_t *snapshot) {
 
 void zule_task_stats_reset(void) {
     zule_modules_task_data_t *const data = zule_modules_task_data_get();
-    const size_t task_count = zule_schedule_get()->task_count;
+    const size_t count = task_count();
     const zule_port_critical_state_t state = zule_port_critical_enter();
     summary = (zule_task_stats_summary_t){0};
-    for (size_t index = 0U; index < task_count; ++index) {
+    for (size_t index = 0U; index < count; ++index) {
         data[index].task_stats = (zule_task_stats_t){0};
     }
     zule_port_critical_exit(state);

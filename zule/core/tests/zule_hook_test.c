@@ -85,8 +85,10 @@ static const zule_schedule_t schedule = {
     .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
-const zule_schedule_t *zule_schedule_get(void) {
-    return &schedule;
+static const zule_schedule_set_t schedule_set = {.schedules = &schedule, .schedule_count = 1U};
+
+const zule_schedule_set_t *zule_schedule_set_get(void) {
+    return &schedule_set;
 }
 
 /* Check the recorded events against expectations. Every hook runs with the tick
@@ -106,7 +108,7 @@ static void check(const event_t *expected, size_t count) {
 static void start(void) {
     zule_test_port_reset();
     event_count = 0U;
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_OK);
     assert(zule_port_tick_init(schedule.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
 }
 

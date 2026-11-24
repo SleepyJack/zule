@@ -43,22 +43,52 @@ def validate_schedule(schedule: Any) -> list[ValidationIssue]:
         return issues
 
     tasks = schedule["tasks"]
+    issues.extend(_name_collisions(tasks, "tasks", "task"))
+    if "schedules" in schedule:
+        issues.extend(_name_collisions(schedule["schedules"], "schedules", "schedule"))
+    for _, cycle, base in schedule_cycles(schedule):
+        issues.extend(_check_cycle(cycle, base, tasks))
+    return issues
+
+
+def schedule_cycles(schedule: Any) -> list[tuple[str, Any, str]]:
+    """Return each schedule's name, cycle, and JSON Pointer, in name order.
+
+    A single cycle is the schedule named "main". The order is the order of the
+    generated schedule IDs, independent of JSON key order.
+    """
+    if "cycle" in schedule:
+        return [("main", schedule["cycle"], "/cycle")]
+    return [
+        (name, schedule["schedules"][name], _pointer(("schedules", name)))
+        for name in sorted(schedule["schedules"])
+    ]
+
+
+def _name_collisions(named: Any, key: str, kind: str) -> list[ValidationIssue]:
+    """Report names whose uppercase forms, used for generated constants, collide."""
+    issues = []
     enum_names = {}
-    for name in tasks:
+    for name in named:
         enum_name = name.upper()
         if enum_name in enum_names:
             issues.append(ValidationIssue(
-                _pointer(("tasks", name)),
-                f"task name collides with {enum_names[enum_name]!r} in generated enum constants",
+                _pointer((key, name)),
+                f"{kind} name collides with {enum_names[enum_name]!r} in generated enum constants",
             ))
         else:
             enum_names[enum_name] = name
-    cycle = schedule["cycle"]
+    return issues
+
+
+def _check_cycle(cycle: Any, base: str, tasks: Any) -> list[ValidationIssue]:
+    """Check one schedule's windows against its cycle and the shared tasks."""
+    issues = []
     previous_start = None
     occupied_until = 0
     occupied_by = None
     for index, window in enumerate(cycle["windows"]):
-        path = f"/cycle/windows/{index}"
+        path = f"{base}/windows/{index}"
         start = window["start_slot"]
         if previous_start is not None and start <= previous_start:
             issues.append(ValidationIssue(

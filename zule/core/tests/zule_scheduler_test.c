@@ -84,8 +84,12 @@ static const zule_schedule_t invalid_schedule = {
     .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
-const zule_schedule_t *zule_schedule_get(void) {
-    return schedule_definition;
+/* One schedule, or none while schedule_definition is null. */
+const zule_schedule_set_t *zule_schedule_set_get(void) {
+    static zule_schedule_set_t set;
+    set.schedules = schedule_definition;
+    set.schedule_count = (schedule_definition != NULL) ? 1U : 0U;
+    return &set;
 }
 
 int main(void) {
@@ -95,17 +99,17 @@ int main(void) {
     assert(first_calls == 0U && second_calls == 0U);
 
     schedule_definition = NULL;
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_scheduler_run() == ZULE_RESULT_NOT_INITIALIZED);
     assert(first_calls == 0U && second_calls == 0U);
     schedule_definition = &invalid_schedule;
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_scheduler_run() == ZULE_RESULT_NOT_INITIALIZED);
     schedule_definition = &schedule;
 
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(first_calls == 0U && second_calls == 0U);
     for (uint32_t cycle = 0U; cycle < 2U; ++cycle) {
@@ -118,7 +122,7 @@ int main(void) {
         }
     }
 
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
@@ -126,7 +130,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(first_calls == 2U && second_calls == 2U);
 
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_OK);
     simulate_overrun = true;
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_EXECUTION_OVERRUN);
@@ -136,24 +140,24 @@ int main(void) {
     assert(first_calls == 3U && second_calls == 2U);
 
     simulate_overrun = false;
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(first_calls == 4U && second_calls == 2U);
 
     /* A failed reinitialization must disable an already initialized scheduler. */
     schedule_definition = NULL;
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_scheduler_run() == ZULE_RESULT_NOT_INITIALIZED);
     assert(first_calls == 4U && second_calls == 2U);
     schedule_definition = &schedule;
-    assert(zule_scheduler_init(NULL) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(NULL, 0U) == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(!zule_test_port_is_critical());
 
     /* The tick that latches the fault must notify before main-loop polling. */
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
@@ -165,7 +169,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_DISPATCH_MISSED);
     assert(fault_calls == 1U);
 
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     simulate_overrun = true;
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_EXECUTION_OVERRUN);
@@ -177,7 +181,7 @@ int main(void) {
     assert(zule_scheduler_tick() == ZULE_RESULT_EXECUTION_OVERRUN);
     assert(fault_calls == 2U);
 
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
@@ -189,13 +193,13 @@ int main(void) {
     assert(last_fault.cycle_count == 0U);
 
     schedule_definition = NULL;
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_INVALID_SCHEDULE);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(zule_scheduler_tick() == ZULE_RESULT_NOT_INITIALIZED);
     assert(fault_calls == 3U);
 
     /* Idle slots still advance the cycle count; faulting ticks do not. */
     schedule_definition = &schedule;
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     for (uint32_t cycle = 0U; cycle < 3U; ++cycle) {
         for (uint32_t slot = 0U; slot < schedule.cycle_slots; ++slot) {
             assert(zule_scheduler_tick() == ZULE_RESULT_OK);
@@ -215,7 +219,7 @@ int main(void) {
 
     /* A fault detected at slot zero reports the new cycle. */
     schedule_definition = &boundary_schedule;
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     for (uint32_t cycle = 0U; cycle < 2U; ++cycle) {
         for (uint32_t slot = 0U; slot < boundary_schedule.cycle_slots; ++slot) {
             assert(zule_scheduler_tick() == ZULE_RESULT_OK);
@@ -234,7 +238,7 @@ int main(void) {
     assert(last_fault.task_id == 1U);
 
     /* Reinitialization resets the count, including for a boundary overrun. */
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
     assert(zule_scheduler_run() == ZULE_RESULT_OK);
     assert(zule_scheduler_tick() == ZULE_RESULT_OK);
@@ -252,7 +256,7 @@ int main(void) {
     schedule_definition = &schedule;
     zule_test_port_reset();
     zule_test_port_control.idle_limit = UINT32_MAX;
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     assert(zule_port_tick_init(schedule.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
     const uint32_t first_before = first_calls;
     assert(zule_scheduler_idle() == ZULE_RESULT_OK);

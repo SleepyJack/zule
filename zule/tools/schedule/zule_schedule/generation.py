@@ -5,11 +5,11 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from .validation import validate_schedule
+from .validation import schedule_cycles, validate_schedule
 
 
 def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
-    """Validate and write the schedule C and task-ID header, returning the C path.
+    """Validate and write the schedule C and the ID headers, returning the C path.
 
     Raise ValueError for invalid or unrepresentable schedules, or OSError for
     output failures. Invalid input leaves existing output untouched.
@@ -20,10 +20,15 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     tasks = schedule["tasks"]
     task_names = sorted(tasks)
-    windows = schedule["cycle"]["windows"]
-    values = [("/slot_us", schedule["slot_us"]), ("/cycle/slots", schedule["cycle"]["slots"])]
+    cycles = schedule_cycles(schedule)
+    values = [("/slot_us", schedule["slot_us"])]
     values.extend((f"/tasks/{name}/budget_slots", task["budget_slots"]) for name, task in tasks.items())
-    values.extend((f"/cycle/windows/{i}/start_slot", window["start_slot"]) for i, window in enumerate(windows))
+    for _, cycle, base in cycles:
+        values.append((f"{base}/slots", cycle["slots"]))
+        values.extend(
+            (f"{base}/windows/{i}/start_slot", window["start_slot"])
+            for i, window in enumerate(cycle["windows"])
+        )
     for path, value in values:
         if not 0 <= value <= 0xFFFFFFFF:
             raise ValueError(f"{path}: value does not fit uint32_t")
@@ -31,38 +36,29 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) is None:
             raise ValueError(f"/tasks: task name {name!r} cannot form a C function name")
 
-    header_lines = [
-        "/* Generated Zule task IDs. Do not edit. */",
-        "#ifndef ZULE_TASK_IDS_H",
-        "#define ZULE_TASK_IDS_H",
-        "",
-        "typedef enum {",
-    ]
-    for index, name in enumerate(task_names):
-        header_lines.append(f"    ZULE_TASK_ID_{name.upper()} = {index},")
-    header_lines.extend([
-        "} zule_task_id_t;",
-        "",
-        "#endif",
-        "",
-    ])
-    header = "\n".join(header_lines)
+    task_header = _id_header(
+        "task", "ZULE_TASK_IDS_H", "ZULE_TASK_ID", "zule_task_id_t", task_names)
+    schedule_header = _id_header(
+        "schedule", "ZULE_SCHEDULE_IDS_H", "ZULE_SCHEDULE_ID", "zule_schedule_id_t",
+        [name for name, _, _ in cycles])
 
     lines = [
         "/* Generated Zule schedule. Do not edit. */",
         '#include "zule_modules_task_data.h"',
         '#include "zule_schedule_definition.h"',
+        '#include "zule_schedule_ids.h"',
         '#include "zule_task_ids.h"',
         "",
     ]
     # Declaration order does not depend on JSON object key order.
     for name in task_names:
         lines.append(f"extern void zule_task_{name}(void);")
-    # The tables are used only by zule_schedule_get(), so they are defined inside it
-    # (MISRA C:2012 rule 8.9); as static const objects they keep static storage.
+    # The tables are used only by zule_schedule_set_get(), so they are defined
+    # inside it (MISRA C:2012 rule 8.9); as static const objects they keep static
+    # storage. Every schedule shares the one task table.
     lines.extend([
         "",
-        "const zule_schedule_t *zule_schedule_get(void) {",
+        "const zule_schedule_set_t *zule_schedule_set_get(void) {",
         "    static const zule_task_t zule_tasks[] = {",
     ])
     for name in task_names:
@@ -75,29 +71,45 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
             "#endif",
             "        },",
         ])
+    lines.append("    };")
+    for name, cycle, _ in cycles:
+        lines.extend([
+            "",
+            f"    static const zule_window_t zule_windows_{name}[] = {{",
+        ])
+        for window in cycle["windows"]:
+            task = window["task"]
+            start = int(window["start_slot"])
+            budget = int(tasks[task]["budget_slots"])
+            lines.append(f"        {{&zule_tasks[ZULE_TASK_ID_{task.upper()}], {start}U, {budget}U}},")
+        lines.append("    };")
+    # Schedules are indexed by ID; the array's size is explicit because its
+    # initializers are designated (MISRA C:2012 rule 9.5).
     lines.extend([
-        "    };",
         "",
-        "    static const zule_window_t zule_windows[] = {",
+        f"    static const zule_schedule_t zule_schedules[{len(cycles)}U] = {{",
     ])
-    for window in windows:
-        name = window["task"]
-        start = int(window["start_slot"])
-        budget = int(tasks[name]["budget_slots"])
-        lines.append(f"        {{&zule_tasks[ZULE_TASK_ID_{name.upper()}], {start}U, {budget}U}},")
+    for name, cycle, _ in cycles:
+        lines.extend([
+            f"        [ZULE_SCHEDULE_ID_{name.upper()}] =",
+            "            {",
+            f"                .slot_us = {int(schedule['slot_us'])}U,",
+            f"                .cycle_slots = {int(cycle['slots'])}U,",
+            f"                .windows = zule_windows_{name},",
+            f"                .window_count = sizeof(zule_windows_{name}) / sizeof(zule_windows_{name}[0]),",
+            "                .tasks = zule_tasks,",
+            "                .task_count = sizeof(zule_tasks) / sizeof(zule_tasks[0]),",
+            "            },",
+        ])
     lines.extend([
         "    };",
         "",
-        "    static const zule_schedule_t zule_schedule = {",
-        f"        .slot_us = {int(schedule['slot_us'])}U,",
-        f"        .cycle_slots = {int(schedule['cycle']['slots'])}U,",
-        "        .windows = zule_windows,",
-        "        .window_count = sizeof(zule_windows) / sizeof(zule_windows[0]),",
-        "        .tasks = zule_tasks,",
-        "        .task_count = sizeof(zule_tasks) / sizeof(zule_tasks[0]),",
+        "    static const zule_schedule_set_t zule_schedule_set = {",
+        "        .schedules = zule_schedules,",
+        "        .schedule_count = sizeof(zule_schedules) / sizeof(zule_schedules[0]),",
         "    };",
         "",
-        "    return &zule_schedule;",
+        "    return &zule_schedule_set;",
         "}",
         "",
         # Storage for modules that keep data for each task, sized by the task
@@ -117,7 +129,12 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     output = directory / "zule_schedule_definition.c"
     temporary_files = []
     try:
-        for path, contents in ((directory / "zule_task_ids.h", header), (output, source)):
+        outputs = (
+            (directory / "zule_task_ids.h", task_header),
+            (directory / "zule_schedule_ids.h", schedule_header),
+            (output, source),
+        )
+        for path, contents in outputs:
             with NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=directory, delete=False) as stream:
                 temporary = Path(stream.name)
                 temporary_files.append((temporary, path))
@@ -128,3 +145,23 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         for temporary, _ in temporary_files:
             temporary.unlink(missing_ok=True)
     return output
+
+
+def _id_header(kind: str, guard: str, prefix: str, type_name: str, names: list[str]) -> str:
+    """Return a header defining an ID constant for each name, numbered in order."""
+    lines = [
+        f"/* Generated Zule {kind} IDs. Do not edit. */",
+        f"#ifndef {guard}",
+        f"#define {guard}",
+        "",
+        "typedef enum {",
+    ]
+    for index, name in enumerate(names):
+        lines.append(f"    {prefix}_{name.upper()} = {index},")
+    lines.extend([
+        f"}} {type_name};",
+        "",
+        "#endif",
+        "",
+    ])
+    return "\n".join(lines)

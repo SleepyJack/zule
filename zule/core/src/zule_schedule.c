@@ -46,3 +46,23 @@ zule_result_t zule_schedule_validate(const zule_schedule_t *schedule) {
     }
     return result;
 }
+
+zule_result_t zule_schedule_set_validate(const zule_schedule_set_t *set) {
+    zule_result_t result = ZULE_RESULT_OK;
+    if ((set == NULL) || (set->schedules == NULL) || (set->schedule_count == 0U)) {
+        result = ZULE_RESULT_INVALID_SCHEDULE;
+    }
+    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < set->schedule_count); ++index) {
+        const zule_schedule_t *schedule = &set->schedules[index];
+        result = zule_schedule_validate(schedule);
+        /* A switch never reprograms the tick, and task IDs mean the same task in
+         * every schedule. */
+        if ((result == ZULE_RESULT_OK) &&
+            ((schedule->slot_us != set->schedules[0].slot_us) ||
+             (schedule->tasks != set->schedules[0].tasks) ||
+             (schedule->task_count != set->schedules[0].task_count))) {
+            result = ZULE_RESULT_INVALID_SCHEDULE;
+        }
+    }
+    return result;
+}

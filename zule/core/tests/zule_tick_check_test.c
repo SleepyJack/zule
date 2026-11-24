@@ -46,8 +46,12 @@ static const zule_window_t single_window[] = {{&tasks[0], 0U, 1U}};
 
 static zule_schedule_t schedule;
 
-const zule_schedule_t *zule_schedule_get(void) {
-    return &schedule;
+static const zule_schedule_set_t schedule_set = {.schedules = &schedule, .schedule_count = 1U};
+/* A set of several schedules, when a test sets one. */
+static const zule_schedule_set_t *several;
+
+const zule_schedule_set_t *zule_schedule_set_get(void) {
+    return (several != NULL) ? several : &schedule_set;
 }
 
 static void use_schedule(uint32_t slot_us, uint32_t cycle_slots, const zule_window_t *list,
@@ -71,7 +75,7 @@ static void start(void) {
     zule_test_port_control.time_step = 0U;
     fault_calls = 0U;
     hook_calls = 0U;
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     assert(zule_port_tick_init(schedule.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
 }
 
@@ -104,7 +108,7 @@ static void check_fault(int32_t deviation_counts, uint32_t slot, uint32_t cycle_
 static void check_init(zule_result_t expected, uint32_t time_hz) {
     zule_test_port_reset();
     zule_test_port_control.time_hz = time_hz;
-    assert(zule_scheduler_init(NULL) == expected);
+    assert(zule_scheduler_init(NULL, 0U) == expected);
 }
 
 static void test_init_limits(void) {
@@ -137,6 +141,18 @@ static void test_init_limits(void) {
     check_init(ZULE_RESULT_INVALID_CONFIG, 1000000U);
     use_schedule(1073741823U, 4U, windows, sizeof(windows) / sizeof(windows[0]));
     check_init(ZULE_RESULT_OK, 1000000U);
+
+    /* The limit applies to every schedule, not only the one that starts, since a
+     * run may switch to any. At 1 MHz, 42949673 slots of 100 us reach 2^32 counts. */
+    use_default_schedule();
+    zule_schedule_t long_cycles[] = {schedule, schedule};
+    long_cycles[1].cycle_slots = 42949673U;
+    const zule_schedule_set_t long_set = {long_cycles, 2U};
+    several = &long_set;
+    check_init(ZULE_RESULT_INVALID_CONFIG, 1000000U);
+    long_cycles[1].cycle_slots = 42949672U;
+    check_init(ZULE_RESULT_OK, 1000000U);
+    several = NULL;
 
     /* zule_run() reports the failure before starting ticks. */
     use_default_schedule();

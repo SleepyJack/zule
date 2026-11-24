@@ -53,8 +53,10 @@ static const zule_schedule_t schedule = {
     .task_count = sizeof(tasks) / sizeof(tasks[0]),
 };
 
-const zule_schedule_t *zule_schedule_get(void) {
-    return &schedule;
+static const zule_schedule_set_t schedule_set = {.schedules = &schedule, .schedule_count = 1U};
+
+const zule_schedule_set_t *zule_schedule_set_get(void) {
+    return &schedule_set;
 }
 
 /* What the generated schedule defines: one entry per task. */
@@ -68,7 +70,7 @@ static void start(void) {
     zule_test_port_control.time_step = 0U;
     fault_calls = 0U;
     task_overruns = false;
-    assert(zule_scheduler_init(handle_fault) == ZULE_RESULT_OK);
+    assert(zule_scheduler_init(handle_fault, 0U) == ZULE_RESULT_OK);
     assert(zule_port_tick_init(schedule.slot_us, zule_scheduler_tick) == ZULE_PORT_RESULT_OK);
 }
 

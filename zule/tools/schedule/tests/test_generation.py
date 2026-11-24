@@ -43,6 +43,7 @@ class GenerationTests(unittest.TestCase):
             harness.write_text('''#include <assert.h>
 #include "zule_task_ids.h"
 #include "zule_task_ids.h"
+#include "zule_schedule_ids.h"
 #include "zule_modules_task_data.h"
 #include "zule_schedule_definition.h"
 #include "zule_task_stats.h"
@@ -52,9 +53,14 @@ void zule_task_sense(void) { called = 1; }
 void zule_task_control(void) { called = 2; }
 void zule_task_output(void) { called = 3; }
 int main(void) {
-    const zule_schedule_t *schedule = zule_schedule_get();
+    /* A single cycle is the one schedule, main, with ID 0. */
+    const zule_schedule_set_t *set = zule_schedule_set_get();
+    assert(set == zule_schedule_set_get());
+    assert(set->schedule_count == 1U);
+    assert(ZULE_SCHEDULE_ID_MAIN == 0);
+    assert(zule_schedule_set_validate(set) == ZULE_RESULT_OK);
+    const zule_schedule_t *schedule = &set->schedules[ZULE_SCHEDULE_ID_MAIN];
     assert(schedule->slot_us == 100U);
-    assert(schedule == zule_schedule_get());
     assert(schedule->cycle_slots == 10U);
     assert(schedule->window_count == 3U);
     assert(schedule->task_count == 3U);
@@ -161,16 +167,56 @@ int main(void) {
                 harness.write_text('''#include <assert.h>
 #include <string.h>
 #include "zule_task_ids.h"
+#include "zule_schedule_ids.h"
 #include "zule_schedule_definition.h"
 void zule_task_sense(void) {}
 void zule_task_control(void) {}
 int main(void) {
-    const zule_schedule_t *schedule = zule_schedule_get();
+    const zule_schedule_t *schedule = &zule_schedule_set_get()->schedules[ZULE_SCHEDULE_ID_MAIN];
     assert(zule_schedule_validate(schedule) == ZULE_RESULT_OK);
 ''' + "\n".join(checks) + "\n    return 0;\n}\n")
                 executable = Path(directory) / "test"
                 subprocess.run([*compile_command(compiler, harness, output, executable), "-DZULE_CONFIG_TASK_NAMES=1"], check=True, capture_output=True, text=True)
                 subprocess.run([str(executable)], check=True, capture_output=True, text=True)
+
+    def test_several_schedules(self):
+        """Named schedules share the task table and slot length, and take IDs in name order."""
+        compiler = shutil.which("cc")
+        if compiler is None:
+            self.skipTest("C compiler is required for generated-code integration test")
+        schedule = load_schedule(FIXTURES / "valid/modes.json")
+        with tempfile.TemporaryDirectory() as directory:
+            output = generate_schedule(schedule, directory)
+            header = (Path(directory) / "zule_schedule_ids.h").read_text()
+            self.assertIn("ZULE_SCHEDULE_ID_OPERATIONAL = 0,", header)
+            self.assertIn("ZULE_SCHEDULE_ID_STARTUP = 1,", header)
+            harness = Path(directory) / "test.c"
+            harness.write_text('''#include <assert.h>
+#include "zule_task_ids.h"
+#include "zule_schedule_ids.h"
+#include "zule_schedule_definition.h"
+void zule_task_sense(void) {}
+void zule_task_control(void) {}
+void zule_task_mode_manager(void) {}
+int main(void) {
+    const zule_schedule_set_t *set = zule_schedule_set_get();
+    assert(set->schedule_count == 2U);
+    assert(zule_schedule_set_validate(set) == ZULE_RESULT_OK);
+    const zule_schedule_t *operational = &set->schedules[ZULE_SCHEDULE_ID_OPERATIONAL];
+    const zule_schedule_t *startup = &set->schedules[ZULE_SCHEDULE_ID_STARTUP];
+    assert(operational->cycle_slots == 10U && operational->window_count == 3U);
+    assert(startup->cycle_slots == 5U && startup->window_count == 1U);
+    assert(startup->slot_us == 1000U && operational->slot_us == 1000U);
+    assert(startup->tasks == operational->tasks && startup->task_count == 3U);
+    assert(startup->windows[0].task->id == ZULE_TASK_ID_MODE_MANAGER);
+    assert(startup->windows[0].start_slot == 4U && startup->windows[0].budget_slots == 1U);
+    assert(operational->windows[2].task->id == ZULE_TASK_ID_MODE_MANAGER);
+    return 0;
+}
+''')
+            executable = Path(directory) / "test"
+            subprocess.run(compile_command(compiler, harness, output, executable), check=True, capture_output=True, text=True)
+            subprocess.run([str(executable)], check=True, capture_output=True, text=True)
 
     def test_invalid_input_preserves_existing_output(self):
         for name, message in (("invalid/overlap.json", "overlaps"), ("valid/large-slot.json", "uint32_t"), ("invalid/task-name-collision.json", "collides")):

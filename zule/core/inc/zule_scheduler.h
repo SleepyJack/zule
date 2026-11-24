@@ -3,12 +3,14 @@
 
 #include "zule.h"
 
-/* Internal API. Init requires quiescent tick delivery and no executing task.
- * Returns INVALID_SCHEDULE for a schedule that fails validation, and
- * INVALID_CONFIG when the timebase cannot represent what enabled hooks or the tick
- * check measure, or an enabled module's initialization fails. Any failure leaves tick and run
- * disabled. Capture the supplied handler for this run; NULL disables notification. */
-zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault);
+/* Internal API. Init requires quiescent tick delivery and no executing task. It
+ * validates every schedule and starts the one with ID schedule_id. Returns
+ * INVALID_SCHEDULE for a schedule set that fails validation, and INVALID_CONFIG
+ * for a schedule ID outside the set, when the timebase cannot represent what
+ * enabled hooks or the tick check measure in any schedule, or when an enabled
+ * module's initialization fails. Any failure leaves tick and run disabled.
+ * Capture the supplied handler for this run; NULL disables notification. */
+zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault, uint32_t schedule_id);
 
 /* Advance one logical slot from a non-reentrant ISR or an excluded native
  * callback. Faulted calls still retire completed work without advancing time. */

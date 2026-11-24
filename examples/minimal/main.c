@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "zule.h"
+#include "zule_schedule_ids.h"
 
 /* The smallest complete Zule application: two tasks, a fault handler, and
  * zule_run(). It uses no optional features and no output, so it runs on every
@@ -30,7 +31,10 @@ static void handle_fault(const zule_fault_info_t *fault) {
 }
 
 int main(void) {
-    const zule_config_t config = {.on_fault = handle_fault};
+    const zule_config_t config = {
+        .on_fault = handle_fault,
+        .schedule_id = ZULE_SCHEDULE_ID_MAIN,
+    };
     zule_result_t result = zule_configure(&config);
     if (result == ZULE_RESULT_OK) {
         /* Returns only on a fault or port error. */

@@ -3,9 +3,9 @@
 
 #include "zule_schedule.h"
 
-/* Generated configuration must remain alive and immutable throughout use.
- * It must have a nonzero slot period and cycle/window counts, non-null windows and task pointers,
- * and ordered, nonoverlapping windows contained within the cycle. */
-const zule_schedule_t *zule_schedule_get(void);
+/* Implemented by the generated schedule: return the application's schedules,
+ * indexed by schedule ID. They must remain alive and immutable throughout use.
+ * The core checks them with zule_schedule_set_validate() before running any. */
+const zule_schedule_set_t *zule_schedule_set_get(void);
 
 #endif

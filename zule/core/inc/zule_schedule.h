@@ -31,6 +31,14 @@ typedef struct {
     size_t task_count;
 } zule_schedule_t;
 
+/* An application's schedules, indexed by schedule ID, as the generated
+ * zule_schedule_ids.h numbers them. Every schedule shares one slot length and one
+ * task table, so tasks and task IDs mean the same in each. */
+typedef struct {
+    const zule_schedule_t *schedules;
+    size_t schedule_count;
+} zule_schedule_set_t;
+
 /* Return OK for a nonempty schedule with nonzero slot period and cycle length, callable tasks
  * whose IDs equal their task array index, windows referencing entries in the task array,
  * positive budgets, and ordered, nonoverlapping windows within the cycle.
@@ -40,5 +48,11 @@ typedef struct {
  * Validation cannot establish storage validity or task execution-time bounds.
  * The configuration must remain unchanged during validation and subsequent use. */
 zule_result_t zule_schedule_validate(const zule_schedule_t *schedule);
+
+/* Return OK for a set of at least one schedule, each of which passes
+ * zule_schedule_validate(), that all share the first schedule's slot length and
+ * task table. Otherwise, including for a null set or schedules array, return
+ * INVALID_SCHEDULE. */
+zule_result_t zule_schedule_set_validate(const zule_schedule_set_t *set);
 
 #endif

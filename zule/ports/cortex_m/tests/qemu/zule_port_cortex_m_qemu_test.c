@@ -11,6 +11,7 @@
 
 #include "zule.h"
 #include "zule_port.h"
+#include "zule_schedule_ids.h"
 #include "zule_task_ids.h"
 
 #if ZULE_CONFIG_MODULE_TASK_STATS
@@ -313,7 +314,10 @@ void zule_user_hook_task_end(uint32_t time_counts, uint32_t task_id, size_t wind
 #endif
 
 static void test_scheduler(void) {
-    const zule_config_t config = {.on_fault = handle_fault};
+    const zule_config_t config = {
+        .on_fault = handle_fault,
+        .schedule_id = ZULE_SCHEDULE_ID_MAIN,
+    };
     check(zule_configure(&config) == ZULE_RESULT_OK, "configure");
     const zule_result_t result = zule_run();
     check(result == ZULE_RESULT_EXECUTION_OVERRUN, "zule_run() returns the overrun");
