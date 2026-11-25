@@ -228,10 +228,16 @@ int main(void) {
     assert(last_fault.cycle_count == 4U);
 
     /* A run starts with its configured schedule and no request pending. */
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+    const uint32_t switches_before_runs = switch_calls;
+#endif
     start(1U);
     assert(zule_scheduler_schedule_request(0U) == ZULE_RESULT_OK);
     start(1U);
     steps(6U);
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+    assert(switch_calls == switches_before_runs);
+#endif
     const uint32_t configured[] = {2U, 2U};
     check_ran(configured, 2U);
     assert(fault_calls == 0U);

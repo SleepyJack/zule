@@ -52,12 +52,11 @@ enters the application dispatch loop. The first tick processes slot zero.
 
 If the first tick occurs before timer initialization returns, the first task
 can become pending before the application loop is ready to dispatch it.
-Startup overhead then consumes part of the first window's budget. Leaving
-initial slots idle allows time for initialization. With
-[multiple schedules](configuration.md#multiple-schedules), a startup schedule
-can hold the idle slots instead, followed by a task that
-[switches](#schedule-switching) to the operational schedule, so they are not
-repeated in every cycle.
+Startup overhead then consumes part of the first window's budget. With
+[multiple schedules](configuration.md#multiple-schedules), a startup schedule of
+idle slots, followed by a task that [switches](#schedule-switching) to the
+operational schedule, absorbs this latency without costing slots in every
+cycle.
 
 ![Startup timing when the first tick arrives before timer initialization returns.](images/initialisation.svg)
 

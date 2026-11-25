@@ -66,8 +66,8 @@ completion does not advance the schedule.
 
 Budgets are wall-clock reservations. They must cover the task's execution time
 plus scheduler overhead and interrupt interference; see
-[deadline monitoring](core.md#task-deadline-monitoring). Leaving the first slots
-idle allows time for [startup](core.md#scheduler-initialisation).
+[deadline monitoring](core.md#task-deadline-monitoring), and
+[startup](core.md#scheduler-initialisation) for the first window.
 
 Generation additionally requires every timing value to fit `uint32_t`.
 

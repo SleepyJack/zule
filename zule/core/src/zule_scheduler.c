@@ -196,20 +196,21 @@ static void start_tick(void) {
 }
 
 /* At the start of a cycle, once the previous schedule's final window has been
- * retired, apply a requested switch, so the new schedule's first window can be
- * released in the same tick. Every window lies within its cycle, so no task is
- * pending or running here, and the active window is the first. A request for the
- * active schedule cancels a switch without one taking place. */
-static void apply_switch_request(void) {
+ * retired, apply a requested switch and return the new active window, the new
+ * schedule's first, so it can be released in the same tick. Every window lies
+ * within its cycle, so no task is pending or running here. Without a request,
+ * return the active window unchanged. */
+static const zule_window_t *apply_switch_request(const zule_window_t *active_window) {
+    const zule_window_t *window = active_window;
     if (scheduler.switch_requested) {
         scheduler.switch_requested = false;
-        if (scheduler.requested_schedule_id != scheduler.schedule_id) {
-            scheduler.schedule_id = scheduler.requested_schedule_id;
-            scheduler.schedule = &scheduler.schedules->entries[scheduler.schedule_id];
-            scheduler.active_window_ind = 0U;
-            zule_hook_tick_schedule_switch(scheduler.schedule_id);
-        }
+        scheduler.schedule_id = scheduler.requested_schedule_id;
+        scheduler.schedule = &scheduler.schedules->entries[scheduler.schedule_id];
+        scheduler.active_window_ind = 0U;
+        window = &scheduler.schedule->windows[0U];
+        zule_hook_tick_schedule_switch(scheduler.schedule_id);
     }
+    return window;
 }
 
 /* Process one tick of an initialized scheduler. */
@@ -249,8 +250,7 @@ static void process_tick(void) {
 
     // Switch schedules only at a cycle start and while no fault is latched
     if ((scheduler.slot == 0U) && (scheduler.exec.fault == ZULE_RESULT_OK)) {
-        apply_switch_request();
-        active_window = &scheduler.schedule->windows[scheduler.active_window_ind];
+        active_window = apply_switch_request(active_window);
     }
 
     // Prevent new task dispatch in case of active faults
@@ -324,8 +324,11 @@ zule_result_t zule_scheduler_schedule_request(uint32_t schedule_id) {
     if (scheduler.initialized) {
         if ((size_t)schedule_id < scheduler.schedules->count) {
             const zule_port_critical_state_t critical_state = zule_port_critical_enter();
+            /* A request for the active schedule cancels any pending switch, so
+             * the tick only sees real switches. Only the tick changes the active
+             * schedule, and it cannot run inside the critical section. */
             scheduler.requested_schedule_id = schedule_id;
-            scheduler.switch_requested = true;
+            scheduler.switch_requested = (schedule_id != scheduler.schedule_id);
             zule_port_critical_exit(critical_state);
             result = ZULE_RESULT_OK;
         } else {
