@@ -1,7 +1,7 @@
 #ifndef ZULE_H
 #define ZULE_H
 
-#include "zule_config.h"
+#include "zule_config_apply.h"
 #include "zule_hooks.h"
 
 #include <stddef.h>

@@ -8,7 +8,7 @@
  * schedules.
  *
  * Each entry combines what every enabled module keeps for a task. It exists
- * only when ZULE_MODULES_TASK_DATA, derived in zule_modules_config.h. A module
+ * only when ZULE_MODULES_TASK_DATA, derived in zule_modules_config_apply.h. A module
  * that keeps per-task data adds a member here, and its setting to
  * ZULE_MODULES_TASK_DATA. */
 #include "zule.h"

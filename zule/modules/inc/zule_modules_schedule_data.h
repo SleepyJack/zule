@@ -7,7 +7,7 @@
  * entry per schedule; the modules own its contents.
  *
  * Each entry combines what every enabled module keeps for a schedule. It exists
- * only when ZULE_MODULES_SCHEDULE_DATA, derived in zule_modules_config.h. A
+ * only when ZULE_MODULES_SCHEDULE_DATA, derived in zule_modules_config_apply.h. A
  * module that keeps per-schedule data adds a member here, and its setting to
  * ZULE_MODULES_SCHEDULE_DATA. */
 #include "zule.h"

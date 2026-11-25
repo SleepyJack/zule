@@ -143,11 +143,13 @@ do: the core defines the interface, and modules implement it.
   each hook, `zule_modules_<hook>()`. Only the Zule library, which also builds
   the modules, can include it; applications see only the user hooks in
   `zule_hooks.h`.
-- [`zule_modules_config.h`](../zule/modules/api/zule_modules_config.h) holds the
-  module settings and derives the conditions the core reads:
+- [`zule_modules_config_defaults.h`](../zule/modules/api/zule_modules_config_defaults.h)
+  holds the module settings, and
+  [`zule_modules_config_apply.h`](../zule/modules/api/zule_modules_config_apply.h)
+  checks them and derives the conditions the core reads:
   `ZULE_MODULES_ANY`, which is `1` when any module is enabled, and for each hook,
   `ZULE_MODULES_HOOK_<HOOK>`, which is `1` when any enabled module consumes it.
-  `zule_config.h` includes it, so the conditions are ordinary settings: the core
+  `zule_config_apply.h` includes it, so the conditions are ordinary settings: the core
   reads them, but never names a module.
 - `zule_modules.c` defines the entry points, each calling the enabled modules in
   a fixed order.
@@ -199,8 +201,9 @@ A module consists of:
   header declaring the handlers that `zule_modules.c` calls;
 - a public header in `zule/modules/api/` for its read API, declared only when the
   module is enabled;
-- a `ZULE_CONFIG_MODULE_<NAME>` setting in `zule_modules_config.h`, defaulting
-  to `0`, added to `ZULE_MODULES_ANY` and to the `ZULE_MODULES_HOOK_<HOOK>`
+- a `ZULE_CONFIG_MODULE_<NAME>` setting, defaulting to `0` in
+  `zule_modules_config_defaults.h`, checked in `zule_modules_config_apply.h`,
+  and added there to `ZULE_MODULES_ANY` and to the `ZULE_MODULES_HOOK_<HOOK>`
   condition of each hook it consumes;
 - calls from `zule_modules_init()` and from each consumed hook's entry point in
   `zule_modules.c`;
