@@ -9,7 +9,7 @@ core.
 | Module | Setting | Reports |
 | --- | --- | --- |
 | [Tick timing](#tick-timing) | `ZULE_CONFIG_MODULE_TICK_TIMING` | Worst tick deviations and the longest tick handler. |
-| [Task statistics](#task-statistics) | `ZULE_CONFIG_MODULE_TASK_STATS` | Execution times and dispatch latency for each task, and totals over all tasks. |
+| [Task statistics](#task-statistics) | `ZULE_CONFIG_MODULE_TASK_STATS` | Execution times and dispatch latency for each task, and totals for each schedule. |
 
 ## Using modules
 
@@ -69,7 +69,7 @@ The showcase example enables the module and prints its results every ten cycles.
 ## Task statistics
 
 Measures how long each task runs and how long it waits to start, and totals
-over all tasks, so [budgets](configuration.md#schedule) can be chosen and
+for each schedule, so [budgets](configuration.md#schedule) can be chosen and
 checked from measurements.
 
 ```c
@@ -81,13 +81,21 @@ if (zule_task_stats_get(ZULE_TASK_ID_CONTROL, &stats)) {
 }
 
 zule_task_stats_summary_t summary;
-zule_task_stats_summary_get(&summary);
+if (zule_task_stats_summary_get(ZULE_SCHEDULE_ID_MAIN, &summary)) {
+    /* summary holds the totals while the main schedule was active. */
+}
 ```
 
 `zule_task_stats_get()` copies one task's statistics, and returns `false`,
 leaving its output unchanged, for an ID that is not one of the schedule's. Since
 task IDs run from zero, an application can read every task by counting up until
 it returns `false`.
+
+`zule_task_stats_summary_get()` likewise copies one schedule's totals, over all
+tasks while that schedule was active, and returns `false` for an ID that is not
+one of the application's schedules. Each schedule has its own totals, since
+schedules can differ widely in how busy they are. Task statistics cover every
+schedule.
 
 | `zule_task_stats_t` member | Meaning |
 | --- | --- |
@@ -99,8 +107,8 @@ it returns `false`.
 
 | `zule_task_stats_summary_t` member | Meaning |
 | --- | --- |
-| `cycles` | Cycles completed since the last reset. A cycle completes when the next one starts, so after a fault the current cycle never completes. |
-| `busy_counts` | Total execution time of all tasks. |
+| `cycles` | Cycles of the schedule completed since the last reset. A cycle completes when the next one starts, in the same schedule or after a [switch](application.md#switching-schedules), so after a fault the current cycle never completes. |
+| `busy_counts` | Total execution time of all tasks. An execution counts toward the schedule active when it ends. |
 | `max_cycle_busy_counts` | Most execution time in any completed cycle. An execution counts toward the cycle in which it ends. |
 
 An execution runs from the `task_start` hook event to the `task_end` event: the
@@ -111,15 +119,16 @@ are 64-bit, so they do not wrap in practice: even at the fastest timebase,
 2^32 - 1 Hz, they last over 100 years. Readers can measure over any interval by
 subtracting two snapshots.
 
-`zule_task_stats_reset()` clears every task's statistics and the totals
-together, so they always cover the same interval; the cycle in progress is still
+`zule_task_stats_reset()` clears every task's statistics and every schedule's
+totals together, so they always cover the same interval; the cycle in progress is still
 measured in full. Results accumulate across runs, but a run that stops
 mid-cycle does not complete that cycle.
 
-Each task's statistics are kept in [per-task storage](#per-task-storage) that the
+Each task's statistics and each schedule's totals are kept in
+[per-task and per-schedule storage](#per-task-and-per-schedule-storage) that the
 generated schedule defines, so the module needs no setting for the number of
-tasks. Its reset clears every task inside one critical section, so its duration
-grows with the number of tasks.
+tasks or schedules. Its reset clears every task and schedule inside one
+critical section, so its duration grows with their number.
 
 The showcase example enables the module and prints each task's mean and longest execution
 time and worst dispatch latency, and the busiest cycle, every ten cycles.
@@ -142,11 +151,14 @@ do: the core defines the interface, and modules implement it.
   reads them, but never names a module.
 - `zule_modules.c` defines the entry points, each calling the enabled modules in
   a fixed order.
-- [`zule_modules_task_data.h`](../zule/modules/inc/zule_modules_task_data.h), an
-  internal modules header, defines the [per-task storage](#per-task-storage).
+- [`zule_modules_task_data.h`](../zule/modules/inc/zule_modules_task_data.h) and
+  [`zule_modules_schedule_data.h`](../zule/modules/inc/zule_modules_schedule_data.h),
+  internal modules headers, define the
+  [per-task and per-schedule storage](#per-task-and-per-schedule-storage).
 
-The core calls `zule_modules_init()` on each run, after its own checks, and the
-first module failure stops the run. The core calls each hook point through an
+The core calls `zule_modules_init()` on each run, after its own checks, with the
+ID of the schedule the run starts with, and the first module failure stops the
+run. The core calls each hook point through an
 inline wrapper that reads the timebase once and then calls the module entry
 point and the user hook. A hook that neither consumes compiles to nothing,
 including the time read. Adding a module changes only the modules layer and its
@@ -158,22 +170,26 @@ and the core's internal helpers without a circular dependency between libraries.
 share a helper's code with the core, such as the tick tracker the tick timing
 check also uses, but owns its own state.
 
-### Per-task storage
+### Per-task and per-schedule storage
 
-A module that keeps data for each task, such as task statistics, does not size
-its own storage. Instead, the generated schedule defines it, with one entry per
-task, so the number of tasks is set only by the schedule JSON:
+A module that keeps data for each task or each schedule, such as task
+statistics, does not size its own storage. Instead, the generated schedule
+defines it, with one entry per task or per schedule, so their numbers are set
+only by the schedule JSON:
 
 - `zule_modules_task_data_t` combines what every enabled module keeps for one
-  task, with a member for each.
-- `ZULE_MODULES_TASK_DATA` is `1` when any enabled module keeps per-task data.
-- When it is, the generated schedule defines `zule_modules_task_data_get()`,
-  which returns a static, zero-initialized array of entries, indexed by task ID.
+  task, with a member for each, and `zule_modules_schedule_data_t` likewise for
+  one schedule.
+- `ZULE_MODULES_TASK_DATA` is `1` when any enabled module keeps per-task data,
+  and `ZULE_MODULES_SCHEDULE_DATA` when any keeps per-schedule data.
+- When they are, the generated schedule defines `zule_modules_task_data_get()`
+  and `zule_modules_schedule_data_get()`, which return static, zero-initialized
+  arrays of entries, indexed by task ID and schedule ID.
 
 This is the same arrangement as the schedule itself: Zule declares the
 interface, and the generated schedule implements it. The generated code only
 reserves the storage; the modules own and update its contents. With
-per-task storage, the generated schedule also uses RAM, not just constant tables.
+this storage, the generated schedule also uses RAM, not just constant tables.
 
 ## Adding a module
 
@@ -190,9 +206,10 @@ A module consists of:
   `zule_modules.c`;
 - its sources listed in [`zule/zule_sources.txt`](../zule/zule_sources.txt), the
   single list of Zule's sources;
-- for data kept for each task, a member in `zule_modules_task_data_t`, and its
-  setting added to `ZULE_MODULES_TASK_DATA`; see
-  [per-task storage](#per-task-storage);
+- for data kept for each task or schedule, a member in
+  `zule_modules_task_data_t` or `zule_modules_schedule_data_t`, and its setting
+  added to `ZULE_MODULES_TASK_DATA` or `ZULE_MODULES_SCHEDULE_DATA`; see
+  [per-task and per-schedule storage](#per-task-and-per-schedule-storage);
 - compile-time checks for any further features it requires;
 - tests, using the core test port's scripted timebase.
 
@@ -200,4 +217,4 @@ Module handlers follow the hook rules: bounded and nonblocking, no calls to
 Zule or port functions, and safe in the context of each hook they consume. Its
 init may validate and prepare, but keeps accumulated results unless the module
 documents otherwise. Per-task data is indexed by task ID, which equals the
-task's index in the task table.
+task's index in the task table, and per-schedule data by schedule ID.

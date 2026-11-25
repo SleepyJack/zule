@@ -12,10 +12,13 @@
 /* Initialize each enabled module, returning the first failure. Modules whose
  * init cannot fail come first. Of the others, the first one's result is assigned
  * directly, and each later one runs only if the result so far is OK. */
-zule_result_t zule_modules_init(const zule_schedule_definition_t *definition) {
+zule_result_t zule_modules_init(const zule_schedule_definition_t *definition,
+                                uint32_t schedule_id) {
     zule_result_t result = ZULE_RESULT_OK;
 #if ZULE_CONFIG_MODULE_TASK_STATS
-    zule_task_stats_init();
+    zule_task_stats_init(schedule_id);
+#else
+    (void)schedule_id;
 #endif
 #if ZULE_CONFIG_MODULE_TICK_TIMING
     result = zule_tick_timing_init(definition->slot_us);
@@ -56,6 +59,15 @@ void zule_modules_tick_task_release(uint32_t time_counts, uint32_t task_id, size
     (void)window_index;
 #if ZULE_CONFIG_MODULE_TASK_STATS
     zule_task_stats_tick_task_release(time_counts);
+#endif
+}
+#endif
+
+#if ZULE_MODULES_HOOK_TICK_SCHEDULE_SWITCH
+void zule_modules_tick_schedule_switch(uint32_t time_counts, uint32_t schedule_id) {
+    (void)time_counts;
+#if ZULE_CONFIG_MODULE_TASK_STATS
+    zule_task_stats_tick_schedule_switch(schedule_id);
 #endif
 }
 #endif

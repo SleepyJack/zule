@@ -293,6 +293,15 @@ void zule_user_hook_tick_task_release(uint32_t time_counts, uint32_t task_id, si
 }
 #endif
 
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+static uint32_t hook_schedule_switches;
+void zule_user_hook_tick_schedule_switch(uint32_t time_counts, uint32_t schedule_id) {
+    (void)time_counts;
+    (void)schedule_id;
+    ++hook_schedule_switches;
+}
+#endif
+
 #if ZULE_CONFIG_USER_HOOK_TASK_START
 static uint32_t hook_task_starts;
 void zule_user_hook_task_start(uint32_t time_counts, uint32_t task_id, size_t window_index) {
@@ -323,6 +332,7 @@ static void test_scheduler(void) {
     check(result == ZULE_RESULT_EXECUTION_OVERRUN, "zule_run() returns the overrun");
     check(fault.reason == ZULE_RESULT_EXECUTION_OVERRUN, "the fault handler sees the overrun");
     check(fault.task_id == (uint32_t)ZULE_TASK_ID_FIRST, "the fault names the overrunning task");
+    check(fault.schedule_id == (uint32_t)ZULE_SCHEDULE_ID_MAIN, "the fault names the schedule");
     check(first_runs == (CYCLES_BEFORE_OVERRUN + 1U), "the first task ran each cycle");
     check(second_runs == CYCLES_BEFORE_OVERRUN, "the second task ran each cycle");
     check((SYST_CSR & 0x3U) == 0U, "ticks are stopped when zule_run() returns");
@@ -338,6 +348,9 @@ static void test_scheduler(void) {
 #if ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE
     check(hook_releases >= task_runs, "the release hook runs for each window");
 #endif
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+    check(hook_schedule_switches == 0U, "a single schedule never switches");
+#endif
 #if ZULE_CONFIG_USER_HOOK_TICK_START && ZULE_CONFIG_USER_HOOK_TICK_END
     check((hook_tick_starts > 0U) && (hook_tick_starts == hook_tick_ends),
           "the tick hooks run in pairs");
@@ -350,7 +363,8 @@ static void test_scheduler(void) {
     check(zule_task_stats_get((uint32_t)ZULE_TASK_ID_SECOND, &stats), "second task statistics");
     check(stats.executions == CYCLES_BEFORE_OVERRUN, "second task executions");
     zule_task_stats_summary_t summary;
-    zule_task_stats_summary_get(&summary);
+    check(zule_task_stats_summary_get((uint32_t)ZULE_SCHEDULE_ID_MAIN, &summary),
+          "schedule totals");
     check(summary.cycles == CYCLES_BEFORE_OVERRUN, "completed cycles");
 #endif
 #if ZULE_CONFIG_MODULE_TICK_TIMING

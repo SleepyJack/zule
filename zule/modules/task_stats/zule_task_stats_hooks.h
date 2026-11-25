@@ -8,10 +8,11 @@
 #include <stdint.h>
 
 #if ZULE_CONFIG_MODULE_TASK_STATS
-/* Start a run: clear the run's measurement state. Cannot fail, and keeps
- * accumulated results. */
-void zule_task_stats_init(void);
+/* Start a run with the schedule schedule_id: clear the run's measurement state.
+ * Cannot fail, and keeps accumulated results. */
+void zule_task_stats_init(uint32_t schedule_id);
 void zule_task_stats_tick_start(uint32_t cycle_count);
+void zule_task_stats_tick_schedule_switch(uint32_t schedule_id);
 void zule_task_stats_tick_task_release(uint32_t time_counts);
 void zule_task_stats_task_start(uint32_t time_counts, uint32_t task_id);
 void zule_task_stats_task_end(uint32_t time_counts, uint32_t task_id);

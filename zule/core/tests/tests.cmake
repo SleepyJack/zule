@@ -9,6 +9,7 @@ zule_add_test_config(zule_test_config_default)
 zule_add_test(zule_core zule_scheduler_test.c zule_test_config_default)
 zule_add_test(zule_schedule zule_schedule_test.c zule_test_config_default)
 zule_add_test(zule_runner zule_test.c zule_test_config_default)
+zule_add_test(zule_switch zule_switch_test.c zule_test_config_default)
 
 # The timebase and every user hook.
 zule_add_test_config(zule_test_config_hooks
@@ -16,9 +17,18 @@ zule_add_test_config(zule_test_config_hooks
     ZULE_CONFIG_USER_HOOK_TICK_START=1
     ZULE_CONFIG_USER_HOOK_TICK_END=1
     ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE=1
+    ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH=1
     ZULE_CONFIG_USER_HOOK_TASK_START=1
     ZULE_CONFIG_USER_HOOK_TASK_END=1)
 zule_add_test(zule_hooks zule_hook_test.c zule_test_config_hooks)
+
+# Schedule switching with the hooks that show its order among tick events.
+zule_add_test_config(zule_test_config_switch_hooks
+    ZULE_CONFIG_TIMEBASE=1
+    ZULE_CONFIG_USER_HOOK_TICK_START=1
+    ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE=1
+    ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH=1)
+zule_add_test(zule_switch_hooks zule_switch_test.c zule_test_config_switch_hooks)
 
 # The tick timing check, with a 10 us tolerance and the tick start hook, which
 # shares the check's time read.

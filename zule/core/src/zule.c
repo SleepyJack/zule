@@ -46,6 +46,14 @@ const char *zule_task_name_get(uint32_t task_id) {
     return name;
 }
 
+zule_result_t zule_schedule_request(uint32_t schedule_id) {
+    zule_result_t result = ZULE_RESULT_NOT_INITIALIZED;
+    if (running) {
+        result = zule_scheduler_schedule_request(schedule_id);
+    }
+    return result;
+}
+
 #if ZULE_CONFIG_TIMEBASE
 uint32_t zule_timebase_hz(void) {
     return zule_port_time_hz();

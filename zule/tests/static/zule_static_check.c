@@ -30,10 +30,12 @@ void zule_task_check(void) {
         sink = stats.max_execution_counts;
     }
     zule_task_stats_summary_t summary;
-    zule_task_stats_summary_get(&summary);
-    sink = summary.max_cycle_busy_counts;
+    if (zule_task_stats_summary_get(ZULE_SCHEDULE_ID_MAIN, &summary)) {
+        sink = summary.max_cycle_busy_counts;
+    }
     zule_task_stats_reset();
 #endif
+    sink = (uint32_t)zule_schedule_request(ZULE_SCHEDULE_ID_MAIN);
     ++sink;
 }
 
@@ -55,6 +57,12 @@ void zule_user_hook_tick_task_release(uint32_t time_counts, uint32_t task_id, si
 }
 #endif
 
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+void zule_user_hook_tick_schedule_switch(uint32_t time_counts, uint32_t schedule_id) {
+    sink = time_counts + schedule_id;
+}
+#endif
+
 #if ZULE_CONFIG_USER_HOOK_TASK_START
 void zule_user_hook_task_start(uint32_t time_counts, uint32_t task_id, size_t window_index) {
     sink = time_counts + task_id + (uint32_t)window_index;
@@ -68,7 +76,7 @@ void zule_user_hook_task_end(uint32_t time_counts, uint32_t task_id, size_t wind
 #endif
 
 static void handle_fault(const zule_fault_info_t *fault) {
-    sink = (uint32_t)fault->reason;
+    sink = (uint32_t)fault->reason + fault->schedule_id;
 }
 
 /* The linker's default entry point; there is no C runtime to call main(). */

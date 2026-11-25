@@ -17,7 +17,8 @@
  * scheduler's critical section. They must be bounded and nonblocking, and must
  * not call Zule APIs or port functions; their run time delays the tick.
  *
- * Within each tick, tick_start comes first and tick_end last. A window's
+ * Within each tick, tick_start comes first and tick_end last. A schedule switch
+ * comes before any release in its tick. A window's
  * tick_task_release comes before its task_start, which comes before its
  * task_end; ticks can occur between task_start and task_end. A task that is
  * released but never started was missed, and a fault follows. Hooks continue
@@ -36,6 +37,13 @@ void zule_user_hook_tick_end(uint32_t time_counts);
 #if ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE
 /* Tick context, when a window starts and its task becomes pending. */
 void zule_user_hook_tick_task_release(uint32_t time_counts, uint32_t task_id, size_t window_index);
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+/* Tick context, when a requested schedule takes effect, at the start of a cycle
+ * and before its first window is released. schedule_id is the new schedule's ID,
+ * as in zule_schedule_ids.h. Not called for the schedule a run starts with. */
+void zule_user_hook_tick_schedule_switch(uint32_t time_counts, uint32_t schedule_id);
 #endif
 
 #if ZULE_CONFIG_USER_HOOK_TASK_START

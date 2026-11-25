@@ -3,6 +3,7 @@
 #include "zule_task_stats_hooks.h"
 
 #if ZULE_CONFIG_MODULE_TASK_STATS
+#include "zule_modules_schedule_data.h"
 #include "zule_modules_task_data.h"
 #include "zule_schedule_definition.h"
 
@@ -10,11 +11,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Each task's statistics live in the per-task storage the generated schedule
- * defines; the totals and the run's state live here. Written by the hook
- * handlers, which never run concurrently with each other, and read or cleared by
- * the API inside a critical section, so access never overlaps. */
-static zule_task_stats_summary_t summary;
+/* Each task's statistics and each schedule's totals live in the per-task and
+ * per-schedule storage the generated schedule defines; the run's state lives
+ * here. Written by the hook handlers, which never run concurrently with each
+ * other, and read or cleared by the API inside a critical section, so access
+ * never overlaps. */
 
 /* The current run's measurement state, cleared when each run starts. */
 typedef struct {
@@ -27,6 +28,8 @@ typedef struct {
     /* The current cycle, valid once the run's first tick has started it. */
     uint32_t cycle_count;
     bool cycle_started;
+    /* The active schedule, whose totals the current cycle counts toward. */
+    uint32_t schedule_id;
 } zule_task_stats_run_t;
 
 static zule_task_stats_run_t run;
@@ -36,8 +39,13 @@ static zule_task_stats_t *task_stats(uint32_t task_id) {
     return &zule_modules_task_data_get()[(size_t)task_id].task_stats;
 }
 
-void zule_task_stats_init(void) {
-    run = (zule_task_stats_run_t){0};
+/* Return a schedule's totals. The core passes valid IDs, and the API checks them. */
+static zule_task_stats_summary_t *schedule_summary(uint32_t schedule_id) {
+    return &zule_modules_schedule_data_get()[(size_t)schedule_id].task_stats_summary;
+}
+
+void zule_task_stats_init(uint32_t schedule_id) {
+    run = (zule_task_stats_run_t){.schedule_id = schedule_id};
 }
 
 void zule_task_stats_tick_start(uint32_t cycle_count) {
@@ -45,14 +53,21 @@ void zule_task_stats_tick_start(uint32_t cycle_count) {
      * count stops advancing, so that cycle never completes. The first tick of a
      * run starts its first cycle. */
     if (run.cycle_started && (cycle_count != run.cycle_count)) {
-        ++summary.cycles;
-        if (run.cycle_busy_counts > summary.max_cycle_busy_counts) {
-            summary.max_cycle_busy_counts = run.cycle_busy_counts;
+        zule_task_stats_summary_t *const summary = schedule_summary(run.schedule_id);
+        ++summary->cycles;
+        if (run.cycle_busy_counts > summary->max_cycle_busy_counts) {
+            summary->max_cycle_busy_counts = run.cycle_busy_counts;
         }
         run.cycle_busy_counts = 0U;
     }
     run.cycle_count = cycle_count;
     run.cycle_started = true;
+}
+
+/* A switch comes after the tick start that completed the previous schedule's
+ * last cycle, so the new cycle is the first to count toward the new schedule. */
+void zule_task_stats_tick_schedule_switch(uint32_t schedule_id) {
+    run.schedule_id = schedule_id;
 }
 
 void zule_task_stats_tick_task_release(uint32_t time_counts) {
@@ -80,7 +95,7 @@ void zule_task_stats_task_end(uint32_t time_counts, uint32_t task_id) {
     }
     ++stats->executions;
     stats->total_execution_counts += execution_counts;
-    summary.busy_counts += execution_counts;
+    schedule_summary(run.schedule_id)->busy_counts += execution_counts;
     /* Executions in a cycle that completes do not overrun, so they fit in one
      * cycle, which is below 2^32 counts. */
     run.cycle_busy_counts += execution_counts;
@@ -97,19 +112,27 @@ bool zule_task_stats_get(uint32_t task_id, zule_task_stats_t *stats) {
     return found;
 }
 
-void zule_task_stats_summary_get(zule_task_stats_summary_t *snapshot) {
-    const zule_port_critical_state_t state = zule_port_critical_enter();
-    *snapshot = summary;
-    zule_port_critical_exit(state);
+bool zule_task_stats_summary_get(uint32_t schedule_id, zule_task_stats_summary_t *summary) {
+    bool found = false;
+    if ((size_t)schedule_id < zule_schedule_definition_get()->schedules.count) {
+        const zule_port_critical_state_t state = zule_port_critical_enter();
+        *summary = *schedule_summary(schedule_id);
+        zule_port_critical_exit(state);
+        found = true;
+    }
+    return found;
 }
 
 void zule_task_stats_reset(void) {
-    zule_modules_task_data_t *const data = zule_modules_task_data_get();
-    const size_t task_count = zule_schedule_definition_get()->tasks.count;
+    zule_modules_task_data_t *const task_data = zule_modules_task_data_get();
+    zule_modules_schedule_data_t *const schedule_data = zule_modules_schedule_data_get();
+    const zule_schedule_definition_t *const definition = zule_schedule_definition_get();
     const zule_port_critical_state_t state = zule_port_critical_enter();
-    summary = (zule_task_stats_summary_t){0};
-    for (size_t index = 0U; index < task_count; ++index) {
-        data[index].task_stats = (zule_task_stats_t){0};
+    for (size_t index = 0U; index < definition->tasks.count; ++index) {
+        task_data[index].task_stats = (zule_task_stats_t){0};
+    }
+    for (size_t index = 0U; index < definition->schedules.count; ++index) {
+        schedule_data[index].task_stats_summary = (zule_task_stats_summary_t){0};
     }
     zule_port_critical_exit(state);
 }

@@ -21,7 +21,7 @@ There are two ownership domains: the user domain and the Zule domain. The
 
 ### Configuration
 
-The configuration defines the set of tasks and the schedule, and the build settings for the core and the selected port. Core settings include which optional features are enabled, such as the sub-slot timebase, hooks, and modules. Port settings supply target information that only the application knows, such as a timer clock frequency. The schedule also sets the number of tasks, so the schedule generated from it provides the [per-task storage](modules.md#per-task-storage) that modules keep. Configuration therefore feeds every Zule component: the core, the modules, and the port.
+The configuration defines the set of tasks and the schedule, and the build settings for the core and the selected port. Core settings include which optional features are enabled, such as the sub-slot timebase, hooks, and modules. Port settings supply target information that only the application knows, such as a timer clock frequency. The schedule also sets the number of tasks and schedules, so the schedule generated from it provides the [per-task and per-schedule storage](modules.md#per-task-and-per-schedule-storage) that modules keep. Configuration therefore feeds every Zule component: the core, the modules, and the port.
 
 See [configuration](configuration.md).
 

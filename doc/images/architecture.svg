@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="860" viewBox="0 0 1120 860" role="img" aria-labelledby="title description">
   <title id="title">Zule component architecture</title>
-  <desc id="description">The user domain contains configuration and application code. The Zule domain contains the port, core, and modules. Configuration supplies port settings to the port, the schedule and core settings to the core, and per-task storage, generated from the schedule, to the modules. The application controls the scheduler, which calls tasks and user hooks in application context, and fault handlers and user hooks in tick context. The core uses port services and the port delivers ticks to the core. The core sends hook events to the modules, whose results the application reads.</desc>
+  <desc id="description">The user domain contains configuration and application code. The Zule domain contains the port, core, and modules. Configuration supplies port settings to the port, the schedule and core settings to the core, and per-task and per-schedule storage, generated from the schedule, to the modules. The application controls the scheduler, which calls tasks and user hooks in application context, and fault handlers and user hooks in tick context. The core uses port services and the port delivers ticks to the core. The core sends hook events to the modules, whose results the application reads.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 Z" fill="#475569"/>
@@ -65,7 +65,7 @@
   <rect x="720" y="650" width="344" height="150" rx="8" class="zule"/>
   <text x="744" y="685" class="heading">Modules</text>
   <text x="744" y="724" class="body">Hook event consumers</text>
-  <text x="744" y="752" class="body">Per-task data</text>
+  <text x="744" y="752" class="body">Per-task and per-schedule data</text>
   <text x="744" y="780" class="body">Result APIs</text>
 
   <!-- Configuration to each Zule component -->
@@ -74,7 +74,7 @@
   <path d="M 214 250 V 275 H 740 V 300" class="link"/>
   <text x="546" y="268" class="label" text-anchor="middle">Schedule and core settings</text>
   <path d="M 56 225 H 40 V 760 H 720" class="link"/>
-  <text x="546" y="750" class="label" text-anchor="middle">Per-task storage</text>
+  <text x="546" y="750" class="label" text-anchor="middle">Per-task and per-schedule storage</text>
 
   <!-- Application and core -->
   <path d="M 372 365 H 720" class="link"/>

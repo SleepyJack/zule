@@ -66,8 +66,8 @@ completion does not advance the schedule.
 
 Budgets are wall-clock reservations. They must cover the task's execution time
 plus scheduler overhead and interrupt interference; see
-[deadline monitoring](core.md#task-deadline-monitoring). Leaving the first slots
-idle allows time for [startup](core.md#scheduler-initialisation).
+[deadline monitoring](core.md#task-deadline-monitoring), and
+[startup](core.md#scheduler-initialisation) for the first window.
 
 Generation additionally requires every timing value to fit `uint32_t`.
 
@@ -134,7 +134,8 @@ IDs start at zero in sorted schedule-name order, so the example gives
 `cycle` has one schedule, named `main`, with ID `ZULE_SCHEDULE_ID_MAIN`.
 
 The application selects the schedule to start with in its
-[configuration](application.md#configuration).
+[configuration](application.md#configuration), and tasks can
+[switch schedules](application.md#switching-schedules) while it runs.
 
 ## Build settings
 
@@ -148,7 +149,7 @@ same settings.
 | `ZULE_USE_USER_PORT_CONFIG` | `0` | Set to `1` to have the port include an integrator-supplied `zule_user_port_config.h`; see [port settings](#port-settings). |
 | `ZULE_CONFIG_TASK_NAMES` | `0` | Set to `1` to compile diagnostic task names into the schedule. Must be `0` or `1`. |
 | `ZULE_CONFIG_TIMEBASE` | `0` | Set to `1` to enable the optional [port timebase](port.md#timebase) for sub-slot timing. The selected port must provide it. Must be `0` or `1`. |
-| `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`, and every schedule's cycle shorter than 2^32 timebase counts, checked at initialization. Must be `0` or `1`. |
+| `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TICK_SCHEDULE_SWITCH`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`, and every schedule's cycle shorter than 2^32 timebase counts, checked at initialization. Must be `0` or `1`. |
 | `ZULE_CONFIG_TICK_CHECK` | `0` | Set to `1` to enable the [tick timing check](core.md#tick-timing-check). Requires `ZULE_CONFIG_TIMEBASE` and `ZULE_CONFIG_TICK_TOLERANCE_US`. Must be `0` or `1`. |
 | `ZULE_CONFIG_TICK_TOLERANCE_US` | None | Largest accepted tick deviation, early or late, in microseconds. Required with the tick check. Initialization checks it is at least one timebase count and less than one slot. |
 | `ZULE_CONFIG_MODULE_<NAME>` | `0` | Set to `1` to enable a [module](modules.md): `TICK_TIMING` or `TASK_STATS`. Requires `ZULE_CONFIG_TIMEBASE`. Must be `0` or `1`. |

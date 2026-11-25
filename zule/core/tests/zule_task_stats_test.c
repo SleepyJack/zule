@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #include "zule.h"
+#include "zule_modules_schedule_data.h"
 #include "zule_modules_task_data.h"
 #include "zule_schedule_definition.h"
 #include "zule_scheduler.h"
@@ -44,16 +45,17 @@ static const zule_task_t tasks[] = {
     {.id = 1U, .function = task},
 };
 static const zule_window_t windows[] = {{&tasks[0], 0U, 2U}, {&tasks[1], 2U, 1U}};
-static const zule_schedule_t schedule = {
-    .cycle_slots = 4U,
-    .windows = windows,
-    .window_count = sizeof(windows) / sizeof(windows[0]),
+/* A second schedule, with only task 1 at slot 0, to switch to. */
+static const zule_window_t other_windows[] = {{&tasks[1], 0U, 1U}};
+static const zule_schedule_t schedules[] = {
+    {4U, windows, sizeof(windows) / sizeof(windows[0])},
+    {2U, other_windows, sizeof(other_windows) / sizeof(other_windows[0])},
 };
 
 static const zule_schedule_definition_t definition = {
     .slot_us = 100U,
     .tasks = {tasks, sizeof(tasks) / sizeof(tasks[0])},
-    .schedules = {&schedule, 1U},
+    .schedules = {schedules, sizeof(schedules) / sizeof(schedules[0])},
 };
 
 const zule_schedule_definition_t *zule_schedule_definition_get(void) {
@@ -63,6 +65,12 @@ const zule_schedule_definition_t *zule_schedule_definition_get(void) {
 /* What the generated schedule defines: one entry per task. */
 zule_modules_task_data_t *zule_modules_task_data_get(void) {
     static zule_modules_task_data_t data[sizeof(tasks) / sizeof(tasks[0])];
+    return data;
+}
+
+/* What the generated schedule defines: one entry per schedule. */
+zule_modules_schedule_data_t *zule_modules_schedule_data_get(void) {
+    static zule_modules_schedule_data_t data[sizeof(schedules) / sizeof(schedules[0])];
     return data;
 }
 
@@ -105,13 +113,19 @@ static void check_task(uint32_t task_id, uint64_t executions, uint64_t total_cou
     assert(stats.max_dispatch_latency_counts == max_latency_counts);
 }
 
-static void check_summary(uint64_t cycles, uint64_t busy_counts, uint32_t max_cycle_busy_counts) {
+static void check_schedule_summary(uint32_t schedule_id, uint64_t cycles, uint64_t busy_counts,
+                                   uint32_t max_cycle_busy_counts) {
     zule_task_stats_summary_t summary;
-    zule_task_stats_summary_get(&summary);
+    assert(zule_task_stats_summary_get(schedule_id, &summary));
     assert(!zule_test_port_is_critical());
     assert(summary.cycles == cycles);
     assert(summary.busy_counts == busy_counts);
     assert(summary.max_cycle_busy_counts == max_cycle_busy_counts);
+}
+
+/* The totals for schedule 0, which every run starts with. */
+static void check_summary(uint64_t cycles, uint64_t busy_counts, uint32_t max_cycle_busy_counts) {
+    check_schedule_summary(0U, cycles, busy_counts, max_cycle_busy_counts);
 }
 
 /* Run one cycle from slot 0, with each task starting at its release plus the
@@ -137,6 +151,11 @@ int main(void) {
     assert(!zule_task_stats_get(UINT32_MAX, &untouched));
     assert(untouched.executions == 7U);
     check_summary(0U, 0U, 0U);
+    check_schedule_summary(1U, 0U, 0U, 0U);
+    zule_task_stats_summary_t untouched_summary = {.cycles = 7U};
+    assert(!zule_task_stats_summary_get(2U, &untouched_summary));
+    assert(!zule_task_stats_summary_get(UINT32_MAX, &untouched_summary));
+    assert(untouched_summary.cycles == 7U);
 
     /* Execution times, dispatch latency, and cycle totals. */
     start();
@@ -226,5 +245,26 @@ int main(void) {
     check_task(0U, 0U, 0U, 0U, 0U, 0U);
     check_summary(0U, 0U, 0U);
     stop();
+
+    /* Each schedule keeps its own totals. The cycle before a switch counts toward
+     * the old schedule, and executions toward the schedule active when they
+     * end. Task statistics continue across the switch, and reset clears every
+     * schedule's totals. */
+    zule_task_stats_reset();
+    start();
+    run_cycle(10000U, 0U, 10U);
+    assert(zule_scheduler_schedule_request(1U) == ZULE_RESULT_OK);
+    tick_at(10400U);
+    check_schedule_summary(0U, 1U, 20U, 20U);
+    check_schedule_summary(1U, 0U, 0U, 0U);
+    run_task(10400U, 10430U);
+    tick_at(10500U);
+    tick_at(10600U);
+    check_schedule_summary(0U, 1U, 20U, 20U);
+    check_schedule_summary(1U, 1U, 30U, 30U);
+    check_task(1U, 2U, 40U, 10U, 30U, 0U);
+    stop();
+    zule_task_stats_reset();
+    check_schedule_summary(1U, 0U, 0U, 0U);
     return 0;
 }

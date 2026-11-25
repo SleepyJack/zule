@@ -7,8 +7,9 @@
  * The derived conditions below are what the core reads: whether to initialize
  * modules, and whether to call the module entry point for each hook. The core
  * never names a module. A module adds its setting to ZULE_MODULES_ANY and to the
- * condition of each hook it consumes, and to ZULE_MODULES_TASK_DATA if it keeps
- * data for each task. */
+ * condition of each hook it consumes, to ZULE_MODULES_TASK_DATA if it keeps
+ * data for each task, and to ZULE_MODULES_SCHEDULE_DATA if it keeps data for
+ * each schedule. */
 
 /* Tick timing: worst tick deviations and longest tick handler; see
  * zule_tick_timing.h. */
@@ -38,6 +39,7 @@
     (ZULE_CONFIG_MODULE_TICK_TIMING || ZULE_CONFIG_MODULE_TASK_STATS)
 #define ZULE_MODULES_HOOK_TICK_END (ZULE_CONFIG_MODULE_TICK_TIMING)
 #define ZULE_MODULES_HOOK_TICK_TASK_RELEASE (ZULE_CONFIG_MODULE_TASK_STATS)
+#define ZULE_MODULES_HOOK_TICK_SCHEDULE_SWITCH (ZULE_CONFIG_MODULE_TASK_STATS)
 #define ZULE_MODULES_HOOK_TASK_START (ZULE_CONFIG_MODULE_TASK_STATS)
 #define ZULE_MODULES_HOOK_TASK_END (ZULE_CONFIG_MODULE_TASK_STATS)
 
@@ -45,6 +47,11 @@
  * then defines that storage, with one entry per task; see
  * zule_modules_task_data.h. */
 #define ZULE_MODULES_TASK_DATA (ZULE_CONFIG_MODULE_TASK_STATS)
+
+/* 1 when any enabled module keeps data for each schedule. The generated schedule
+ * then defines that storage, with one entry per schedule; see
+ * zule_modules_schedule_data.h. */
+#define ZULE_MODULES_SCHEDULE_DATA (ZULE_CONFIG_MODULE_TASK_STATS)
 
 /* Modules receive timestamps, so they require the timebase. */
 #if ZULE_MODULES_ANY && !ZULE_CONFIG_TIMEBASE

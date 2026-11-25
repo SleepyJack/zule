@@ -21,6 +21,14 @@ zule_result_t zule_scheduler_tick(void);
  * Task identity stays stable; callbacks execute outside the critical section. */
 zule_result_t zule_scheduler_run(void);
 
+/* Request a switch to schedule_id at the next cycle start, from application
+ * context; a request before the first tick applies at it. A later request
+ * replaces an earlier one, and a request for the active schedule cancels a
+ * pending switch. Returns NOT_INITIALIZED
+ * before successful initialization, INVALID_CONFIG for an ID outside the
+ * schedule table, keeping any earlier request, and otherwise OK. */
+zule_result_t zule_scheduler_schedule_request(uint32_t schedule_id);
+
 /* Wait for the next tick from the main loop when no task is pending. The check and the port's
  * idle wait share one critical section, so a tick that marks a task pending cannot be lost
  * between them. Returns a latched fault without waiting, PORT_ERROR if the port wait fails,

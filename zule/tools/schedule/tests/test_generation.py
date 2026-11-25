@@ -44,6 +44,7 @@ class GenerationTests(unittest.TestCase):
 #include "zule_task_ids.h"
 #include "zule_task_ids.h"
 #include "zule_schedule_ids.h"
+#include "zule_modules_schedule_data.h"
 #include "zule_modules_task_data.h"
 #include "zule_schedule_definition.h"
 #include "zule_task_stats.h"
@@ -98,6 +99,12 @@ int main(void) {
     }
     zule_task_stats_t stats;
     assert(!zule_task_stats_get(3U, &stats));
+    /* One zeroed entry per schedule, likewise. */
+    assert(zule_modules_schedule_data_get() == zule_modules_schedule_data_get());
+    zule_task_stats_summary_t summary = {.cycles = 1U};
+    assert(zule_task_stats_summary_get(ZULE_SCHEDULE_ID_MAIN, &summary));
+    assert(summary.cycles == 0U);
+    assert(!zule_task_stats_summary_get(1U, &summary));
 #endif
     return 0;
 }
@@ -123,10 +130,12 @@ int main(void) {
             invalid = subprocess.run(command + ["-DZULE_CONFIG_TASK_NAMES=2"], capture_output=True, text=True)
             self.assertNotEqual(invalid.returncode, 0)
             self.assertIn("ZULE_CONFIG_TASK_NAMES must be 0 or 1", invalid.stderr)
-            # Module storage is sized by the task count, and defined only when a
-            # module keeps per-task data.
+            # Module storage is sized by the task and schedule counts, and
+            # defined only when a module keeps that data.
             self.assertIn("#if ZULE_MODULES_TASK_DATA", output.read_text())
             self.assertIn("zule_modules_task_data[3U];", output.read_text())
+            self.assertIn("#if ZULE_MODULES_SCHEDULE_DATA", output.read_text())
+            self.assertIn("zule_modules_schedule_data[1U];", output.read_text())
             original = output.read_bytes()
             header = Path(directory) / "zule_task_ids.h"
             original_header = header.read_bytes()
@@ -189,6 +198,7 @@ int main(void) {
             header = (Path(directory) / "zule_schedule_ids.h").read_text()
             self.assertIn("ZULE_SCHEDULE_ID_OPERATIONAL = 0,", header)
             self.assertIn("ZULE_SCHEDULE_ID_STARTUP = 1,", header)
+            self.assertIn("zule_modules_schedule_data[2U];", output.read_text())
             harness = Path(directory) / "test.c"
             harness.write_text('''#include <assert.h>
 #include "zule_task_ids.h"

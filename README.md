@@ -9,6 +9,8 @@ before the application is built, so its timing can be reviewed and reasoned abou
 
 - **Fixed, offline-checked timing.** The schedule is a JSON file, validated and
   turned into C at build time.
+- **A schedule for each mode.** Define several schedules, such as start-up and
+  operation, and switch between them at a cycle boundary while running.
 - **Overruns are caught.** A task that misses its window, or is still running
   at the end of it, raises a fault immediately.
 - **No preemption between tasks.** Tasks run one after another, so data shared

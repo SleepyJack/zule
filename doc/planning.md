@@ -127,47 +127,18 @@ tools and configurations.
 
 ## Multiple schedules
 
-- **Switching at run time.** Add an API for tasks to request the next schedule,
-  by schedule ID; the last request before the boundary wins. Tick context
-  applies it at the next cycle boundary, so a switch takes effect within one
-  cycle: it retires the old schedule's final window, switches, then starts the
-  new schedule's first window. Never switch while a fault is latched. All
-  schedules share `slot_us` and are validated at init, so a switch never
-  reprograms the port timer and tick context never validates.
-  - Add a schedule-switched hook, for modules and the application, and leave
-    the existing hooks unchanged, so single-schedule applications see no
-    difference.
-  - Add the active schedule ID to the fault information, since window indexes
-    are per schedule.
-  - In the [task statistics module](modules.md#task-statistics), keep a summary
-    per schedule (cycles, busy time, and the busiest cycle) in generated
-    per-schedule module storage, read with
-    `zule_task_stats_summary_get(schedule_id, &summary)`, which returns `false`
-    for an unknown ID. Per-task statistics stay as they are.
-- **An example, `modes`,** of the [startup delay pattern](#startup-delay-as-a-pattern):
-  a startup schedule, a mode-manager task, and a switch to the operational
-  schedule.
-- **Revisit naming** once switching and the example exist. It is not evident
-  what distinguishes the schedule definition (`zule_schedule_definition_t`:
-  the slot length, task table, and schedules) from a schedule (one cycle of
-  windows); one option is a distinct name for the container. Also review slot,
-  cycle, and window against established time-triggered terms (minor and major
-  frame, partition window).
-
-### Startup delay as a pattern
-
-- Handle startup latency with a startup schedule rather than a dedicated core
-  feature: idle slots followed by a window for an application-owned
-  mode-manager task, which requests the operational schedule. The startup
-  cycle length sets the delay, and the operational schedule starts at slot zero
-  of the following cycle. The mode manager can also perform startup checks and
-  choose the initial mode.
-- Until switching exists, leave the first slots of the schedule idle, as
-  described in [scheduler initialisation](core.md#scheduler-initialisation).
-  This absorbs startup latency at the cost of those slots in every cycle.
-- If switching is deferred indefinitely, reconsider a dedicated startup delay:
-  a countdown of `n` slots in tick processing, without marking tasks pending,
-  before the first cycle begins at slot zero.
+- **An example, `modes`,** of a startup delay as a pattern rather than a
+  dedicated core feature: a startup schedule of idle slots followed by a window
+  for an application-owned mode-manager task, which requests the operational
+  schedule. The startup cycle length sets the delay, and the operational
+  schedule starts at slot zero of the following cycle. The mode manager can
+  also perform startup checks and choose the initial mode.
+- **Revisit naming** once the example exists. It is not evident what
+  distinguishes the schedule definition (`zule_schedule_definition_t`: the slot
+  length, task table, and schedules) from a schedule (one cycle of windows);
+  one option is a distinct name for the container. Also review slot, cycle, and
+  window against established time-triggered terms (minor and major frame,
+  partition window).
 
 ## Core and port configuration
 

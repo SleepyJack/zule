@@ -21,6 +21,9 @@ typedef enum {
 
 typedef struct {
     zule_result_t reason;
+    /* The active schedule's ID, as in zule_schedule_ids.h; window_index is an
+     * index into its windows. */
+    uint32_t schedule_id;
     size_t window_index;
     uint32_t slot;
     uint32_t cycle_count;
@@ -73,6 +76,18 @@ const char *zule_task_name_get(uint32_t task_id);
  * from separate application threads are unsupported. Tick delivery is stopped
  * and quiesced before returning. Tasks must return for the runner to exit. */
 zule_result_t zule_run(void);
+
+/* Request a switch to another schedule, by schedule ID from the generated
+ * zule_schedule_ids.h. Call from a task. The switch takes effect at the start of
+ * the next cycle, after the current schedule's final window: its first window
+ * starts at slot 0 of the new schedule, and the cycle count continues. A later
+ * request before then replaces an earlier one, and requesting the active
+ * schedule cancels a pending switch. No switch takes place while a fault is
+ * latched. Returns OK; INVALID_CONFIG for an ID that is not one of the
+ * application's schedules, keeping any earlier request; and NOT_INITIALIZED when
+ * the scheduler is not running. Each run starts with the configured schedule,
+ * with no request pending. */
+zule_result_t zule_schedule_request(uint32_t schedule_id);
 
 #if ZULE_CONFIG_TIMEBASE
 /* Return the timebase frequency in counts per second, for converting hook

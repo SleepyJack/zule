@@ -40,7 +40,7 @@ static void print_timing(FILE *stream) {
                       counts_to_us(stats.max_dispatch_latency_counts));
     }
     zule_task_stats_summary_t summary;
-    zule_task_stats_summary_get(&summary);
+    (void)zule_task_stats_summary_get(ZULE_SCHEDULE_ID_MAIN, &summary);
     (void)fprintf(stream, "Cycles: %lu, busiest cycle %lu us of task time\n",
                   (unsigned long)summary.cycles, counts_to_us(summary.max_cycle_busy_counts));
     zule_tick_timing_t timing;

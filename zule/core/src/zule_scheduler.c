@@ -25,7 +25,14 @@ typedef struct {
 } zule_task_execution_t;
 
 typedef struct {
+    const zule_schedule_table_t *schedules;
+    /* The active schedule and its ID. */
     const zule_schedule_t *schedule;
+    uint32_t schedule_id;
+    /* A switch requested from application context, applied by the tick at the
+     * next cycle start. */
+    bool switch_requested;
+    uint32_t requested_schedule_id;
     uint32_t slot;
     uint32_t cycle_count;
     size_t active_window_ind;
@@ -112,11 +119,15 @@ zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault, uint32_t schedu
 #endif
 #if ZULE_MODULES_ANY
     if (result == ZULE_RESULT_OK) {
-        result = zule_modules_init(definition);
+        result = zule_modules_init(definition, schedule_id);
     }
 #endif
     if (result == ZULE_RESULT_OK) {
+        scheduler.schedules = &definition->schedules;
         scheduler.schedule = schedule;
+        scheduler.schedule_id = schedule_id;
+        scheduler.switch_requested = false;
+        scheduler.requested_schedule_id = schedule_id;
 #if ZULE_CONFIG_TICK_CHECK
         scheduler.tick_deviation = (zule_tick_deviation_t){0};
 #endif
@@ -143,6 +154,7 @@ static void raise_fault(zule_result_t reason) {
              * state. */
             const zule_fault_info_t fault = {
                 .reason = reason,
+                .schedule_id = scheduler.schedule_id,
                 .window_index = scheduler.active_window_ind,
                 .slot = scheduler.slot,
                 .cycle_count = scheduler.cycle_count,
@@ -183,6 +195,24 @@ static void start_tick(void) {
 #endif
 }
 
+/* At the start of a cycle, once the previous schedule's final window has been
+ * retired, apply a requested switch and return the new active window, the new
+ * schedule's first, so it can be released in the same tick. Every window lies
+ * within its cycle, so no task is pending or running here. Without a request,
+ * return the active window unchanged. */
+static const zule_window_t *apply_switch_request(const zule_window_t *active_window) {
+    const zule_window_t *window = active_window;
+    if (scheduler.switch_requested) {
+        scheduler.switch_requested = false;
+        scheduler.schedule_id = scheduler.requested_schedule_id;
+        scheduler.schedule = &scheduler.schedules->entries[scheduler.schedule_id];
+        scheduler.active_window_ind = 0U;
+        window = &scheduler.schedule->windows[0U];
+        zule_hook_tick_schedule_switch(scheduler.schedule_id);
+    }
+    return window;
+}
+
 /* Process one tick of an initialized scheduler. */
 static void process_tick(void) {
     start_tick();
@@ -216,6 +246,11 @@ static void process_tick(void) {
             }
             active_window = &scheduler.schedule->windows[scheduler.active_window_ind];
         }
+    }
+
+    // Switch schedules only at a cycle start and while no fault is latched
+    if ((scheduler.slot == 0U) && (scheduler.exec.fault == ZULE_RESULT_OK)) {
+        active_window = apply_switch_request(active_window);
     }
 
     // Prevent new task dispatch in case of active faults
@@ -280,6 +315,25 @@ zule_result_t zule_scheduler_run(void) {
         }
         result = scheduler.exec.fault;
         zule_port_critical_exit(critical_state);
+    }
+    return result;
+}
+
+zule_result_t zule_scheduler_schedule_request(uint32_t schedule_id) {
+    zule_result_t result = ZULE_RESULT_NOT_INITIALIZED;
+    if (scheduler.initialized) {
+        if ((size_t)schedule_id < scheduler.schedules->count) {
+            const zule_port_critical_state_t critical_state = zule_port_critical_enter();
+            /* A request for the active schedule cancels any pending switch, so
+             * the tick only sees real switches. Only the tick changes the active
+             * schedule, and it cannot run inside the critical section. */
+            scheduler.requested_schedule_id = schedule_id;
+            scheduler.switch_requested = (schedule_id != scheduler.schedule_id);
+            zule_port_critical_exit(critical_state);
+            result = ZULE_RESULT_OK;
+        } else {
+            result = ZULE_RESULT_INVALID_CONFIG;
+        }
     }
     return result;
 }
