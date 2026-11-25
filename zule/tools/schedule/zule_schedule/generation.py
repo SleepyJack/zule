@@ -87,7 +87,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
     # initializers are designated (MISRA C:2012 rule 9.5).
     lines.extend([
         "",
-        f"    static const zule_schedule_t zule_schedule_table[{len(cycles)}U] = {{",
+        f"    static const zule_schedule_t zule_schedules[{len(cycles)}U] = {{",
     ])
     for name, cycle, _ in cycles:
         lines.extend([
@@ -103,9 +103,16 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         "",
         "    static const zule_schedule_definition_t zule_schedule_definition = {",
         f"        .slot_us = {int(schedule['slot_us'])}U,",
-        "        .tasks = {.entries = zule_tasks, .count = sizeof(zule_tasks) / sizeof(zule_tasks[0])},",
-        "        .schedules = zule_schedule_table,",
-        "        .schedule_count = sizeof(zule_schedule_table) / sizeof(zule_schedule_table[0]),",
+        "        .tasks =",
+        "            {",
+        "                .entries = zule_tasks,",
+        "                .count = sizeof(zule_tasks) / sizeof(zule_tasks[0]),",
+        "            },",
+        "        .schedules =",
+        "            {",
+        "                .entries = zule_schedules,",
+        "                .count = sizeof(zule_schedules) / sizeof(zule_schedules[0]),",
+        "            },",
         "    };",
         "",
         "    return &zule_schedule_definition;",

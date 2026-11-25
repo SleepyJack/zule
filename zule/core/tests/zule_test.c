@@ -66,8 +66,7 @@ static const zule_schedule_t schedule = {
 static const zule_schedule_definition_t default_definition = {
     .slot_us = 250U,
     .tasks = {tasks, sizeof(tasks) / sizeof(tasks[0])},
-    .schedules = &schedule,
-    .schedule_count = 1U,
+    .schedules = {&schedule, 1U},
 };
 static const zule_schedule_definition_t *definition = &default_definition;
 
@@ -89,7 +88,7 @@ int main(void) {
     const zule_task_t named_tasks[] = {{0U, first_task, "sample"}};
     const zule_window_t named_window[] = {{&named_tasks[0], 0U, 1U}};
     const zule_schedule_t named_schedule = {1U, named_window, 1U};
-    const zule_schedule_definition_t named = {100U, {named_tasks, 1U}, &named_schedule, 1U};
+    const zule_schedule_definition_t named = {100U, {named_tasks, 1U}, {&named_schedule, 1U}};
     assert(zule_schedule_definition_validate(&named) == ZULE_RESULT_OK);
     definition = &named;
     assert(strcmp(zule_task_name_get(0U), "sample") == 0);
@@ -98,7 +97,7 @@ int main(void) {
     /* An entry whose ID does not match its index is never returned. */
     const zule_task_t mismatched_tasks[] = {{1U, first_task, "mismatched"}};
     const zule_schedule_definition_t mismatched = {
-        100U, {mismatched_tasks, 1U}, &named_schedule, 1U};
+        100U, {mismatched_tasks, 1U}, {&named_schedule, 1U}};
     definition = &mismatched;
     assert(zule_task_name_get(0U) == NULL);
 #endif
@@ -187,7 +186,7 @@ int main(void) {
     static const zule_window_t second_only[] = {{&tasks[1], 0U, 1U}};
     const zule_schedule_t pair[] = {schedule, {2U, second_only, 1U}};
     const zule_schedule_definition_t two = {
-        250U, {tasks, sizeof(tasks) / sizeof(tasks[0])}, pair, 2U};
+        250U, {tasks, sizeof(tasks) / sizeof(tasks[0])}, {pair, 2U}};
     definition = &two;
     zule_config_t second_schedule = {.on_fault = NULL, .schedule_id = 1U};
     assert(zule_configure(&second_schedule) == ZULE_RESULT_OK);

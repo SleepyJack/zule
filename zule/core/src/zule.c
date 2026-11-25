@@ -12,7 +12,7 @@ static zule_config_t configuration;
  * again, after validating the schedules. */
 static bool schedule_id_valid(uint32_t schedule_id) {
     const zule_schedule_definition_t *definition = zule_schedule_definition_get();
-    return (definition != NULL) && ((size_t)schedule_id < definition->schedule_count);
+    return (definition != NULL) && ((size_t)schedule_id < definition->schedules.count);
 }
 
 zule_result_t zule_configure(const zule_config_t *config) {

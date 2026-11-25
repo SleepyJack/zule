@@ -64,9 +64,9 @@ static zule_result_t check_timebase_limits(const zule_schedule_definition_t *def
     if ((result == ZULE_RESULT_OK) && (slot_scaled_counts >= wrap_scaled_counts)) {
         result = ZULE_RESULT_INVALID_CONFIG;
     }
-    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < definition->schedule_count);
+    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < definition->schedules.count);
          ++index) {
-        if ((uint64_t)definition->schedules[index].cycle_slots >
+        if ((uint64_t)definition->schedules.entries[index].cycle_slots >
             ((wrap_scaled_counts - 1U) / slot_scaled_counts)) {
             result = ZULE_RESULT_INVALID_CONFIG;
         }
@@ -99,8 +99,8 @@ zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault, uint32_t schedu
     zule_result_t result = zule_schedule_definition_validate(definition);
     const zule_schedule_t *schedule = NULL;
     if (result == ZULE_RESULT_OK) {
-        if ((size_t)schedule_id < definition->schedule_count) {
-            schedule = &definition->schedules[schedule_id];
+        if ((size_t)schedule_id < definition->schedules.count) {
+            schedule = &definition->schedules.entries[schedule_id];
         } else {
             result = ZULE_RESULT_INVALID_CONFIG;
         }

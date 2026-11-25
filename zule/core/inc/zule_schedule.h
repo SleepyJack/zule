@@ -35,15 +35,20 @@ typedef struct {
     size_t window_count;
 } zule_schedule_t;
 
+/* The application's schedules, indexed by schedule ID as the generated
+ * zule_schedule_ids.h numbers them. */
+typedef struct {
+    const zule_schedule_t *entries;
+    size_t count;
+} zule_schedule_table_t;
+
 /* The generated schedule definition: the slot length and task table, which
  * every schedule shares, so the tick and task IDs mean the same in each, and the
- * schedules, indexed by schedule ID as the generated zule_schedule_ids.h numbers
- * them. */
+ * schedules. */
 typedef struct {
     uint32_t slot_us;
     zule_task_table_t tasks;
-    const zule_schedule_t *schedules;
-    size_t schedule_count;
+    zule_schedule_table_t schedules;
 } zule_schedule_definition_t;
 
 /* Return OK for a nonzero slot period, a nonempty task table of callable tasks
@@ -51,7 +56,7 @@ typedef struct {
  * cycle length and windows that reference entries in the task table, have
  * positive budgets, and are ordered, nonoverlapping, and within the cycle.
  * Otherwise return INVALID_SCHEDULE, including for a null definition, task
- * table, schedules, or windows. Non-null pointers must address readable storage
+ * table, schedule table, or windows. Non-null pointers must address readable storage
  * for the declared array size; task names, when present and non-null, must point
  * to valid immutable strings. Validation cannot establish storage validity or
  * task execution-time bounds. The definition must remain unchanged during

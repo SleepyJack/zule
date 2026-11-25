@@ -53,8 +53,7 @@ static const zule_schedule_t schedule = {
 static const zule_schedule_definition_t definition = {
     .slot_us = 100U,
     .tasks = {tasks, sizeof(tasks) / sizeof(tasks[0])},
-    .schedules = &schedule,
-    .schedule_count = 1U,
+    .schedules = {&schedule, 1U},
 };
 
 const zule_schedule_definition_t *zule_schedule_definition_get(void) {

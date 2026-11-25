@@ -82,8 +82,8 @@ static zule_schedule_definition_t definition = {
 };
 
 const zule_schedule_definition_t *zule_schedule_definition_get(void) {
-    definition.schedules = active_schedule;
-    definition.schedule_count = (active_schedule != NULL) ? 1U : 0U;
+    definition.schedules.entries = active_schedule;
+    definition.schedules.count = (active_schedule != NULL) ? 1U : 0U;
     return &definition;
 }
 

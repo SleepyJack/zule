@@ -53,7 +53,7 @@ static const zule_window_t offset_window[] = {{&offset_task[0], 0U, 1U}};
 /* One schedule over the given tasks, at 100 us slots. */
 static zule_result_t validate_one(const zule_schedule_t *schedule, const zule_task_t *task_table,
                                   size_t task_count) {
-    const zule_schedule_definition_t definition = {100U, {task_table, task_count}, schedule, 1U};
+    const zule_schedule_definition_t definition = {100U, {task_table, task_count}, {schedule, 1U}};
     return zule_schedule_definition_validate(&definition);
 }
 
@@ -83,7 +83,7 @@ int main(void) {
 
     /* The slot length and task table, shared by every schedule. */
     assert(zule_schedule_definition_validate(NULL) == ZULE_RESULT_INVALID_SCHEDULE);
-    const zule_schedule_definition_t no_slot = {0U, {tasks, 1U}, valid, 1U};
+    const zule_schedule_definition_t no_slot = {0U, {tasks, 1U}, {valid, 1U}};
     assert(zule_schedule_definition_validate(&no_slot) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(validate_one(&valid[0], NULL, 1U) == ZULE_RESULT_INVALID_SCHEDULE);
     assert(validate_one(&valid[0], tasks, 0U) == ZULE_RESULT_INVALID_SCHEDULE);
@@ -100,17 +100,17 @@ int main(void) {
 
     /* Multiple schedules are valid when every one is. */
     const zule_schedule_definition_t all_valid = {
-        100U, {tasks, 1U}, valid, sizeof(valid) / sizeof(valid[0])};
+        100U, {tasks, 1U}, {valid, sizeof(valid) / sizeof(valid[0])}};
     assert(zule_schedule_definition_validate(&all_valid) == ZULE_RESULT_OK);
-    const zule_schedule_definition_t no_schedules = {100U, {tasks, 1U}, NULL, 1U};
+    const zule_schedule_definition_t no_schedules = {100U, {tasks, 1U}, {NULL, 1U}};
     assert(zule_schedule_definition_validate(&no_schedules) == ZULE_RESULT_INVALID_SCHEDULE);
-    const zule_schedule_definition_t empty = {100U, {tasks, 1U}, valid, 0U};
+    const zule_schedule_definition_t empty = {100U, {tasks, 1U}, {valid, 0U}};
     assert(zule_schedule_definition_validate(&empty) == ZULE_RESULT_INVALID_SCHEDULE);
     const zule_schedule_t with_invalid[] = {valid[0], invalid[0]};
-    const zule_schedule_definition_t one_invalid = {100U, {tasks, 1U}, with_invalid, 2U};
+    const zule_schedule_definition_t one_invalid = {100U, {tasks, 1U}, {with_invalid, 2U}};
     assert(zule_schedule_definition_validate(&one_invalid) == ZULE_RESULT_INVALID_SCHEDULE);
     const zule_schedule_t with_foreign[] = {valid[0], foreign};
-    const zule_schedule_definition_t one_foreign = {100U, {tasks, 1U}, with_foreign, 2U};
+    const zule_schedule_definition_t one_foreign = {100U, {tasks, 1U}, {with_foreign, 2U}};
     assert(zule_schedule_definition_validate(&one_foreign) == ZULE_RESULT_INVALID_SCHEDULE);
     return 0;
 }

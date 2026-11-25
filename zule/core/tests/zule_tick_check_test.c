@@ -62,8 +62,7 @@ static void use_schedule(uint32_t slot_us, uint32_t cycle_slots, const zule_wind
     definition = (zule_schedule_definition_t){
         .slot_us = slot_us,
         .tasks = {tasks, sizeof(tasks) / sizeof(tasks[0])},
-        .schedules = &schedule,
-        .schedule_count = 1U,
+        .schedules = {&schedule, 1U},
     };
 }
 
@@ -148,8 +147,7 @@ static void test_init_limits(void) {
     use_default_schedule();
     zule_schedule_t long_cycles[] = {schedule, schedule};
     long_cycles[1].cycle_slots = 42949673U;
-    definition.schedules = long_cycles;
-    definition.schedule_count = 2U;
+    definition.schedules = (zule_schedule_table_t){long_cycles, 2U};
     check_init(ZULE_RESULT_INVALID_CONFIG, 1000000U);
     long_cycles[1].cycle_slots = 42949672U;
     check_init(ZULE_RESULT_OK, 1000000U);

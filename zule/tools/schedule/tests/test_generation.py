@@ -56,12 +56,12 @@ int main(void) {
     /* A single cycle is the one schedule, main, with ID 0. */
     const zule_schedule_definition_t *definition = zule_schedule_definition_get();
     assert(definition == zule_schedule_definition_get());
-    assert(definition->schedule_count == 1U);
+    assert(definition->schedules.count == 1U);
     assert(ZULE_SCHEDULE_ID_MAIN == 0);
     assert(zule_schedule_definition_validate(definition) == ZULE_RESULT_OK);
     assert(definition->slot_us == 100U);
     assert(definition->tasks.count == 3U);
-    const zule_schedule_t *schedule = &definition->schedules[ZULE_SCHEDULE_ID_MAIN];
+    const zule_schedule_t *schedule = &definition->schedules.entries[ZULE_SCHEDULE_ID_MAIN];
     assert(schedule->cycle_slots == 10U);
     assert(schedule->window_count == 3U);
     const uint32_t starts[] = {0U, 2U, 5U};
@@ -172,7 +172,7 @@ void zule_task_sense(void) {}
 void zule_task_control(void) {}
 int main(void) {
     assert(zule_schedule_definition_validate(zule_schedule_definition_get()) == ZULE_RESULT_OK);
-    const zule_schedule_t *schedule = &zule_schedule_definition_get()->schedules[ZULE_SCHEDULE_ID_MAIN];
+    const zule_schedule_t *schedule = &zule_schedule_definition_get()->schedules.entries[ZULE_SCHEDULE_ID_MAIN];
 ''' + "\n".join(checks) + "\n    return 0;\n}\n")
                 executable = Path(directory) / "test"
                 subprocess.run([*compile_command(compiler, harness, output, executable), "-DZULE_CONFIG_TASK_NAMES=1"], check=True, capture_output=True, text=True)
@@ -199,11 +199,11 @@ void zule_task_control(void) {}
 void zule_task_mode_manager(void) {}
 int main(void) {
     const zule_schedule_definition_t *definition = zule_schedule_definition_get();
-    assert(definition->schedule_count == 2U);
+    assert(definition->schedules.count == 2U);
     assert(zule_schedule_definition_validate(definition) == ZULE_RESULT_OK);
     assert(definition->slot_us == 1000U && definition->tasks.count == 3U);
-    const zule_schedule_t *operational = &definition->schedules[ZULE_SCHEDULE_ID_OPERATIONAL];
-    const zule_schedule_t *startup = &definition->schedules[ZULE_SCHEDULE_ID_STARTUP];
+    const zule_schedule_t *operational = &definition->schedules.entries[ZULE_SCHEDULE_ID_OPERATIONAL];
+    const zule_schedule_t *startup = &definition->schedules.entries[ZULE_SCHEDULE_ID_STARTUP];
     assert(operational->cycle_slots == 10U && operational->window_count == 3U);
     assert(startup->cycle_slots == 5U && startup->window_count == 1U);
     assert(startup->windows[0].task->id == ZULE_TASK_ID_MODE_MANAGER);

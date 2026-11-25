@@ -54,18 +54,29 @@ static zule_result_t validate_schedule(const zule_task_table_t *tasks,
     return result;
 }
 
+/* A nonempty table of schedules, each valid over the task table. */
+static zule_result_t validate_schedules(const zule_task_table_t *tasks,
+                                        const zule_schedule_table_t *schedules) {
+    zule_result_t result = ZULE_RESULT_OK;
+    if ((schedules->entries == NULL) || (schedules->count == 0U)) {
+        result = ZULE_RESULT_INVALID_SCHEDULE;
+    }
+    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < schedules->count); ++index) {
+        result = validate_schedule(tasks, &schedules->entries[index]);
+    }
+    return result;
+}
+
 zule_result_t zule_schedule_definition_validate(const zule_schedule_definition_t *definition) {
     zule_result_t result = ZULE_RESULT_OK;
-    if ((definition == NULL) || (definition->slot_us == 0U) || (definition->schedules == NULL) ||
-        (definition->schedule_count == 0U)) {
+    if ((definition == NULL) || (definition->slot_us == 0U)) {
         result = ZULE_RESULT_INVALID_SCHEDULE;
     }
     if (result == ZULE_RESULT_OK) {
         result = validate_tasks(&definition->tasks);
     }
-    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < definition->schedule_count);
-         ++index) {
-        result = validate_schedule(&definition->tasks, &definition->schedules[index]);
+    if (result == ZULE_RESULT_OK) {
+        result = validate_schedules(&definition->tasks, &definition->schedules);
     }
     return result;
 }
