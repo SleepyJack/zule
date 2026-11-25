@@ -1,0 +1,33 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 31, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "example",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../../build/examples/modes/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_COMPILE_WARNING_AS_ERROR": "ON",
+        "EXAMPLE_TARGET": "${presetName}"
+      }
+    },
+    {
+      "name": "posix",
+      "displayName": "The modes example on the host, with the POSIX port",
+      "inherits": "example"
+    },
+    {
+      "name": "qemu-mps2-an385",
+      "displayName": "The modes example on QEMU's mps2-an385 (Cortex-M3), with the Cortex-M port",
+      "inherits": "example",
+      "toolchainFile": "${sourceDir}/../../zule/ports/cortex_m/arm-none-eabi.cmake",
+      "cacheVariables": { "CMAKE_C_FLAGS": "-mcpu=cortex-m3 -mthumb" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "posix", "configurePreset": "posix" },
+    { "name": "qemu-mps2-an385", "configurePreset": "qemu-mps2-an385" }
+  ]
+}

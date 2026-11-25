@@ -75,14 +75,16 @@ for two seconds and checks it is still running:
 
 - **On POSIX,** the minimal example is the stable smoke test, since it does not
   depend on host timing. The showcase must also print every task's name, and its
-  tick check can fault on a heavily loaded host.
-- **On `qemu-mps2-an385`,** both examples run in QEMU with `-icount` and
+  tick check can fault on a heavily loaded host. The modes example must print
+  its switch to the operational schedule before `sense` first runs.
+- **On `qemu-mps2-an385`,** the examples run in QEMU with `-icount` and
   `sleep=off`, so their timing is deterministic, and a fault ends QEMU with a
   failure status. The minimal example prints nothing, so CI also counts SysTick
   exceptions in QEMU's exception log (`-d int`), to tell a running scheduler
   from a stuck program. The showcase prints through semihosting: CI checks
   every task's name, and that its tick timing report shows no deviation, which
-  only QEMU's exact timing can promise.
+  only QEMU's exact timing can promise. The modes example is checked as on
+  POSIX.
 
 ## Target tests
 
@@ -198,7 +200,7 @@ every step inside it:
 | Tests and formatting | Handwritten and generated C formatting, the schedule tool tests, the core and port tests, and the examples on POSIX. |
 | Tests under sanitizers | The core and port tests with the `sanitize` preset. |
 | Static checks | Every static check preset. |
-| Target tests | The Cortex-M port's target tests, the core tests, and both examples, in QEMU. |
+| Target tests | The Cortex-M port's target tests, the core tests, and the examples, in QEMU. |
 
 CI runs for pushes and pull requests, and the
 [CI workflow](.github/workflows/ci.yml) can also be run manually.

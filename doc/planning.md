@@ -124,17 +124,15 @@ tools and configurations.
 - Stop and quiesce tick delivery before returning. Define allowed caller
   contexts, treatment of an executing task, and precedence between termination
   requests and faults.
+- Show it in the [`modes` example](../examples/modes/README.md): a third,
+  shutdown schedule whose task puts outputs in a safe state and then
+  terminates, so the example exits cleanly, and CI checks its exit status
+  rather than a timeout.
 
-## Multiple schedules
+## Naming review
 
-- **An example, `modes`,** of a startup delay as a pattern rather than a
-  dedicated core feature: a startup schedule of idle slots followed by a window
-  for an application-owned mode-manager task, which requests the operational
-  schedule. The startup cycle length sets the delay, and the operational
-  schedule starts at slot zero of the following cycle. The mode manager can
-  also perform startup checks and choose the initial mode.
-- **Revisit naming** once the example exists. It is not evident what
-  distinguishes the schedule definition (`zule_schedule_definition_t`: the slot
+- Review names now that multiple schedules are complete. It is not evident
+  what distinguishes the schedule definition (`zule_schedule_definition_t`: the slot
   length, task table, and schedules) from a schedule (one cycle of windows);
   one option is a distinct name for the container. Also review slot, cycle, and
   window against established time-triggered terms (minor and major frame,

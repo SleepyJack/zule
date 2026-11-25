@@ -8,6 +8,7 @@ purpose, and each lists the targets it runs on.
 | --- | --- | --- |
 | [`minimal`](minimal/README.md) | The smallest complete application: tasks, a fault handler, and `zule_run()`, with no optional features and no output. | `posix`, `qemu-mps2-an385` |
 | [`showcase`](showcase/README.md) | A tour of Zule's features, with task names, the tick timing check, and the modules' timing reports printed with the C library's `printf`. What [Getting started](../README.md#getting-started) runs. | `posix`, `qemu-mps2-an385` |
+| [`modes`](modes/README.md) | Operating modes as multiple schedules: a startup schedule, and a mode manager that switches to the operational one. | `posix`, `qemu-mps2-an385` |
 
 ## Targets
 
