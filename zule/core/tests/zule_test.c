@@ -38,6 +38,10 @@ static void first_task(void) {
         assert(zule_run() == ZULE_RESULT_ALREADY_RUNNING);
         const zule_config_t disabled = {.on_fault = NULL};
         assert(zule_configure(&disabled) == ZULE_RESULT_ALREADY_RUNNING);
+        /* Tasks can request a schedule while running; a request for the active
+         * schedule switches nothing. */
+        assert(zule_schedule_request(0U) == ZULE_RESULT_OK);
+        assert(zule_schedule_request(1U) == ZULE_RESULT_INVALID_CONFIG);
     }
     if (overrun) {
         task_running = true;
@@ -81,6 +85,7 @@ static void check_stopped(void) {
 }
 
 int main(void) {
+    assert(zule_schedule_request(0U) == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_task_name_get(10U) == NULL);
     definition = NULL;
     assert(zule_task_name_get(UINT32_MAX) == NULL);
@@ -212,5 +217,7 @@ int main(void) {
     zule_test_port_reset();
     assert(zule_run() == ZULE_RESULT_INVALID_CONFIG);
     assert(zule_test_port_control.init_calls == 0U);
+    /* Outside a run, even after one, there is nothing to switch. */
+    assert(zule_schedule_request(0U) == ZULE_RESULT_NOT_INITIALIZED);
     return 0;
 }

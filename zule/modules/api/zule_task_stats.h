@@ -2,7 +2,7 @@
 #define ZULE_TASK_STATS_H
 
 /* Task statistics module: how long each task runs and how long it waits to
- * start, and totals over all tasks, so budgets can be chosen and checked from
+ * start, and totals for each schedule, so budgets can be chosen and checked from
  * measurements. Enabled by ZULE_CONFIG_MODULE_TASK_STATS; declared only when
  * enabled.
  *
@@ -34,12 +34,14 @@ typedef struct {
     uint32_t max_dispatch_latency_counts;
 } zule_task_stats_t;
 
-/* Totals over all tasks. */
+/* Totals over all tasks while one schedule was active. */
 typedef struct {
-    /* Cycles completed since the last reset. A cycle completes when the next
-     * one starts; after a fault, the cycle never completes. */
+    /* Cycles of the schedule completed since the last reset. A cycle completes
+     * when the next one starts, in the same or another schedule; after a fault,
+     * the cycle never completes. */
     uint64_t cycles;
-    /* Total execution time of all tasks. */
+    /* Total execution time of all tasks. An execution counts toward the
+     * schedule active when it ends. */
     uint64_t busy_counts;
     /* Most execution time in any completed cycle. An execution counts toward
      * the cycle in which it ends. */
@@ -53,12 +55,14 @@ typedef struct {
  * tasks; not from hooks or the fault handler. */
 bool zule_task_stats_get(uint32_t task_id, zule_task_stats_t *stats);
 
-/* Copy a consistent snapshot of the totals to *snapshot, which must point to
- * writable storage. Same calling rules as zule_task_stats_get(). */
-void zule_task_stats_summary_get(zule_task_stats_summary_t *snapshot);
+/* Copy a consistent snapshot of one schedule's totals to *summary, which must
+ * point to writable storage, and return true. Return false, leaving *summary
+ * unchanged, for an ID that is not one of the application's schedule IDs, as in
+ * zule_schedule_ids.h. Same calling rules as zule_task_stats_get(). */
+bool zule_task_stats_summary_get(uint32_t schedule_id, zule_task_stats_summary_t *summary);
 
-/* Clear every task's statistics and the totals together, so they always cover
- * the same interval. The cycle in progress is still measured in full. Same
+/* Clear every task's statistics and every schedule's totals together, so they
+ * always cover the same interval. The cycle in progress is still measured in full. Same
  * calling rules as zule_task_stats_get(). */
 void zule_task_stats_reset(void);
 

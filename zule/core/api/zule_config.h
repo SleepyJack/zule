@@ -57,6 +57,15 @@
 #error "ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE must be 0 or 1"
 #endif
 
+#ifndef ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+#define ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH 0
+#endif
+
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH != 0 &&                                             \
+    ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH != 1
+#error "ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH must be 0 or 1"
+#endif
+
 #ifndef ZULE_CONFIG_USER_HOOK_TASK_START
 #define ZULE_CONFIG_USER_HOOK_TASK_START 0
 #endif
@@ -75,8 +84,8 @@
 
 /* Every hook passes a timestamp, so hooks require the timebase. */
 #if (ZULE_CONFIG_USER_HOOK_TICK_START || ZULE_CONFIG_USER_HOOK_TICK_END ||                         \
-     ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE || ZULE_CONFIG_USER_HOOK_TASK_START ||                \
-     ZULE_CONFIG_USER_HOOK_TASK_END) &&                                                            \
+     ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE || ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH ||      \
+     ZULE_CONFIG_USER_HOOK_TASK_START || ZULE_CONFIG_USER_HOOK_TASK_END) &&                        \
     !ZULE_CONFIG_TIMEBASE
 #error "User hooks require ZULE_CONFIG_TIMEBASE"
 #endif

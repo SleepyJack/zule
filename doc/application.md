@@ -45,6 +45,37 @@ After `zule_run()` returns, it can be called again; each call reinitializes the
 scheduler and clears the previous fault. A task that never returns prevents
 `zule_run()` from returning. There is no public stop API yet.
 
+## Switching schedules
+
+With [multiple schedules](configuration.md#multiple-schedules), a task can
+switch to another while the scheduler runs:
+
+```c
+#include "zule_schedule_ids.h"
+
+void zule_task_mode_manager(void) {
+    if (startup_complete()) {
+        (void)zule_schedule_request(ZULE_SCHEDULE_ID_OPERATIONAL);
+    }
+}
+```
+
+The switch takes effect at the start of the next cycle: the current schedule
+finishes its cycle, including its final window, and the new schedule starts at
+its slot 0, so its first window can start in the same tick. Ticks continue at
+the same rate, and the cycle count continues. A later request before then
+replaces an earlier one, and a request for the active schedule cancels a
+pending switch. No switch takes place while a fault is latched.
+
+| Result | Meaning |
+| --- | --- |
+| `ZULE_RESULT_OK` | The request is pending. |
+| `ZULE_RESULT_INVALID_CONFIG` | The ID names no schedule. Any earlier request stays pending. |
+| `ZULE_RESULT_NOT_INITIALIZED` | The scheduler is not running. |
+
+Each run starts with the [configured](#configuration) schedule, with no request
+pending. The [`tick_schedule_switch` hook](#hooks) reports each switch.
+
 ## Configuration
 
 Configure the scheduler before running: the schedule to start with, and
@@ -87,10 +118,11 @@ errors, which are reported only through the `zule_run()` result. It receives a s
 | Member | Meaning |
 | --- | --- |
 | `reason` | `ZULE_RESULT_DISPATCH_MISSED`, `ZULE_RESULT_EXECUTION_OVERRUN`, or `ZULE_RESULT_TICK_TIMING`. |
+| `schedule_id` | ID of the active schedule, a `ZULE_SCHEDULE_ID_<NAME>` constant. |
 | `task_id` | ID of the active window's task: the faulting task, or for a tick timing fault, the task whose window is in progress or next to start; see [task names and IDs](#task-names-and-ids). |
-| `window_index` | Index of the active window in the schedule. |
+| `window_index` | Index of the active window in the active schedule. |
 | `slot` | Slot at which the fault was detected. |
-| `cycle_count` | Zero-based cycle count, reset at initialization. Wraps modulo 2^32. |
+| `cycle_count` | Zero-based cycle count, reset at initialization and continuing across schedule switches. Wraps modulo 2^32. |
 | `tick_deviation_counts` | With the [tick timing check](core.md#tick-timing-check) only: the deviation of the detecting tick from its expected time, in timebase counts, positive when late. |
 
 Together, `cycle_count` and `slot` identify when the fault was detected. A fault
@@ -120,6 +152,7 @@ function for each enabled hook; the declarations are in
 | --- | --- | --- | --- |
 | `zule_user_hook_tick_start(time_counts, slot, cycle_count)` | `ZULE_CONFIG_USER_HOOK_TICK_START` | Tick | Before each tick processes its slot. |
 | `zule_user_hook_tick_task_release(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE` | Tick | When a window starts and its task becomes pending. |
+| `zule_user_hook_tick_schedule_switch(time_counts, schedule_id)` | `ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH` | Tick | When a [requested schedule](#switching-schedules) takes effect, with the new schedule's ID. Not called for the schedule a run starts with. |
 | `zule_user_hook_tick_end(time_counts)` | `ZULE_CONFIG_USER_HOOK_TICK_END` | Tick | After each tick's processing. |
 | `zule_user_hook_task_start(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TASK_START` | Application | Immediately before a task function is called. |
 | `zule_user_hook_task_end(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TASK_END` | Application | Immediately after a task function returns, including after an overrun. |
@@ -140,7 +173,8 @@ can therefore be read by tasks without synchronization; data written by
 handler, hooks must be bounded and nonblocking and must not call Zule or port
 functions. Their run time adds to the tick and to the critical section.
 
-Within each tick, `tick_start` comes first and `tick_end` last. A window's
+Within each tick, `tick_start` comes first and `tick_end` last. A
+`tick_schedule_switch` comes before any `tick_task_release` in its tick. A window's
 `tick_task_release` comes before its `task_start`, which comes before its
 `task_end`; ticks can occur between a task's start and end. Hooks continue for
 ticks after a fault. Enabled [modules](modules.md) receive the same events

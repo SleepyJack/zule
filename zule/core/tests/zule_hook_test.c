@@ -50,6 +50,15 @@ void zule_user_hook_tick_task_release(uint32_t time_counts, uint32_t task_id, si
     record(EVENT_TICK_TASK_RELEASE, time_counts, task_id, window_index);
 }
 
+/* With a single schedule, no switch ever takes place. */
+static uint32_t schedule_switch_calls;
+
+void zule_user_hook_tick_schedule_switch(uint32_t time_counts, uint32_t schedule_id) {
+    (void)time_counts;
+    (void)schedule_id;
+    ++schedule_switch_calls;
+}
+
 void zule_user_hook_task_start(uint32_t time_counts, uint32_t task_id, size_t window_index) {
     record(EVENT_TASK_START, time_counts, task_id, window_index);
 }
@@ -159,5 +168,6 @@ int main(void) {
     };
     check(overrun_events, sizeof(overrun_events) / sizeof(overrun_events[0]));
     assert(zule_port_tick_stop() == ZULE_PORT_RESULT_OK);
+    assert(schedule_switch_calls == 0U);
     return 0;
 }

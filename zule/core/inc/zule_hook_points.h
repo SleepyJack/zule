@@ -20,11 +20,13 @@
 #define ZULE_HOOK_TICK_END_USED (ZULE_MODULES_HOOK_TICK_END || ZULE_CONFIG_USER_HOOK_TICK_END)
 #define ZULE_HOOK_TICK_TASK_RELEASE_USED                                                           \
     (ZULE_MODULES_HOOK_TICK_TASK_RELEASE || ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE)
+#define ZULE_HOOK_TICK_SCHEDULE_SWITCH_USED                                                        \
+    (ZULE_MODULES_HOOK_TICK_SCHEDULE_SWITCH || ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH)
 #define ZULE_HOOK_TASK_START_USED (ZULE_MODULES_HOOK_TASK_START || ZULE_CONFIG_USER_HOOK_TASK_START)
 #define ZULE_HOOK_TASK_END_USED (ZULE_MODULES_HOOK_TASK_END || ZULE_CONFIG_USER_HOOK_TASK_END)
 #define ZULE_HOOKS_USED                                                                            \
     (ZULE_HOOK_TICK_START_USED || ZULE_HOOK_TICK_END_USED || ZULE_HOOK_TICK_TASK_RELEASE_USED ||   \
-     ZULE_HOOK_TASK_START_USED || ZULE_HOOK_TASK_END_USED)
+     ZULE_HOOK_TICK_SCHEDULE_SWITCH_USED || ZULE_HOOK_TASK_START_USED || ZULE_HOOK_TASK_END_USED)
 
 /* The scheduler reads the time for tick start itself, so the tick check can share
  * the same read. It calls this wrapper only when ZULE_HOOK_TICK_START_USED, so
@@ -64,6 +66,20 @@ static inline void zule_hook_tick_task_release(uint32_t task_id, size_t window_i
 #else
     (void)task_id;
     (void)window_index;
+#endif
+}
+
+static inline void zule_hook_tick_schedule_switch(uint32_t schedule_id) {
+#if ZULE_HOOK_TICK_SCHEDULE_SWITCH_USED
+    const uint32_t time_counts = zule_port_time_get();
+#if ZULE_MODULES_HOOK_TICK_SCHEDULE_SWITCH
+    zule_modules_tick_schedule_switch(time_counts, schedule_id);
+#endif
+#if ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH
+    zule_user_hook_tick_schedule_switch(time_counts, schedule_id);
+#endif
+#else
+    (void)schedule_id;
 #endif
 }
 

@@ -53,7 +53,11 @@ enters the application dispatch loop. The first tick processes slot zero.
 If the first tick occurs before timer initialization returns, the first task
 can become pending before the application loop is ready to dispatch it.
 Startup overhead then consumes part of the first window's budget. Leaving
-initial slots idle allows time for initialization.
+initial slots idle allows time for initialization. With
+[multiple schedules](configuration.md#multiple-schedules), a startup schedule
+can hold the idle slots instead, followed by a task that
+[switches](#schedule-switching) to the operational schedule, so they are not
+repeated in every cycle.
 
 ![Startup timing when the first tick arrives before timer initialization returns.](images/initialisation.svg)
 
@@ -78,6 +82,18 @@ cannot be missed between them.
 
 The detailed diagrams illustrate an ISR interrupting application execution and
 are not to scale. The POSIX port instead uses a timer thread.
+
+### Schedule switching
+
+A [switch request](application.md#switching-schedules) from a task is applied
+by the tick that processes slot zero of the next cycle, once the current
+schedule's final window has been retired. Every window lies within its cycle,
+so at that point no task is pending or running. The tick then continues with
+the new schedule's first window, which is released in the same tick if it
+starts at slot zero. All schedules share the slot length, so the port timer is
+never reprogrammed, and all were validated at initialization, so tick context
+never validates. A latched fault prevents the switch: a task that overruns the
+end of the cycle is reported against the schedule it ran in.
 
 ### Task deadline monitoring
 
@@ -144,8 +160,8 @@ scheduler entry point can return.
 ## Hooks
 
 The core reports scheduler events through [hooks](application.md#hooks): tick
-start and end, task release in tick context, and task start and end around each
-task call. It reads the timebase once per event and passes the count to enabled
+start and end, task release, and schedule switches in tick context, and task
+start and end around each task call. It reads the timebase once per event and passes the count to enabled
 [modules](modules.md), then to the application's hooks. Hook points sit beside
 the state transitions above: release when a task becomes pending, start just
 before running, end as completion is recorded. Hooks observe; they cannot change

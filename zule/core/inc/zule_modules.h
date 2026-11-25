@@ -17,11 +17,11 @@
 
 #if ZULE_MODULES_ANY
 /* Called on each run from scheduler initialization, in application context
- * before ticks start, after the schedule and the core's own checks pass. Each
- * enabled module validates and prepares, and the first failure is returned,
- * normally INVALID_CONFIG. Modules keep accumulated results unless they
- * document otherwise. */
-zule_result_t zule_modules_init(const zule_schedule_definition_t *definition);
+ * before ticks start, after the schedule and the core's own checks pass, with
+ * the ID of the schedule the run starts with. Each enabled module validates and
+ * prepares, and the first failure is returned, normally INVALID_CONFIG. Modules
+ * keep accumulated results unless they document otherwise. */
+zule_result_t zule_modules_init(const zule_schedule_definition_t *definition, uint32_t schedule_id);
 #endif
 
 #if ZULE_MODULES_HOOK_TICK_START
@@ -34,6 +34,10 @@ void zule_modules_tick_end(uint32_t time_counts);
 
 #if ZULE_MODULES_HOOK_TICK_TASK_RELEASE
 void zule_modules_tick_task_release(uint32_t time_counts, uint32_t task_id, size_t window_index);
+#endif
+
+#if ZULE_MODULES_HOOK_TICK_SCHEDULE_SWITCH
+void zule_modules_tick_schedule_switch(uint32_t time_counts, uint32_t schedule_id);
 #endif
 
 #if ZULE_MODULES_HOOK_TASK_START

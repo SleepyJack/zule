@@ -44,6 +44,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
 
     lines = [
         "/* Generated Zule schedule. Do not edit. */",
+        '#include "zule_modules_schedule_data.h"',
         '#include "zule_modules_task_data.h"',
         '#include "zule_schedule_definition.h"',
         '#include "zule_schedule_ids.h"',
@@ -124,6 +125,14 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
         "zule_modules_task_data_t *zule_modules_task_data_get(void) {",
         f"    static zule_modules_task_data_t zule_modules_task_data[{len(task_names)}U];",
         "    return zule_modules_task_data;",
+        "}",
+        "#endif",
+        "",
+        # Likewise for modules that keep data for each schedule.
+        "#if ZULE_MODULES_SCHEDULE_DATA",
+        "zule_modules_schedule_data_t *zule_modules_schedule_data_get(void) {",
+        f"    static zule_modules_schedule_data_t zule_modules_schedule_data[{len(cycles)}U];",
+        "    return zule_modules_schedule_data;",
         "}",
         "#endif",
         "",
