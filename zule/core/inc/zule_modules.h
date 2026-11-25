@@ -21,7 +21,7 @@
  * enabled module validates and prepares, and the first failure is returned,
  * normally INVALID_CONFIG. Modules keep accumulated results unless they
  * document otherwise. */
-zule_result_t zule_modules_init(const zule_schedule_t *schedule);
+zule_result_t zule_modules_init(const zule_schedule_definition_t *definition);
 #endif
 
 #if ZULE_MODULES_HOOK_TICK_START

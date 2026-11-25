@@ -60,6 +60,26 @@ class ValidationTests(unittest.TestCase):
         issues = validate_schedule(read_fixture("invalid/nested-overlap.json"))
         self.assertTrue(any(i.path == "/cycle/windows/2" and "overlaps" in i.message for i in issues))
 
+    def test_multiple_schedules(self):
+        self.assertEqual(validate_schedule(read_fixture("valid/modes.json")), [])
+
+    def test_exactly_one_schedule_form(self):
+        self.assertTrue(validate_schedule(read_fixture("invalid/both-schedule-forms.json")))
+        neither = read_fixture("valid/modes.json")
+        del neither["schedules"]
+        self.assertTrue(validate_schedule(neither))
+
+    def test_schedule_names_must_form_distinct_enum_constants(self):
+        issues = validate_schedule(read_fixture("invalid/schedule-name-collision.json"))
+        self.assertTrue(any(i.path == "/schedules/NORMAL" and "schedule name collides" in i.message for i in issues))
+
+    def test_errors_in_a_named_schedule_name_it(self):
+        issues = validate_schedule(read_fixture("invalid/schedule-errors.json"))
+        paths = {i.path for i in issues}
+        self.assertIn("/schedules/broken/windows/1", paths)
+        self.assertIn("/schedules/broken/windows/2/task", paths)
+        self.assertFalse(any(p.startswith("/schedules/fine") for p in paths))
+
     def test_repeated_tasks_touching_windows_and_exact_cycle_end(self):
         self.assertEqual(validate_schedule(read_fixture("valid/repeated-task.json")), [])
 

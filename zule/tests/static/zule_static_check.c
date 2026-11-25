@@ -2,6 +2,7 @@
  * the schedule names, the user hooks when enabled, and an entry point that
  * reaches the public API, so every enabled part of Zule is linked. */
 #include "zule.h"
+#include "zule_schedule_ids.h"
 
 #if ZULE_CONFIG_MODULE_TICK_TIMING
 #include "zule_tick_timing.h"
@@ -74,7 +75,10 @@ static void handle_fault(const zule_fault_info_t *fault) {
 void _start(void);
 
 void _start(void) {
-    const zule_config_t config = {.on_fault = handle_fault};
+    const zule_config_t config = {
+        .on_fault = handle_fault,
+        .schedule_id = ZULE_SCHEDULE_ID_MAIN,
+    };
     (void)zule_configure(&config);
     sink = (zule_task_name_get(0U) != NULL) ? 1U : 0U;
 #if ZULE_CONFIG_TIMEBASE

@@ -1,10 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Zule schedule configuration",
-  "description": "Draft configuration for a repeating, single-core schedule. All timing uses integer slots. Each window reserves its referenced task's budget; early completion does not advance subsequent windows. Unallocated slots are idle.",
+  "description": "Draft configuration for repeating, single-core schedules. Either one schedule, as cycle, or several named schedules, such as operating modes, as schedules; all of them share the tasks and slot_us. All timing uses integer slots. Each window reserves its referenced task's budget; early completion does not advance subsequent windows. Unallocated slots are idle.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["slot_us", "tasks", "cycle"],
+  "required": [
+    "slot_us",
+    "tasks"
+  ],
+  "oneOf": [
+    {
+      "required": [
+        "cycle"
+      ]
+    },
+    {
+      "required": [
+        "schedules"
+      ]
+    }
+  ],
   "properties": {
     "$schema": {
       "type": "string",
@@ -27,14 +42,28 @@
       }
     },
     "cycle": {
-      "$ref": "#/$defs/cycle"
+      "$ref": "#/$defs/cycle",
+      "description": "The one schedule, when there is only one. Its generated ID is ZULE_SCHEDULE_ID_MAIN."
+    },
+    "schedules": {
+      "type": "object",
+      "description": "Multiple schedules, keyed by names with distinct uppercase forms for generated schedule ID constants. All share the tasks and slot_us.",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/cycle"
+      }
     }
   },
   "$defs": {
     "task": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["budget_slots"],
+      "required": [
+        "budget_slots"
+      ],
       "properties": {
         "description": {
           "type": "string"
@@ -49,7 +78,10 @@
     "cycle": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["slots", "windows"],
+      "required": [
+        "slots",
+        "windows"
+      ],
       "properties": {
         "slots": {
           "type": "integer",
@@ -69,7 +101,10 @@
     "window": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["task", "start_slot"],
+      "required": [
+        "task",
+        "start_slot"
+      ],
       "properties": {
         "task": {
           "type": "string",

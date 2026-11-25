@@ -1,0 +1,15 @@
+{
+  "slot_us": 1000,
+  "tasks": { "sense": { "budget_slots": 2 } },
+  "schedules": {
+    "fine": { "slots": 4, "windows": [{ "task": "sense", "start_slot": 0 }] },
+    "broken": {
+      "slots": 4,
+      "windows": [
+        { "task": "sense", "start_slot": 0 },
+        { "task": "sense", "start_slot": 1 },
+        { "task": "missing", "start_slot": 3 }
+      ]
+    }
+  }
+}

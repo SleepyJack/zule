@@ -1,8 +1,9 @@
 # zule_add_schedule(<target> SCHEDULE <file.json> [OUTPUT_DIR <dir>])
 #
-# Generates the schedule definition and task IDs from a schedule JSON file at build
-# time and links them into <target>. The generated zule_task_ids.h is available to
-# <target> sources. A relative SCHEDULE is resolved against the calling directory.
+# Generates the schedule definition, task IDs, and schedule IDs from a schedule
+# JSON file at build time and links them into <target>. The generated
+# zule_task_ids.h and zule_schedule_ids.h are available to <target> sources. A
+# relative SCHEDULE is resolved against the calling directory.
 # Requires Python 3.10 or later with zule/tools/schedule/requirements.txt installed;
 # set Python3_EXECUTABLE to select the interpreter.
 
@@ -32,6 +33,7 @@ function(zule_add_schedule target)
 
     add_custom_command(
         OUTPUT "${output_dir}/zule_schedule_definition.c" "${output_dir}/zule_task_ids.h"
+            "${output_dir}/zule_schedule_ids.h"
         COMMAND "${Python3_EXECUTABLE}" -m zule_schedule generate "${schedule}" "${output_dir}"
         WORKING_DIRECTORY "${tools_dir}"
         DEPENDS "${schedule}" "${tools_dir}/zule_schedule/schedule.schema.json" ${generator_sources}
@@ -43,7 +45,8 @@ function(zule_add_schedule target)
     # Object files link directly into the target, independent of library order.
     set(schedule_target "${target}_zule_schedule")
     add_library(${schedule_target} OBJECT
-        "${output_dir}/zule_schedule_definition.c" "${output_dir}/zule_task_ids.h")
+        "${output_dir}/zule_schedule_definition.c" "${output_dir}/zule_task_ids.h"
+        "${output_dir}/zule_schedule_ids.h")
     target_include_directories(${schedule_target} PUBLIC "${output_dir}")
     # Generated code is Zule's, so it compiles as strict C99 like the library.
     set_target_properties(${schedule_target} PROPERTIES

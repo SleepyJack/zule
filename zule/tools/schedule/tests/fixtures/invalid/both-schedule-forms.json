@@ -1,0 +1,8 @@
+{
+  "slot_us": 1000,
+  "tasks": { "sense": { "budget_slots": 1 } },
+  "cycle": { "slots": 2, "windows": [{ "task": "sense", "start_slot": 0 }] },
+  "schedules": {
+    "main": { "slots": 2, "windows": [{ "task": "sense", "start_slot": 0 }] }
+  }
+}

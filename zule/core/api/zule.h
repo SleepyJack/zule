@@ -45,13 +45,20 @@ typedef void (*zule_fault_handler_t)(const zule_fault_info_t *fault);
 
 typedef struct {
     zule_fault_handler_t on_fault;
+    /* The schedule zule_run() starts, as a schedule ID from the generated
+     * zule_schedule_ids.h, such as ZULE_SCHEDULE_ID_MAIN for a single schedule.
+     * ID 0 is the first schedule by name. */
+    uint32_t schedule_id;
 } zule_config_t;
 
 /* Copy configuration while stopped. While running, return ALREADY_RUNNING.
- * Otherwise NULL returns INVALID_CONFIG without changing the previous config.
- * Configuration is optional; a null handler disables notification while faults
- * still latch. The copied configuration persists across runs. Use the same
- * application context as zule_run(); concurrent configuration is unsupported. */
+ * Otherwise NULL, or a schedule ID that is not one of the application's
+ * schedules, returns INVALID_CONFIG without changing the previous config.
+ * Configuration is optional: without it, zule_run() starts the schedule with ID
+ * 0 and notifies no fault handler. A null handler disables notification while
+ * faults still latch. The copied configuration persists across runs. Use the
+ * same application context as zule_run(); concurrent configuration is
+ * unsupported. */
 zule_result_t zule_configure(const zule_config_t *config);
 
 /* Return the immutable diagnostic name for a declared task, or NULL for an

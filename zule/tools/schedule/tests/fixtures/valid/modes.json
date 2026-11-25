@@ -1,0 +1,22 @@
+{
+  "slot_us": 1000,
+  "tasks": {
+    "sense": { "budget_slots": 2 },
+    "control": { "budget_slots": 3 },
+    "mode_manager": { "budget_slots": 1 }
+  },
+  "schedules": {
+    "startup": {
+      "slots": 5,
+      "windows": [{ "task": "mode_manager", "start_slot": 4 }]
+    },
+    "operational": {
+      "slots": 10,
+      "windows": [
+        { "task": "sense", "start_slot": 0 },
+        { "task": "control", "start_slot": 2 },
+        { "task": "mode_manager", "start_slot": 9 }
+      ]
+    }
+  }
+}

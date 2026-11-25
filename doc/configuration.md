@@ -3,14 +3,15 @@
 Configuration is owned by the user (see [ownership](architecture.md#ownership)).
 It consists of:
 
-- the [schedule](#schedule): tasks, budgets, and window timing, in JSON;
+- the [schedule](#schedule): tasks, budgets, and window timing, in JSON, with
+  one or [multiple schedules](#multiple-schedules);
 - [build settings](#build-settings): compile-time options for the core in
   `zule_user_config.h`, and for the selected port in `zule_user_port_config.h`,
   or as compiler definitions.
 
 Keep both in an application-owned directory, such as the showcase example's
 [`examples/showcase/config/`](../examples/showcase/config). Runtime settings, such as the fault handler,
-are part of the [application](application.md#fault-handler).
+are part of the [application](application.md#configuration).
 
 ## Schedule
 
@@ -55,6 +56,7 @@ example, the showcase example's schedule:
 | `tasks.<name>.description` | Optional free text. |
 | `cycle.slots` | Cycle length in slots, including idle time. |
 | `cycle.windows[]` | Windows in increasing `start_slot` order, each naming a declared `task`. |
+| `schedules.<name>` | Instead of `cycle`, a cycle per named schedule; see [multiple schedules](#multiple-schedules). |
 | `$schema` | Optional path to the schema, for editor support. Tools ignore it. |
 
 Each window occupies `[start_slot, start_slot + budget_slots)` of its task.
@@ -91,6 +93,49 @@ this, so tools and [modules](modules.md) can index per-task data by ID.
 They are specific to a build: adding, removing, or renaming a task may change
 other IDs. Interpret saved fault logs against the matching build or schedule.
 
+### Multiple schedules
+
+An application with several modes, such as start-up and normal operation, can
+define a schedule for each. Instead of `cycle`, a `schedules` object holds one
+cycle per schedule, keyed by name; a file has exactly one of the two. All
+schedules share the tasks and `slot_us`, and each has its own `slots` and
+`windows`, with the same rules as `cycle`:
+
+```json
+{
+  "slot_us": 1000,
+  "tasks": {
+    "sense": { "budget_slots": 2 },
+    "control": { "budget_slots": 3 },
+    "mode_manager": { "budget_slots": 1 }
+  },
+  "schedules": {
+    "startup": {
+      "slots": 5,
+      "windows": [{ "task": "mode_manager", "start_slot": 4 }]
+    },
+    "operational": {
+      "slots": 10,
+      "windows": [
+        { "task": "sense", "start_slot": 0 },
+        { "task": "control", "start_slot": 2 },
+        { "task": "mode_manager", "start_slot": 9 }
+      ]
+    }
+  }
+}
+```
+
+Each schedule name determines a schedule ID constant, `ZULE_SCHEDULE_ID_<NAME>`,
+in the generated `zule_schedule_ids.h`. Names follow the rules for
+[task names](#task-names-and-ids): C identifiers with distinct uppercase forms.
+IDs start at zero in sorted schedule-name order, so the example gives
+`ZULE_SCHEDULE_ID_OPERATIONAL` 0 and `ZULE_SCHEDULE_ID_STARTUP` 1. A file with
+`cycle` has one schedule, named `main`, with ID `ZULE_SCHEDULE_ID_MAIN`.
+
+The application selects the schedule to start with in its
+[configuration](application.md#configuration).
+
 ## Build settings
 
 `zule/core/api/zule_config.h` supplies compile-time defaults and validates
@@ -103,7 +148,7 @@ same settings.
 | `ZULE_USE_USER_PORT_CONFIG` | `0` | Set to `1` to have the port include an integrator-supplied `zule_user_port_config.h`; see [port settings](#port-settings). |
 | `ZULE_CONFIG_TASK_NAMES` | `0` | Set to `1` to compile diagnostic task names into the schedule. Must be `0` or `1`. |
 | `ZULE_CONFIG_TIMEBASE` | `0` | Set to `1` to enable the optional [port timebase](port.md#timebase) for sub-slot timing. The selected port must provide it. Must be `0` or `1`. |
-| `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`, and a cycle shorter than 2^32 timebase counts, checked at initialization. Must be `0` or `1`. |
+| `ZULE_CONFIG_USER_HOOK_<HOOK>` | `0` | Set to `1` to call the application's [hook](application.md#hooks) for `<HOOK>`: `TICK_START`, `TICK_END`, `TICK_TASK_RELEASE`, `TASK_START`, or `TASK_END`. Requires `ZULE_CONFIG_TIMEBASE`, and every schedule's cycle shorter than 2^32 timebase counts, checked at initialization. Must be `0` or `1`. |
 | `ZULE_CONFIG_TICK_CHECK` | `0` | Set to `1` to enable the [tick timing check](core.md#tick-timing-check). Requires `ZULE_CONFIG_TIMEBASE` and `ZULE_CONFIG_TICK_TOLERANCE_US`. Must be `0` or `1`. |
 | `ZULE_CONFIG_TICK_TOLERANCE_US` | None | Largest accepted tick deviation, early or late, in microseconds. Required with the tick check. Initialization checks it is at least one timebase count and less than one slot. |
 | `ZULE_CONFIG_MODULE_<NAME>` | `0` | Set to `1` to enable a [module](modules.md): `TICK_TIMING` or `TASK_STATS`. Requires `ZULE_CONFIG_TIMEBASE`. Must be `0` or `1`. |

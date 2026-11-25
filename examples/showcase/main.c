@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "zule.h"
+#include "zule_schedule_ids.h"
 #include "zule_task_stats.h"
 #include "zule_tick_timing.h"
 
@@ -69,7 +70,10 @@ void zule_task_output(void) {
 
 int main(void) {
     (void)setvbuf(stdout, NULL, _IONBF, 0);
-    const zule_config_t config = {.on_fault = handle_fault};
+    const zule_config_t config = {
+        .on_fault = handle_fault,
+        .schedule_id = ZULE_SCHEDULE_ID_MAIN,
+    };
     if (zule_configure(&config) != ZULE_RESULT_OK) {
         (void)fputs("Zule configuration failed\n", stderr);
         return 1;

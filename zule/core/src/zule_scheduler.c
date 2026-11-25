@@ -43,14 +43,16 @@ typedef struct {
 static zule_scheduler_t scheduler;
 
 #if ZULE_HOOKS_USED || ZULE_CONFIG_TICK_CHECK
-/* Check that the timebase can represent what the enabled features measure. The
- * frequency is constant and valid at any time, so this runs before ticks start. */
-static zule_result_t check_timebase_limits(const zule_schedule_t *schedule) {
+/* Check that the timebase can represent what the enabled features measure, in
+ * every schedule, since a run may switch to any of them. The frequency is
+ * constant and valid at any time, so this runs before ticks start. */
+static zule_result_t check_timebase_limits(const zule_schedule_definition_t *definition) {
     zule_result_t result = ZULE_RESULT_OK;
     const uint64_t hz = zule_port_time_hz();
+    const uint32_t slot_us = definition->slot_us;
     /* Slot length in counts, scaled by one million; both factors are below 2^32,
      * so the product fits. */
-    const uint64_t slot_scaled_counts = (uint64_t)schedule->slot_us * hz;
+    const uint64_t slot_scaled_counts = (uint64_t)slot_us * hz;
     if (hz == 0U) {
         result = ZULE_RESULT_INVALID_CONFIG;
     }
@@ -59,16 +61,21 @@ static zule_result_t check_timebase_limits(const zule_schedule_t *schedule) {
      * cycle, which needs a cycle shorter than one timebase wrap of 2^32 counts.
      * A nonzero frequency and slot make the divisor nonzero. */
     const uint64_t wrap_scaled_counts = (uint64_t)ZULE_MICROSECONDS_PER_SECOND << 32U;
-    if ((result == ZULE_RESULT_OK) &&
-        ((slot_scaled_counts >= wrap_scaled_counts) ||
-         ((uint64_t)schedule->cycle_slots > ((wrap_scaled_counts - 1U) / slot_scaled_counts)))) {
+    if ((result == ZULE_RESULT_OK) && (slot_scaled_counts >= wrap_scaled_counts)) {
         result = ZULE_RESULT_INVALID_CONFIG;
+    }
+    for (size_t index = 0U; (result == ZULE_RESULT_OK) && (index < definition->schedules.count);
+         ++index) {
+        if ((uint64_t)definition->schedules.entries[index].cycle_slots >
+            ((wrap_scaled_counts - 1U) / slot_scaled_counts)) {
+            result = ZULE_RESULT_INVALID_CONFIG;
+        }
     }
 #endif
 #if ZULE_CONFIG_TICK_CHECK
     if (result == ZULE_RESULT_OK) {
         /* Also clears the tracker's reference, so each run starts from its first tick. */
-        result = zule_tick_tracker_init(&scheduler.tick_tracker, schedule->slot_us, (uint32_t)hz);
+        result = zule_tick_tracker_init(&scheduler.tick_tracker, slot_us, (uint32_t)hz);
     }
     if (result == ZULE_RESULT_OK) {
         /* Round down, so the tolerance never exceeds what was configured. */
@@ -86,21 +93,30 @@ static zule_result_t check_timebase_limits(const zule_schedule_t *schedule) {
 }
 #endif
 
-zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault) {
+zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault, uint32_t schedule_id) {
     scheduler.initialized = false;
-    scheduler.schedule = zule_schedule_get();
-    zule_result_t result = zule_schedule_validate(scheduler.schedule);
+    const zule_schedule_definition_t *definition = zule_schedule_definition_get();
+    zule_result_t result = zule_schedule_definition_validate(definition);
+    const zule_schedule_t *schedule = NULL;
+    if (result == ZULE_RESULT_OK) {
+        if ((size_t)schedule_id < definition->schedules.count) {
+            schedule = &definition->schedules.entries[schedule_id];
+        } else {
+            result = ZULE_RESULT_INVALID_CONFIG;
+        }
+    }
 #if ZULE_HOOKS_USED || ZULE_CONFIG_TICK_CHECK
     if (result == ZULE_RESULT_OK) {
-        result = check_timebase_limits(scheduler.schedule);
+        result = check_timebase_limits(definition);
     }
 #endif
 #if ZULE_MODULES_ANY
     if (result == ZULE_RESULT_OK) {
-        result = zule_modules_init(scheduler.schedule);
+        result = zule_modules_init(definition);
     }
 #endif
     if (result == ZULE_RESULT_OK) {
+        scheduler.schedule = schedule;
 #if ZULE_CONFIG_TICK_CHECK
         scheduler.tick_deviation = (zule_tick_deviation_t){0};
 #endif

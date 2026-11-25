@@ -32,8 +32,8 @@ delivery, and returns the reason:
 
 | Result | Cause |
 | --- | --- |
-| `ZULE_RESULT_INVALID_SCHEDULE` | The linked schedule failed validation. |
-| `ZULE_RESULT_INVALID_CONFIG` | The timebase cannot represent what enabled [hooks](#hooks) or the [tick timing check](core.md#tick-timing-check) measure for this schedule. |
+| `ZULE_RESULT_INVALID_SCHEDULE` | The linked schedules failed validation. |
+| `ZULE_RESULT_INVALID_CONFIG` | The configured schedule ID names no schedule, or the timebase cannot represent what enabled [hooks](#hooks) or the [tick timing check](core.md#tick-timing-check) measure for the schedules. |
 | `ZULE_RESULT_DISPATCH_MISSED` | A task was not dispatched within its window. |
 | `ZULE_RESULT_EXECUTION_OVERRUN` | A task was still running at the end of its window. |
 | `ZULE_RESULT_TICK_TIMING` | A tick deviated from its expected time by more than the tolerance; see the [tick timing check](core.md#tick-timing-check). |
@@ -45,21 +45,40 @@ After `zule_run()` returns, it can be called again; each call reinitializes the
 scheduler and clears the previous fault. A task that never returns prevents
 `zule_run()` from returning. There is no public stop API yet.
 
-## Fault handler
+## Configuration
 
-Optionally install a fault handler before running:
+Configure the scheduler before running: the schedule to start with, and
+optionally a fault handler:
 
 ```c
+#include "zule_schedule_ids.h"
+
 static void handle_fault(const zule_fault_info_t *fault) { /* ... */ }
 
-const zule_config_t config = {.on_fault = handle_fault};
+const zule_config_t config = {
+    .on_fault = handle_fault,
+    .schedule_id = ZULE_SCHEDULE_ID_MAIN,
+};
 zule_configure(&config);
 ```
 
+| Member | Meaning |
+| --- | --- |
+| `on_fault` | The [fault handler](#fault-handler). Null disables notification; faults still latch. |
+| `schedule_id` | The schedule `zule_run()` starts, a `ZULE_SCHEDULE_ID_<NAME>` constant from the generated `zule_schedule_ids.h`; see [multiple schedules](configuration.md#multiple-schedules). |
+
 `zule_configure()` copies the configuration, which persists across runs. A null
-handler disables notification; faults still latch. A null configuration returns
+configuration, or a schedule ID that names no schedule, returns
 `ZULE_RESULT_INVALID_CONFIG` and keeps the previous settings. Calling it while
 running returns `ZULE_RESULT_ALREADY_RUNNING`.
+
+Set the schedule ID explicitly: ID 0 is the first schedule by name, which may
+not be the intended one. Without any configuration, `zule_run()` runs the
+schedule with ID 0 and no fault handler.
+
+## Fault handler
+
+The fault handler is installed by the [configuration](#configuration).
 
 The handler is called once, on the first missed-dispatch, overrun, or tick
 timing fault. It is not called for invalid schedules or configurations, or port
@@ -108,8 +127,8 @@ function for each enabled hook; the declarations are in
 `time_counts` is a timebase count, read once per event. Convert counts with
 `zule_timebase_hz()`, and measure intervals by unsigned subtraction, which
 handles the count wrapping. Any interval up to one cycle can be measured this
-way: with hooks enabled, initialization checks that a cycle is shorter than
-2^32 counts, and `zule_run()` returns `ZULE_RESULT_INVALID_CONFIG` otherwise. For example, `task_end` minus `task_start` is a
+way: with hooks enabled, initialization checks that every schedule's cycle is
+shorter than 2^32 counts, and `zule_run()` returns `ZULE_RESULT_INVALID_CONFIG` otherwise. For example, `task_end` minus `task_start` is a
 task's execution time, and `task_start` minus `tick_task_release` is its
 dispatch latency.
 
@@ -136,6 +155,8 @@ application's own.
 The generated header `zule_task_ids.h` defines `zule_task_id_t` and constants
 such as `ZULE_TASK_ID_SENSE`, for comparison with `zule_fault_info_t.task_id`.
 IDs are specific to a build; see [task names and IDs](configuration.md#task-names-and-ids).
+Likewise, `zule_schedule_ids.h` defines `zule_schedule_id_t` and constants such
+as `ZULE_SCHEDULE_ID_MAIN`; see [multiple schedules](configuration.md#multiple-schedules).
 
 `zule_task_name_get(task_id)` returns a task's name, or `NULL` for an unknown ID
 or when [task names](configuration.md#task-names) are disabled. It can be called
@@ -185,7 +206,7 @@ Zule provides:
 | Name | Use |
 | --- | --- |
 | `zule::zule` | The Zule library to link: the core and the [modules](modules.md). It carries the public include path and the build settings, so the application, Zule, the port, and the generated schedule share them. |
-| `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time, compiles it, and links it into `<target>`, whose sources can then include `zule_task_ids.h`. Output defaults to `<target>_schedule/` in the calling binary directory. Only one schedule per application is supported. |
+| `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time, compiles it, and links it into `<target>`, whose sources can then include `zule_task_ids.h` and `zule_schedule_ids.h`. Output defaults to `<target>_schedule/` in the calling binary directory. One schedule file per application is supported; it can define [multiple schedules](configuration.md#multiple-schedules). |
 
 `zule_add_schedule()` needs Python 3.10 or later with
 [`zule/tools/schedule/requirements.txt`](../zule/tools/schedule/requirements.txt)
@@ -218,5 +239,6 @@ definitions the port's README requires. Generate the schedule from
 python -m zule_schedule generate path/to/schedule.json path/to/output
 ```
 
-This writes `zule_schedule_definition.c` and `zule_task_ids.h`; add the output
+This writes `zule_schedule_definition.c`, `zule_task_ids.h`, and
+`zule_schedule_ids.h`; add the output
 directory to the application's include path.

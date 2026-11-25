@@ -95,8 +95,10 @@ jobs:
           $IN_IMAGE python tools/format.py --check
           build/examples/minimal/posix/zule_minimal_schedule/zule_schedule_definition.c
           build/examples/minimal/posix/zule_minimal_schedule/zule_task_ids.h
+          build/examples/minimal/posix/zule_minimal_schedule/zule_schedule_ids.h
           build/examples/showcase/posix/zule_showcase_schedule/zule_schedule_definition.c
           build/examples/showcase/posix/zule_showcase_schedule/zule_task_ids.h
+          build/examples/showcase/posix/zule_showcase_schedule/zule_schedule_ids.h
 
       # Each example must keep running, since it returns only on a fault; the
       # showcase must also print every task's name. The minimal example has no
