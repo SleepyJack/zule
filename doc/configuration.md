@@ -139,8 +139,11 @@ The application selects the schedule to start with in its
 
 ## Build settings
 
-`zule/core/api/zule_config.h` supplies compile-time defaults and validates
-settings. The core, port, application, and generated schedule must all use the
+[`zule_config_defaults.h`](../zule/core/api/zule_config_defaults.h) lists the
+settings and their defaults, and
+[`zule_config_apply.h`](../zule/core/api/zule_config_apply.h), included by
+`zule.h`, applies them: the integrator's settings, then the defaults, then
+checks. The core, port, application, and generated schedule must all use the
 same settings.
 
 | Setting | Default | Meaning |
@@ -168,7 +171,7 @@ overrides, create `zule_user_config.h` in an application-owned directory:
 ```
 
 Zule includes the user header first and supplies defaults for settings left
-unspecified. Do not edit or replace Zule's own settings header. With CMake, set
+unspecified. Do not edit or replace Zule's own settings headers. With CMake, set
 `ZULE_USER_CONFIG_DIR` to the header's directory; see
 [CMake integration](application.md#cmake-integration). Other build systems add
 the directory to the include path and define `ZULE_USE_USER_CONFIG=1` for every

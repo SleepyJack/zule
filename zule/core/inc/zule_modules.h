@@ -6,7 +6,7 @@
  * modules; applications cannot include it.
  *
  * It covers initialization and the hook entry points. Each is declared when an
- * enabled module needs it, as derived in zule_modules_config.h. Hook entry
+ * enabled module needs it, as derived in zule_modules_config_apply.h. Hook entry
  * points take the same arguments and give the same guarantees as the user hooks
  * in zule_hooks.h, and are called first. */
 #include "zule.h"

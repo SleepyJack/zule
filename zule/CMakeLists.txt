@@ -19,7 +19,7 @@ if(ZULE_BUILD_TESTS)
     enable_testing()
 endif()
 
-# Settings shared by every component that includes zule_config.h or the port's
+# Settings shared by every component that includes zule_config_apply.h or the port's
 # zule_port_config.h: the core, port, generated schedule, and application.
 # ZULE_USER_CONFIG_DIR holds zule_user_config.h, zule_user_port_config.h, or both.
 # ZULE_USER_PORT_CONFIG_DIR, when the port settings are kept separately, holds

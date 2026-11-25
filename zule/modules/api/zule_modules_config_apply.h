@@ -1,30 +1,21 @@
-#ifndef ZULE_MODULES_CONFIG_H
-#define ZULE_MODULES_CONFIG_H
+#ifndef ZULE_MODULES_CONFIG_APPLY_H
+#define ZULE_MODULES_CONFIG_APPLY_H
 
-/* Module settings, included by zule_config.h after the core settings. Each
- * module is enabled by a ZULE_CONFIG_MODULE_... setting, defaulting to 0.
+/* Apply the module settings: included by zule_config_apply.h after the core
+ * settings, it supplies the module defaults from zule_modules_config_defaults.h,
+ * then checks the values and derives the conditions below.
  *
- * The derived conditions below are what the core reads: whether to initialize
+ * The derived conditions are what the core reads: whether to initialize
  * modules, and whether to call the module entry point for each hook. The core
  * never names a module. A module adds its setting to ZULE_MODULES_ANY and to the
  * condition of each hook it consumes, to ZULE_MODULES_TASK_DATA if it keeps
  * data for each task, and to ZULE_MODULES_SCHEDULE_DATA if it keeps data for
  * each schedule. */
 
-/* Tick timing: worst tick deviations and longest tick handler; see
- * zule_tick_timing.h. */
-#ifndef ZULE_CONFIG_MODULE_TICK_TIMING
-#define ZULE_CONFIG_MODULE_TICK_TIMING 0
-#endif
+#include "zule_modules_config_defaults.h"
 
 #if ZULE_CONFIG_MODULE_TICK_TIMING != 0 && ZULE_CONFIG_MODULE_TICK_TIMING != 1
 #error "ZULE_CONFIG_MODULE_TICK_TIMING must be 0 or 1"
-#endif
-
-/* Task statistics: execution times and dispatch latency for each task, and
- * totals over all tasks; see zule_task_stats.h. */
-#ifndef ZULE_CONFIG_MODULE_TASK_STATS
-#define ZULE_CONFIG_MODULE_TASK_STATS 0
 #endif
 
 #if ZULE_CONFIG_MODULE_TASK_STATS != 0 && ZULE_CONFIG_MODULE_TASK_STATS != 1
