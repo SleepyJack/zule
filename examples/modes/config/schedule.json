@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../zule/tools/schedule/zule_schedule/schedule.schema.json",
+  "slot_us": 10000,
+  "tasks": {
+    "sense": {
+      "description": "Sample inputs into a stable snapshot.",
+      "budget_slots": 2
+    },
+    "control": {
+      "description": "Compute control outputs from the input snapshot.",
+      "budget_slots": 3
+    },
+    "mode_manager": {
+      "description": "Check the system and choose the schedule for the next cycle.",
+      "budget_slots": 1
+    }
+  },
+  "schedules": {
+    "startup": {
+      "slots": 4,
+      "windows": [{ "task": "mode_manager", "start_slot": 3 }]
+    },
+    "operational": {
+      "slots": 10,
+      "windows": [
+        { "task": "sense", "start_slot": 0 },
+        { "task": "control", "start_slot": 2 },
+        { "task": "mode_manager", "start_slot": 9 }
+      ]
+    }
+  }
+}

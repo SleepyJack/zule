@@ -73,10 +73,13 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
             "        },",
         ])
     lines.append("    };")
+    # Each schedule's window count is emitted as a number, for the array's size
+    # and the schedule's count, so the lines stay short whatever the schedule's
+    # name, and the compiler rejects more windows than the size.
     for name, cycle, _ in cycles:
         lines.extend([
             "",
-            f"    static const zule_window_t zule_windows_{name}[] = {{",
+            f"    static const zule_window_t zule_windows_{name}[{len(cycle['windows'])}U] = {{",
         ])
         for window in cycle["windows"]:
             task = window["task"]
@@ -96,7 +99,7 @@ def generate_schedule(schedule: Any, output_dir: str | Path) -> Path:
             "            {",
             f"                .cycle_slots = {int(cycle['slots'])}U,",
             f"                .windows = zule_windows_{name},",
-            f"                .window_count = sizeof(zule_windows_{name}) / sizeof(zule_windows_{name}[0]),",
+            f"                .window_count = {len(cycle['windows'])}U,",
             "            },",
         ])
     lines.extend([

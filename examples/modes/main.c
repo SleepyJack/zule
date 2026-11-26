@@ -1,0 +1,67 @@
+#include <stdbool.h>
+#include <stdio.h>
+
+#include "zule.h"
+#include "zule_schedule_ids.h"
+
+/* Operating modes as schedules. The run starts in the startup schedule, whose
+ * idle slots absorb startup latency, so no window of the operational schedule
+ * is shortened by it. The startup cycle ends with the mode manager, which
+ * checks the system and requests the operational schedule, which starts at slot
+ * 0 of the next cycle. */
+
+/* Whether the mode manager has requested the operational schedule. Tasks run
+ * one after another, so this needs no locking. */
+static bool operational_requested;
+
+void zule_task_sense(void) {
+    puts("sense");
+}
+
+void zule_task_control(void) {
+    puts("control");
+}
+
+void zule_task_mode_manager(void) {
+    if (!operational_requested) {
+        /* Stands in for startup checks: inputs valid, outputs safe. */
+        if (zule_schedule_request(ZULE_SCHEDULE_ID_OPERATIONAL) == ZULE_RESULT_OK) {
+            operational_requested = true;
+            puts("mode_manager: startup complete, switching to operational");
+        }
+    }
+    /* In the operational schedule, the mode manager would watch for conditions
+     * that need another mode. */
+}
+
+/* The fault handler runs in tick context, so it only keeps the report. main()
+ * prints it after zule_run() returns. */
+static zule_fault_info_t last_fault;
+static bool fault_seen;
+
+static void handle_fault(const zule_fault_info_t *fault) {
+    last_fault = *fault;
+    fault_seen = true;
+}
+
+int main(void) {
+    (void)setvbuf(stdout, NULL, _IONBF, 0);
+    const zule_config_t config = {
+        .on_fault = handle_fault,
+        .schedule_id = ZULE_SCHEDULE_ID_STARTUP,
+    };
+    if (zule_configure(&config) != ZULE_RESULT_OK) {
+        (void)fputs("Zule configuration failed\n", stderr);
+        return 1;
+    }
+    puts("Zule modes: starting in the startup schedule");
+    const zule_result_t result = zule_run();
+    (void)fprintf(stderr, "Zule stopped: %u\n", (unsigned int)result);
+    if (fault_seen) {
+        (void)fprintf(stderr, "Fault %u in schedule %u, window %zu, at slot %u (cycle %u)\n",
+                      (unsigned int)last_fault.reason, (unsigned int)last_fault.schedule_id,
+                      last_fault.window_index, (unsigned int)last_fault.slot,
+                      (unsigned int)last_fault.cycle_count);
+    }
+    return result == ZULE_RESULT_OK ? 0 : 1;
+}
