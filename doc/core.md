@@ -1,25 +1,22 @@
 # Core
 
 The core is the scheduler: it dispatches tasks according to the schedule and
-enforces the schedule's timing. This document describes its intended behaviour
-and timing model. See the [architecture overview](architecture.md) for
-components and execution contexts.
+enforces the schedule's timing. This document describes its behaviour and
+timing model. See the [architecture overview](architecture.md) for components
+and execution contexts.
 
 ## Scheduling overview
 
-Tasks are allocated fixed execution windows within a predefined cyclic
-schedule. The cycle is divided into slots, with slot timing defined by a
-periodic timer implemented by the [port](architecture.md#port).
+Tasks are allocated fixed execution windows within a repeating cycle of slots.
+The [port](port.md) delivers a tick at the start of each slot.
 
-The tick handles window boundaries in [tick context](architecture.md#tick-context),
-normally a timer ISR. At a window's start, it marks the task as pending;
-[application context](architecture.md#application-context) then
-dispatches and executes the task. Early completion does not advance the
-schedule. Unallocated slots are idle.
+The tick handles window boundaries in [tick context](architecture.md#tick-context).
+At a window's start, it marks the task as pending, and
+[application context](architecture.md#application-context) then dispatches and
+runs it. Early completion does not advance the schedule, and unallocated slots
+are idle.
 
 ### Task execution states
-
-The scheduler tracks task execution using the following states.
 
 | State | Description |
 |-------|-------------|
@@ -28,8 +25,6 @@ The scheduler tracks task execution using the following states.
 | Running | Task has been dispatched; completion is not yet recorded. |
 | Completed | Task function has returned and completion is recorded. |
 
-The normal state transitions are below.
-
 | Transition | Context | Condition |
 | --- | --- | --- |
 | Idle → Pending | Tick | The task's window begins. |
@@ -37,142 +32,100 @@ The normal state transitions are below.
 | Running → Completed | Application | The task returns and the scheduler records completion. |
 | Completed → Idle | Tick | The task's window ends. |
 
-The example below shows two tasks in a ten-slot cycle. Each remains in the
-completed state until its window ends. Pending intervals are omitted at this
-resolution; see [task dispatch](#task-dispatch) for the detailed timing.
+The example below shows two tasks in a ten-slot cycle. Each remains completed
+until its window ends. Pending intervals are omitted at this resolution; see
+[task dispatch](#task-dispatch).
 
 ![Example schedule](images/schedule.svg)
 
-## Scheduler timing details
+## Timing
 
-### Scheduler initialisation
+### Startup
 
-The scheduler entry point validates the schedule, starts the port timer, and
-enters the application dispatch loop. The first tick processes slot zero.
-
-If the first tick occurs before timer initialization returns, the first task
-can become pending before the application loop is ready to dispatch it.
-Startup overhead then consumes part of the first window's budget. With
-[multiple schedules](configuration.md#multiple-schedules), a startup schedule of
-idle slots, followed by a task that [switches](#schedule-switching) to the
-operational schedule, absorbs this latency without costing slots in every
-cycle.
+The first tick processes slot zero, and can arrive before the port's timer
+initialization returns. The first task can then become pending before the
+application loop is ready to dispatch it, and startup overhead consumes part of
+its window. With [multiple schedules](configuration.md#multiple-schedules), a
+startup schedule of idle slots, followed by a task that
+[switches](#schedule-switching) to the operational schedule, absorbs this
+latency without costing slots in every cycle.
 
 ![Startup timing when the first tick arrives before timer initialization returns.](images/initialisation.svg)
 
 ### Task dispatch
 
-At a window's start, tick context marks the task as pending. The application
-dispatch loop sets the state to running before calling the task function.
-Critical sections protect these [state transitions](#task-execution-states).
-Task functions execute
-outside the critical sections, allowing ticks to run during task execution.
+State transitions are protected by critical sections, but task functions run
+outside them, so ticks continue during task execution. When no task is pending,
+the dispatch loop waits for the next tick through the port's [idle](port.md#idle).
 
 ![Expanded dispatch timing, from the release tick through pending to running.](images/dispatch.svg)
 
-The scheduler records completion after the task function returns. At the
-window's end, tick context returns the execution state to idle before processing
-the next window.
-
-Only tick context makes a task pending, so when no task is pending the dispatch
-loop waits for the next tick through the port's [idle](port.md#idle). The check
-and the wait share one critical section, so a tick that makes a task pending
-cannot be missed between them.
-
-The detailed diagrams illustrate an ISR interrupting application execution and
-are not to scale. The POSIX port instead uses a timer thread.
+The detailed diagrams show an ISR interrupting application execution and are
+not to scale.
 
 ### Schedule switching
 
-A [switch request](application.md#switching-schedules) from a task is applied
-by the tick that processes slot zero of the next cycle, once the current
-schedule's final window has been retired. Every window lies within its cycle,
-so at that point no task is pending or running. The tick then continues with
-the new schedule's first window, which is released in the same tick if it
-starts at slot zero. All schedules share the slot length, so the port timer is
-never reprogrammed, and all were validated at initialization, so tick context
-never validates. A latched fault prevents the switch: a task that overruns the
-end of the cycle is reported against the schedule it ran in.
+A task can [request another schedule](application.md#switching-schedules). The
+switch takes effect at the start of the next cycle, after the current schedule's
+final window, so a cycle always runs to completion in one schedule. All
+schedules share the slot length, so ticks continue at the same rate.
 
-### Task deadline monitoring
+### Deadline monitoring
 
-At a window's end, tick context checks the task's execution state. A task still
-pending raises a **missed-dispatch** fault: it was not dispatched within its
-window and will not be dispatched after the fault.
+At a window's end, tick context checks the task's state. A task still pending
+raises a **missed-dispatch** fault: it was not dispatched within its window.
 
 ![A task remains pending until the deadline tick raises a missed-dispatch fault.](images/dispatch_missed.svg)
 
 A task still running raises an **execution-overrun** fault. Completion must be
-recorded before the deadline check, so the window must include the overhead of
-returning from the task and updating its state. [Fault detection](#fault-handling) does not
-terminate the task function.
+recorded before the deadline, so the budget must include returning from the
+task. Detecting the fault does not terminate the task function.
 
 ![A task is running at its deadline; the tick raises an overrun fault while the task remains running.](images/execution_overrun.svg)
 
 ### Tick timing check
 
-The optional tick timing check (`ZULE_CONFIG_TICK_CHECK`, with
-`ZULE_CONFIG_TICK_TOLERANCE_US`; see [build settings](configuration.md#build-settings))
-compares each tick's time with when it should have arrived, using the
-[timebase](port.md#timebase). The first tick of a run is the reference, and each
-later tick is expected one slot after the previous expected time. Because the
-expectation is absolute, the check catches slow drift as well as single late
-ticks, and a lost tick appears as a deviation of a whole slot.
-
-A tick that deviates from its expected time by more than the tolerance, early or
-late, raises a **tick timing** fault (`ZULE_RESULT_TICK_TIMING`) before the tick
-does any other processing. The fault reports the deviation in timebase counts.
-Expected times wrap with the timebase, so the check is exact for the life of a
-run.
-
-See [tick timing tolerance](configuration.md#tick-timing-tolerance) for choosing
-the tolerance.
-
-Initialization checks that the timebase can support the check, returning
-`ZULE_RESULT_INVALID_CONFIG` otherwise: each slot must be a whole number of
-timebase counts and shorter than 2^31 counts, and the tolerance, rounded down to
-whole counts, must be at least one count and less than one slot. The tolerance
-resolution is therefore one timebase count.
+The optional tick timing check compares each tick's time with when it should
+have arrived, using the port's [timebase](port.md#timebase). The first tick of a
+run is the reference, and each later tick is expected exactly one slot after the
+previous expected time. Because the expectation is absolute, the check catches
+slow drift as well as single late ticks, and a lost tick shows as a deviation of
+a whole slot. A tick that deviates by more than the
+[tolerance](configuration.md#tick-timing-tolerance), early or late, raises a
+**tick timing** fault.
 
 The check has limits. A late first tick shifts the reference unnoticed. With no
 ticks at all, nothing is checked; that needs independent monitoring, such as a
 watchdog. If the port derives the timebase from its tick timer, a lost tick is
-invisible to both, and the check measures only how late each tick is handled
-within its period.
+invisible to both.
 
 ## Fault handling
 
-A fault halts schedule progression and prevents further task dispatch. The
-first fault remains latched until [reinitialization](#scheduler-initialisation);
-subsequent checks do not replace it or repeat notification.
+A fault halts the schedule and prevents further dispatch. The first fault stays
+latched until the next run; later faults do not replace it. The application's
+[fault handler](application.md#fault-handler) is called once, immediately, in
+tick context, so the application can respond while a task is still running.
 
-The application can supply a [fault handler](application.md#fault-handler),
-invoked immediately in tick context. This allows the application to respond
-independently of a running task. The handler must be bounded and nonblocking,
-and must not call Zule APIs.
-
-Tick processing continues while a running task completes. Once application
-context observes the fault, the scheduler stops tick delivery and waits for any
-active tick handler before returning. An executing task must return before the
-scheduler entry point can return.
+The scheduler then waits for any running task to return, stops tick delivery,
+and returns the fault from `zule_run()`. A task that never returns prevents
+this.
 
 ## Hooks
 
-The core reports scheduler events through [hooks](application.md#hooks): tick
-start and end, task release, and schedule switches in tick context, and task
-start and end around each task call. It reads the timebase once per event and passes the count to enabled
-[modules](modules.md), then to the application's hooks. Hook points sit beside
-the state transitions above: release when a task becomes pending, start just
-before running, end as completion is recorded. Hooks observe; they cannot change
-scheduling. Unused hooks compile to nothing.
+The core reports scheduler events to enabled [modules](modules.md) and the
+application's [hooks](application.md#hooks), with a timebase timestamp for each:
+
+| Event | Context |
+| --- | --- |
+| Tick start and end | Tick |
+| Task release, when a window starts | Tick |
+| Schedule switch | Tick |
+| Task start and end, around each task call | Application |
+
+Hooks observe; they cannot change scheduling. Unused hooks compile to nothing.
 
 ## Timing assumptions
 
 The port is responsible for timer accuracy, reliable tick delivery, and
-synchronization between tick and application contexts. Scheduler timing depends
-on delivered ticks. The [tick timing check](#tick-timing-check) detects late,
-early, and lost ticks against the timebase, but detecting a complete loss of
-ticks requires independent monitoring, such as a watchdog.
-
-Task budgets must account for scheduler overhead and interrupt interference as
-well as task execution time.
+exclusion between tick and application contexts. Task budgets must cover
+scheduler overhead and interrupt interference as well as task execution time.

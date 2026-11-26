@@ -1,6 +1,6 @@
 # Modules
 
-Modules are optional, on-target consumers of the core's [hooks](application.md#hooks),
+Modules are optional, on-target consumers of the core's [hook events](core.md#hooks),
 shipped with Zule. They observe the schedule, for example to measure tick
 timing, and cannot change scheduling. Modules are owned by Zule (see
 [ownership](architecture.md#ownership)) and live in `zule/modules/`, outside the
@@ -13,36 +13,20 @@ core.
 
 ## Using modules
 
-Enable a module with its `ZULE_CONFIG_MODULE_<NAME>` [build setting](configuration.md#build-settings).
-The module then receives the hook events it needs automatically; the
-application does not call it from its own hooks. Like hooks, modules require
-`ZULE_CONFIG_TIMEBASE`, and a module also fails compilation if another feature
-it needs is disabled.
-
-Each module has a public header in `zule/modules/api/`, which is on the
-application's include path, with its API for reading results. The API is
-declared only when the module is enabled. It can be called from application
-context, including tasks, but not from hooks or the fault handler. Results are
-copied or cleared inside a critical section, so reads are consistent while ticks
-run.
-
-A module may also check, when `zule_run()` starts, that it can work with the
-schedule and timebase. A failure stops `zule_run()` with
-`ZULE_RESULT_INVALID_CONFIG` before ticks start. Results accumulate across runs
-until the module's reset function is called.
-
-Modules receive each event before the application's hooks, in a fixed order,
-with the same contexts and guarantees as the [hooks](application.md#hooks).
-User hooks and modules are independent: an application can use either, both, or
-neither.
+Enable a module with its [build setting](configuration.md#build-settings); it
+then receives the events it needs, independently of the application's hooks.
+Each module has a header in `zule/modules/api/` with its API for reading
+results, which tasks can call while the scheduler runs. Results accumulate
+across runs until reset, and values are timebase counts; convert them with
+`zule_timebase_hz()`.
 
 ## Tick timing
 
 Measures how far ticks deviate from their expected times, and how long the tick
 handler takes, so the [tick timing tolerance](configuration.md#tick-timing-tolerance)
 and budget margins can be chosen from measurements. It works with or without the
-[tick timing check](core.md#tick-timing-check), and measures the same deviations
-from the same time reads.
+[tick timing check](core.md#tick-timing-check), and uses the same expected
+times. See [`zule_tick_timing.h`](../zule/modules/api/zule_tick_timing.h).
 
 ```c
 #include "zule_tick_timing.h"
@@ -51,173 +35,58 @@ zule_tick_timing_t timing;
 zule_tick_timing_get(&timing);
 ```
 
-| Member | Meaning |
-| --- | --- |
-| `ticks` | Ticks measured since the last reset, wrapping modulo 2^32. The first tick of each run is its reference and is not measured. |
-| `max_late_counts` | Worst late deviation of a measured tick from its expected time. |
-| `max_early_counts` | Worst early deviation, as a magnitude. |
-| `max_tick_counts` | Longest tick handler, from the tick start timestamp to the tick end timestamp. It includes hook and fault handler time, but not the port's interrupt entry and exit. |
-
-Values are timebase counts; convert them with `zule_timebase_hz()`.
-`zule_tick_timing_reset()` clears the results. Expected times follow the same
-rules as the tick timing check, so the module requires each slot to be a whole
-number of timebase counts below 2^31. A deviation of 2^31 counts or more, such
-as a very long stall, is misread as early.
-
-The showcase example enables the module and prints its results every ten cycles.
-
 ## Task statistics
 
-Measures how long each task runs and how long it waits to start, and totals
-for each schedule, so [budgets](configuration.md#schedule) can be chosen and
-checked from measurements.
+Measures how long each task runs and how long it waits to start, and totals for
+each schedule, so [budgets](configuration.md#schedule) can be chosen and checked
+from measurements. See [`zule_task_stats.h`](../zule/modules/api/zule_task_stats.h).
 
 ```c
 #include "zule_task_stats.h"
 
 zule_task_stats_t stats;
 if (zule_task_stats_get(ZULE_TASK_ID_CONTROL, &stats)) {
-    /* stats holds the control task's statistics. */
+    /* The control task's executions, execution times, and dispatch latency. */
 }
 
 zule_task_stats_summary_t summary;
 if (zule_task_stats_summary_get(ZULE_SCHEDULE_ID_MAIN, &summary)) {
-    /* summary holds the totals while the main schedule was active. */
+    /* Cycles, busy time, and the busiest cycle while main was active. */
 }
 ```
 
-`zule_task_stats_get()` copies one task's statistics, and returns `false`,
-leaving its output unchanged, for an ID that is not one of the schedule's. Since
-task IDs run from zero, an application can read every task by counting up until
-it returns `false`.
+An execution is the task function's elapsed time, including any interrupts that
+preempt it. Each schedule keeps its own totals, since schedules can differ
+widely in how busy they are.
 
-`zule_task_stats_summary_get()` likewise copies one schedule's totals, over all
-tasks while that schedule was active, and returns `false` for an ID that is not
-one of the application's schedules. Each schedule has its own totals, since
-schedules can differ widely in how busy they are. Task statistics cover every
-schedule.
+## Design
 
-| `zule_task_stats_t` member | Meaning |
-| --- | --- |
-| `executions` | Executions measured since the last reset, including any that overran. |
-| `total_execution_counts` | Total execution time. Divided by `executions`, it gives the mean. |
-| `min_execution_counts` | Shortest execution, or `0` while `executions` is `0`. |
-| `max_execution_counts` | Longest execution, or `0` while `executions` is `0`. |
-| `max_dispatch_latency_counts` | Longest wait from the task's release, when its window starts, to its start. Dispatch latency uses up the window's budget. |
+Modules consume the same hook events as the application, through entry points
+the core declares and the modules layer implements. The core reads only derived
+conditions, such as whether any enabled module consumes a hook, and never names
+a module, so adding a module changes only the modules layer and its settings.
+Modules are compiled into the Zule library with the core, so they can use the
+core's internal helpers.
 
-| `zule_task_stats_summary_t` member | Meaning |
-| --- | --- |
-| `cycles` | Cycles of the schedule completed since the last reset. A cycle completes when the next one starts, in the same schedule or after a [switch](application.md#switching-schedules), so after a fault the current cycle never completes. |
-| `busy_counts` | Total execution time of all tasks. An execution counts toward the schedule active when it ends. |
-| `max_cycle_busy_counts` | Most execution time in any completed cycle. An execution counts toward the cycle in which it ends. |
-
-An execution runs from the `task_start` hook event to the `task_end` event: the
-task function's elapsed time, including any interrupts and ticks that preempt
-it. Values are timebase counts; convert them with `zule_timebase_hz()`. Single
-measurements are exact up to one timebase wrap of 2^32 counts. Totals and counts
-are 64-bit, so they do not wrap in practice: even at the fastest timebase,
-2^32 - 1 Hz, they last over 100 years. Readers can measure over any interval by
-subtracting two snapshots.
-
-`zule_task_stats_reset()` clears every task's statistics and every schedule's
-totals together, so they always cover the same interval; the cycle in progress is still
-measured in full. Results accumulate across runs, but a run that stops
-mid-cycle does not complete that cycle.
-
-Each task's statistics and each schedule's totals are kept in
-[per-task and per-schedule storage](#per-task-and-per-schedule-storage) that the
-generated schedule defines, so the module needs no setting for the number of
-tasks or schedules. Its reset clears every task and schedule inside one
-critical section, so its duration grows with their number.
-
-The showcase example enables the module and prints each task's mean and longest execution
-time and worst dispatch latency, and the busiest cycle, every ten cycles.
-
-## Structure
-
-Modules consume the core's hook interface the same way the application's hooks
-do: the core defines the interface, and modules implement it.
-
-- [`zule_modules.h`](../zule/core/inc/zule_modules.h), an internal
-  core header, declares the module entry points: `zule_modules_init()`, and for
-  each hook, `zule_modules_<hook>()`. Only the Zule library, which also builds
-  the modules, can include it; applications see only the user hooks in
-  `zule_hooks.h`.
-- [`zule_modules_config_defaults.h`](../zule/modules/api/zule_modules_config_defaults.h)
-  holds the module settings, and
-  [`zule_modules_config_apply.h`](../zule/modules/api/zule_modules_config_apply.h)
-  checks them and derives the conditions the core reads:
-  `ZULE_MODULES_ANY`, which is `1` when any module is enabled, and for each hook,
-  `ZULE_MODULES_HOOK_<HOOK>`, which is `1` when any enabled module consumes it.
-  `zule_config_apply.h` includes it, so the conditions are ordinary settings: the core
-  reads them, but never names a module.
-- `zule_modules.c` defines the entry points, each calling the enabled modules in
-  a fixed order.
-- [`zule_modules_task_data.h`](../zule/modules/inc/zule_modules_task_data.h) and
-  [`zule_modules_schedule_data.h`](../zule/modules/inc/zule_modules_schedule_data.h),
-  internal modules headers, define the
-  [per-task and per-schedule storage](#per-task-and-per-schedule-storage).
-
-The core calls `zule_modules_init()` on each run, after its own checks, with the
-ID of the schedule the run starts with, and the first module failure stops the
-run. The core calls each hook point through an
-inline wrapper that reads the timebase once and then calls the module entry
-point and the user hook. A hook that neither consumes compiles to nothing,
-including the time read. Adding a module changes only the modules layer and its
-settings, never the core.
-
-Module sources live in `zule/modules/` but are compiled into the Zule library
-with the core, so modules can call the core API, such as `zule_timebase_hz()`,
-and the core's internal helpers without a circular dependency between libraries. A module may
-share a helper's code with the core, such as the tick tracker the tick timing
-check also uses, but owns its own state.
-
-### Per-task and per-schedule storage
-
-A module that keeps data for each task or each schedule, such as task
-statistics, does not size its own storage. Instead, the generated schedule
-defines it, with one entry per task or per schedule, so their numbers are set
-only by the schedule JSON:
-
-- `zule_modules_task_data_t` combines what every enabled module keeps for one
-  task, with a member for each, and `zule_modules_schedule_data_t` likewise for
-  one schedule.
-- `ZULE_MODULES_TASK_DATA` is `1` when any enabled module keeps per-task data,
-  and `ZULE_MODULES_SCHEDULE_DATA` when any keeps per-schedule data.
-- When they are, the generated schedule defines `zule_modules_task_data_get()`
-  and `zule_modules_schedule_data_get()`, which return static, zero-initialized
-  arrays of entries, indexed by task ID and schedule ID.
-
-This is the same arrangement as the schedule itself: Zule declares the
-interface, and the generated schedule implements it. The generated code only
-reserves the storage; the modules own and update its contents. With
-this storage, the generated schedule also uses RAM, not just constant tables.
+A module that keeps data for each task or schedule does not size its own
+storage: the generated schedule defines it, with one entry per task or schedule,
+so their numbers are set only by the schedule JSON. The modules own its
+contents.
 
 ## Adding a module
 
 A module consists of:
 
-- a subdirectory, `zule/modules/<name>/`, with its sources and an internal
-  header declaring the handlers that `zule_modules.c` calls;
+- a subdirectory, `zule/modules/<name>/`, with its sources and the handlers
+  that `zule_modules.c` calls;
 - a public header in `zule/modules/api/` for its read API, declared only when the
   module is enabled;
-- a `ZULE_CONFIG_MODULE_<NAME>` setting, defaulting to `0` in
-  `zule_modules_config_defaults.h`, checked in `zule_modules_config_apply.h`,
-  and added there to `ZULE_MODULES_ANY` and to the `ZULE_MODULES_HOOK_<HOOK>`
-  condition of each hook it consumes;
-- calls from `zule_modules_init()` and from each consumed hook's entry point in
-  `zule_modules.c`;
-- its sources listed in [`zule/zule_sources.txt`](../zule/zule_sources.txt), the
-  single list of Zule's sources;
-- for data kept for each task or schedule, a member in
-  `zule_modules_task_data_t` or `zule_modules_schedule_data_t`, and its setting
-  added to `ZULE_MODULES_TASK_DATA` or `ZULE_MODULES_SCHEDULE_DATA`; see
-  [per-task and per-schedule storage](#per-task-and-per-schedule-storage);
-- compile-time checks for any further features it requires;
+- a `ZULE_CONFIG_MODULE_<NAME>` setting in `zule_modules_config_defaults.h`,
+  checked and added to the derived conditions in `zule_modules_config_apply.h`;
+- its sources listed in [`zule/zule_sources.txt`](../zule/zule_sources.txt);
+- for data kept for each task or schedule, a member in the storage types in
+  `zule/modules/inc/`;
 - tests, using the core test port's scripted timebase.
 
-Module handlers follow the hook rules: bounded and nonblocking, no calls to
-Zule or port functions, and safe in the context of each hook they consume. Its
-init may validate and prepare, but keeps accumulated results unless the module
-documents otherwise. Per-task data is indexed by task ID, which equals the
-task's index in the task table, and per-schedule data by schedule ID.
+Module handlers follow the hook rules: bounded and nonblocking, no calls to Zule
+or port functions, and safe in the context of each hook they consume.

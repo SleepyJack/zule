@@ -14,19 +14,9 @@ by an integrator is owned by the user (see [ownership](architecture.md#ownership
 
 ## Contract
 
-The contract is declared in [`zule/ports/zule_port.h`](../zule/ports/zule_port.h).
-Its comments are authoritative for each function; this section summarises the
-model they share.
-
-| Function | Called from | Purpose |
-| --- | --- | --- |
-| `zule_port_critical_enter()` | Application context | Exclude the tick and return the previous exclusion state. |
-| `zule_port_critical_exit()` | Application context | Restore the state returned by the matching enter. |
-| `zule_port_tick_init()` | Application context | Start delivering the tick callback every `slot_us` microseconds. |
-| `zule_port_tick_stop()` | Application context | Stop delivery and wait for any in-flight callback. |
-| `zule_port_idle()` | Application context, in a critical section | Wait for the next tick when no task is pending. |
-| `zule_port_time_hz()` | Any | Timebase frequency, when the [timebase](#timebase) is enabled. |
-| `zule_port_time_get()` | Application and tick context | Current timebase count, when the timebase is enabled. |
+The contract is declared in [`zule/ports/zule_port.h`](../zule/ports/zule_port.h),
+whose comments are authoritative for each function: critical sections, the tick,
+idle, and the optional timebase. This section describes the model they share.
 
 ### Execution contexts
 
@@ -88,26 +78,13 @@ pending interrupt still ends the sleep, or use a condition wait on its
 critical-section lock, signalled after each tick. A low-power mode must keep the
 tick timer running and able to wake the core.
 
-### Optional features
-
-Some contract functions belong to optional core features. The application
-enables a feature in the core [build settings](configuration.md#build-settings);
-`zule_port.h` declares its functions only when it is enabled. A port implements
-each enabled feature, or fails compilation with a clear `#error` if it cannot
-provide it. A disabled feature costs nothing: no declarations, code, or hardware.
-
-| Setting | Port functions |
-| --- | --- |
-| `ZULE_CONFIG_TIMEBASE` | `zule_port_time_hz()` and `zule_port_time_get()`; see [timebase](#timebase). |
-
-Core features built on the timebase, such as planned task profiling and tick
-timing checks, will require `ZULE_CONFIG_TIMEBASE`.
-
 ### Timebase
 
-The timebase measures time within and across slots, for task profiling and
-tick timing checks. It is a free-running 32-bit count at `zule_port_time_hz()`
-counts per second.
+The timebase is optional: `zule_port.h` declares its functions only when the
+application enables `ZULE_CONFIG_TIMEBASE`, and a port that cannot provide it
+fails compilation with an `#error`. It measures time within and across slots,
+for hooks, modules, and the tick timing check, as a free-running 32-bit count at
+`zule_port_time_hz()` counts per second.
 
 - **Wrapping.** The count wraps modulo 2^32. Unsigned subtraction measures any
   interval shorter than one wrap period.
@@ -121,26 +98,9 @@ counts per second.
   and during idle. A port documents any limit, such as masking for longer than
   one tick period.
 
-Core features using the timebase limit what a schedule may need, and check it
-at initialization:
-
-- [Hooks](application.md#hooks): one cycle must be shorter than 2^32 counts, so
-  any interval up to a cycle can be measured.
-- The [tick timing check](core.md#tick-timing-check): each slot must be a whole
-  number of counts, so expected tick times do not drift, and shorter than 2^31
-  counts, so deviations compare as signed differences.
-
-The frequency, whether fixed by the port or derived from port settings, trades
-range for resolution: a lower frequency allows longer slots and cycles at
-coarser resolution.
-
-### Types
-
-A port provides `zule_port_types.h`, which defines `zule_port_critical_state_t`
-completely. Its size and contents are up to the port; the core only stores the
-value returned by enter and passes it to exit. For example, a port that masks
-interrupts might store the previous mask, and the POSIX port stores the owning
-thread.
+The frequency trades range for resolution: a lower frequency allows longer
+slots and cycles at coarser resolution. Features using the timebase check at
+initialization that the schedule fits within its range.
 
 ## Creating a port
 
@@ -151,9 +111,10 @@ A port consists of:
   defaults, and fails compilation for missing required settings. It may depend
   on core settings, for example to require a setting only when an optional
   feature needs it. A port without settings may leave it empty;
-- `zule_port_types.h`;
+- `zule_port_types.h`, defining `zule_port_critical_state_t`, whose contents
+  are up to the port;
 - sources implementing every function in `zule_port.h`, including those of
-  enabled [optional features](#optional-features), and failing compilation for
+  enabled optional features, such as the [timebase](#timebase), and failing compilation for
   enabled features the port cannot provide;
 - a README describing target assumptions, timing limits, and any blocking or
   latency behaviour;
