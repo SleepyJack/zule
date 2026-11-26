@@ -3,7 +3,7 @@
 Operating modes as [multiple schedules](../../doc/configuration.md#multiple-schedules),
 and a [switch](../../doc/application.md#switching-schedules) between them:
 
-- [`config/schedule.json`](config/schedule.json): two schedules of 50 ms slots
+- [`config/schedule.json`](config/schedule.json): two schedules of 10 ms slots
   sharing three tasks. `startup` is four slots: three idle, which absorb
   startup latency, then `mode_manager`. `operational` runs `sense` and
   `control`, with `mode_manager` in its last slot.
