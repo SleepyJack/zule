@@ -70,15 +70,6 @@ outside the critical sections, allowing ticks to run during task execution.
 
 ![Expanded dispatch timing, from the release tick through pending to running.](images/dispatch.svg)
 
-The scheduler records completion after the task function returns. At the
-window's end, tick context returns the execution state to idle before processing
-the next window.
-
-Only tick context makes a task pending, so when no task is pending the dispatch
-loop waits for the next tick through the port's [idle](port.md#idle). The check
-and the wait share one critical section, so a tick that makes a task pending
-cannot be missed between them.
-
 The detailed diagrams illustrate an ISR interrupting application execution and
 are not to scale. The POSIX port instead uses a timer thread.
 
@@ -86,13 +77,7 @@ are not to scale. The POSIX port instead uses a timer thread.
 
 A [switch request](application.md#switching-schedules) from a task is applied
 by the tick that processes slot zero of the next cycle, once the current
-schedule's final window has been retired. Every window lies within its cycle,
-so at that point no task is pending or running. The tick then continues with
-the new schedule's first window, which is released in the same tick if it
-starts at slot zero. All schedules share the slot length, so the port timer is
-never reprogrammed, and all were validated at initialization, so tick context
-never validates. A latched fault prevents the switch: a task that overruns the
-end of the cycle is reported against the schedule it ran in.
+schedule's final window has been retired.
 
 ### Task deadline monitoring
 
@@ -121,18 +106,10 @@ ticks, and a lost tick appears as a deviation of a whole slot.
 
 A tick that deviates from its expected time by more than the tolerance, early or
 late, raises a **tick timing** fault (`ZULE_RESULT_TICK_TIMING`) before the tick
-does any other processing. The fault reports the deviation in timebase counts.
-Expected times wrap with the timebase, so the check is exact for the life of a
-run.
+does any other processing.
 
 See [tick timing tolerance](configuration.md#tick-timing-tolerance) for choosing
 the tolerance.
-
-Initialization checks that the timebase can support the check, returning
-`ZULE_RESULT_INVALID_CONFIG` otherwise: each slot must be a whole number of
-timebase counts and shorter than 2^31 counts, and the tolerance, rounded down to
-whole counts, must be at least one count and less than one slot. The tolerance
-resolution is therefore one timebase count.
 
 The check has limits. A late first tick shifts the reference unnoticed. With no
 ticks at all, nothing is checked; that needs independent monitoring, such as a
@@ -161,9 +138,7 @@ scheduler entry point can return.
 The core reports scheduler events through [hooks](application.md#hooks): tick
 start and end, task release, and schedule switches in tick context, and task
 start and end around each task call. It reads the timebase once per event and passes the count to enabled
-[modules](modules.md), then to the application's hooks. Hook points sit beside
-the state transitions above: release when a task becomes pending, start just
-before running, end as completion is recorded. Hooks observe; they cannot change
+[modules](modules.md), then to the application's hooks. Hooks observe; they cannot change
 scheduling. Unused hooks compile to nothing.
 
 ## Timing assumptions

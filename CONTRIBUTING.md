@@ -32,9 +32,7 @@ and the Arm GNU toolchain, from your system;
 
 ## Building and testing
 
-Builds use [CMake presets](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html):
-each project defines its own, in its `CMakePresets.json`, and builds to `build/`
-in the project root. Build Zule with the POSIX port and run its tests:
+Build Zule with the POSIX port and run its tests:
 
 ```sh
 cd zule
@@ -60,26 +58,8 @@ python tools/format.py
 python tools/format.py --check
 ```
 
-By default, the script formats handwritten C sources and headers under `zule/`
-and `examples/`. `--check` reports differences without editing and returns a failure
-status if formatting is needed. Paths are resolved from the script, so it can
-be invoked from any working directory. Explicit file arguments are relative
-to the caller's working directory.
-
-Generated files are excluded by default. After building an example, check its
-generated schedule explicitly:
-
-```sh
-python tools/format.py --check build/examples/showcase/posix/zule_showcase_schedule/*.[ch]
-```
-
-Generated formatting fixes belong in the Python generator, never in generated
-output.
-
 ## Coding guidelines
 
-The C style uses four spaces, attached braces, a 100-column limit, and pointer
-stars next to variable names. All conditional and loop bodies use braces.
 See [doc/CODING_GUIDELINES.md](doc/CODING_GUIDELINES.md) for naming, API,
 ownership, and review conventions. [AGENTS.md](AGENTS.md) directs agent reviews
 against those guidelines.

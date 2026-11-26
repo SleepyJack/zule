@@ -69,8 +69,6 @@ plus scheduler overhead and interrupt interference; see
 [deadline monitoring](core.md#task-deadline-monitoring), and
 [startup](core.md#scheduler-initialisation) for the first window.
 
-Generation additionally requires every timing value to fit `uint32_t`.
-
 The [schema](../zule/tools/schedule/zule_schedule/schedule.schema.json) defines
 the structure. The [schedule tool](../zule/tools/schedule/README.md) validates
 structure and timing, and generates C. Validation checks internal consistency
@@ -181,9 +179,7 @@ component.
 
 With `ZULE_CONFIG_TASK_NAMES=1`, each task's name is stored in its schedule
 entry and returned by [`zule_task_name_get()`](application.md#task-names-and-ids).
-With names disabled, both the member and its strings are excluded. The setting
-changes the layout of the schedule's task type, so changing it requires
-recompiling every component, but no schedule regeneration.
+With names disabled, both the member and its strings are excluded.
 
 ### Tick timing tolerance
 
@@ -214,8 +210,3 @@ own directory, set `ZULE_USER_PORT_CONFIG_DIR` to it as well; only one of the
 two directories may hold `zule_user_port_config.h`. Other build systems define
 `ZULE_USE_USER_PORT_CONFIG=1` for every component when the header is present.
 Like core settings, port settings must be the same for every component.
-
-The port's README lists its settings. Which optional features the port must
-provide, such as the timebase, is a core build setting, not a port setting. A
-port can require settings only when a feature needs them, for example a clock
-frequency only with the timebase enabled. The POSIX port has no settings yet.

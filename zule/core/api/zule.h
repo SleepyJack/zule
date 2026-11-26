@@ -20,13 +20,21 @@ typedef enum {
 } zule_result_t;
 
 typedef struct {
+    /* DISPATCH_MISSED, EXECUTION_OVERRUN, or TICK_TIMING. */
     zule_result_t reason;
     /* The active schedule's ID, as in zule_schedule_ids.h; window_index is an
      * index into its windows. */
     uint32_t schedule_id;
     size_t window_index;
+    /* Slot at which the fault was detected. */
     uint32_t slot;
+    /* Zero-based cycle count, reset at initialization and continuing across
+     * schedule switches. Wraps modulo 2^32. A fault detected at slot zero
+     * reports the new cycle, even if the faulting window started in the
+     * previous cycle. */
     uint32_t cycle_count;
+    /* ID of the active window's task: the faulting task, or for a tick timing
+     * fault, the task whose window is in progress or next to start. */
     uint32_t task_id;
 #if ZULE_CONFIG_TICK_CHECK
     /* Deviation of the tick that detected the fault from its expected time, in

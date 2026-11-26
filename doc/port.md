@@ -18,16 +18,6 @@ The contract is declared in [`zule/ports/zule_port.h`](../zule/ports/zule_port.h
 Its comments are authoritative for each function; this section summarises the
 model they share.
 
-| Function | Called from | Purpose |
-| --- | --- | --- |
-| `zule_port_critical_enter()` | Application context | Exclude the tick and return the previous exclusion state. |
-| `zule_port_critical_exit()` | Application context | Restore the state returned by the matching enter. |
-| `zule_port_tick_init()` | Application context | Start delivering the tick callback every `slot_us` microseconds. |
-| `zule_port_tick_stop()` | Application context | Stop delivery and wait for any in-flight callback. |
-| `zule_port_idle()` | Application context, in a critical section | Wait for the next tick when no task is pending. |
-| `zule_port_time_hz()` | Any | Timebase frequency, when the [timebase](#timebase) is enabled. |
-| `zule_port_time_get()` | Application and tick context | Current timebase count, when the timebase is enabled. |
-
 ### Execution contexts
 
 The port defines [tick context](architecture.md#tick-context). On embedded
@@ -100,9 +90,6 @@ provide it. A disabled feature costs nothing: no declarations, code, or hardware
 | --- | --- |
 | `ZULE_CONFIG_TIMEBASE` | `zule_port_time_hz()` and `zule_port_time_get()`; see [timebase](#timebase). |
 
-Core features built on the timebase, such as planned task profiling and tick
-timing checks, will require `ZULE_CONFIG_TIMEBASE`.
-
 ### Timebase
 
 The timebase measures time within and across slots, for task profiling and
@@ -120,15 +107,6 @@ counts per second.
 - **Continuity.** The count keeps advancing while the tick is delayed or masked,
   and during idle. A port documents any limit, such as masking for longer than
   one tick period.
-
-Core features using the timebase limit what a schedule may need, and check it
-at initialization:
-
-- [Hooks](application.md#hooks): one cycle must be shorter than 2^32 counts, so
-  any interval up to a cycle can be measured.
-- The [tick timing check](core.md#tick-timing-check): each slot must be a whole
-  number of counts, so expected tick times do not drift, and shorter than 2^31
-  counts, so deviations compare as signed differences.
 
 The frequency, whether fixed by the port or derived from port settings, trades
 range for resolution: a lower frequency allows longer slots and cycles at

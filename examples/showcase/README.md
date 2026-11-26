@@ -11,13 +11,9 @@ runs:
   and longest tick, from the tick timing module.
 - [`config/`](config): the [configuration](../../doc/configuration.md). It
   contains the schedule `schedule.json` and the build settings
-  `zule_user_config.h`, which enables task names, the timebase, the
-  [tick timing check](../../doc/core.md#tick-timing-check) with a tolerance of
-  half a slot, and the [tick timing](../../doc/modules.md#tick-timing) and
-  [task statistics](../../doc/modules.md#task-statistics) modules.
+  `zule_user_config.h`.
 - [`CMakeLists.txt`](CMakeLists.txt): a standalone project following
-  [CMake integration](../../doc/application.md#cmake-integration). It adds
-  `../../zule`, includes the selected target, and points Zule at `config/`.
+  [CMake integration](../../doc/application.md#cmake-integration).
 - [`targets/`](targets): the targets it runs on; see
   [examples](../README.md#targets).
 
@@ -42,16 +38,9 @@ cmake --build --preset posix
 
 The cycle repeats until a fault or port error, when the showcase prints the
 fault, including the task's name, and exits nonzero. On the host, press Ctrl-C
-to stop it; there is no public stop API yet. The fault handler only copies the
-snapshot; `main()` prints it after `zule_run()` returns, rather than logging
-from tick context.
+to stop it; there is no public stop API yet.
 
 | Target | Output |
 | --- | --- |
-| `posix` | Standard output. The [POSIX port](../../zule/ports/posix/README.md) runs ticks on a timer thread and gives no hard real-time guarantees. |
+| `posix` | Standard output. |
 | `qemu-mps2-an385` | QEMU's standard output, through semihosting. Build with `cmake --preset qemu-mps2-an385` and `cmake --build --preset qemu-mps2-an385`, then run `qemu-system-arm -machine mps2-an385 -nographic -semihosting-config enable=on,target=native -kernel ../../build/examples/showcase/qemu-mps2-an385/zule_showcase`; stop it with Ctrl-A, then X. Its port settings give the board's 25 MHz clock. |
-
-CI runs the showcase briefly on both targets and checks that all three tasks
-appear. On `qemu-mps2-an385`, it runs with `-icount shift=0,sleep=off`, so every
-tick is exactly on time, and CI also checks that the tick timing report shows no
-deviation.

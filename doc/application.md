@@ -62,19 +62,9 @@ void zule_task_mode_manager(void) {
 
 The switch takes effect at the start of the next cycle: the current schedule
 finishes its cycle, including its final window, and the new schedule starts at
-its slot 0, so its first window can start in the same tick. Ticks continue at
-the same rate, and the cycle count continues. A later request before then
+its slot 0, so its first window can start in the same tick. A later request before then
 replaces an earlier one, and a request for the active schedule cancels a
 pending switch. No switch takes place while a fault is latched.
-
-| Result | Meaning |
-| --- | --- |
-| `ZULE_RESULT_OK` | The request is pending. |
-| `ZULE_RESULT_INVALID_CONFIG` | The ID names no schedule. Any earlier request stays pending. |
-| `ZULE_RESULT_NOT_INITIALIZED` | The scheduler is not running. |
-
-Each run starts with the [configured](#configuration) schedule, with no request
-pending. The [`tick_schedule_switch` hook](#hooks) reports each switch.
 
 ## Configuration
 
@@ -98,11 +88,6 @@ zule_configure(&config);
 | `on_fault` | The [fault handler](#fault-handler). Null disables notification; faults still latch. |
 | `schedule_id` | The schedule `zule_run()` starts, a `ZULE_SCHEDULE_ID_<NAME>` constant from the generated `zule_schedule_ids.h`; see [multiple schedules](configuration.md#multiple-schedules). |
 
-`zule_configure()` copies the configuration, which persists across runs. A null
-configuration, or a schedule ID that names no schedule, returns
-`ZULE_RESULT_INVALID_CONFIG` and keeps the previous settings. Calling it while
-running returns `ZULE_RESULT_ALREADY_RUNNING`.
-
 Set the schedule ID explicitly: ID 0 is the first schedule by name, which may
 not be the intended one. Without any configuration, `zule_run()` runs the
 schedule with ID 0 and no fault handler.
@@ -112,22 +97,7 @@ schedule with ID 0 and no fault handler.
 The fault handler is installed by the [configuration](#configuration).
 
 The handler is called once, on the first missed-dispatch, overrun, or tick
-timing fault. It is not called for invalid schedules or configurations, or port
-errors, which are reported only through the `zule_run()` result. It receives a snapshot:
-
-| Member | Meaning |
-| --- | --- |
-| `reason` | `ZULE_RESULT_DISPATCH_MISSED`, `ZULE_RESULT_EXECUTION_OVERRUN`, or `ZULE_RESULT_TICK_TIMING`. |
-| `schedule_id` | ID of the active schedule, a `ZULE_SCHEDULE_ID_<NAME>` constant. |
-| `task_id` | ID of the active window's task: the faulting task, or for a tick timing fault, the task whose window is in progress or next to start; see [task names and IDs](#task-names-and-ids). |
-| `window_index` | Index of the active window in the active schedule. |
-| `slot` | Slot at which the fault was detected. |
-| `cycle_count` | Zero-based cycle count, reset at initialization and continuing across schedule switches. Wraps modulo 2^32. |
-| `tick_deviation_counts` | With the [tick timing check](core.md#tick-timing-check) only: the deviation of the detecting tick from its expected time, in timebase counts, positive when late. |
-
-Together, `cycle_count` and `slot` identify when the fault was detected. A fault
-detected at slot zero reports the new cycle, even if the faulting window started
-in the previous cycle.
+timing fault.
 
 The handler runs in [tick context](architecture.md#tick-context), possibly
 interrupting a task: an ISR on embedded ports, or a timer thread on native ports.
@@ -148,20 +118,18 @@ diagnostics. Each is enabled by its own
 function for each enabled hook; the declarations are in
 [`zule_hooks.h`](../zule/core/api/zule_hooks.h), included by `zule.h`.
 
-| Hook | Setting | Context | Called |
-| --- | --- | --- | --- |
-| `zule_user_hook_tick_start(time_counts, slot, cycle_count)` | `ZULE_CONFIG_USER_HOOK_TICK_START` | Tick | Before each tick processes its slot. |
-| `zule_user_hook_tick_task_release(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TICK_TASK_RELEASE` | Tick | When a window starts and its task becomes pending. |
-| `zule_user_hook_tick_schedule_switch(time_counts, schedule_id)` | `ZULE_CONFIG_USER_HOOK_TICK_SCHEDULE_SWITCH` | Tick | When a [requested schedule](#switching-schedules) takes effect, with the new schedule's ID. Not called for the schedule a run starts with. |
-| `zule_user_hook_tick_end(time_counts)` | `ZULE_CONFIG_USER_HOOK_TICK_END` | Tick | After each tick's processing. |
-| `zule_user_hook_task_start(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TASK_START` | Application | Immediately before a task function is called. |
-| `zule_user_hook_task_end(time_counts, task_id, window_index)` | `ZULE_CONFIG_USER_HOOK_TASK_END` | Application | Immediately after a task function returns, including after an overrun. |
+| Hook | Context | Called |
+| --- | --- | --- |
+| `zule_user_hook_tick_start(time_counts, slot, cycle_count)` | Tick | Before each tick processes its slot. |
+| `zule_user_hook_tick_task_release(time_counts, task_id, window_index)` | Tick | When a window starts and its task becomes pending. |
+| `zule_user_hook_tick_schedule_switch(time_counts, schedule_id)` | Tick | When a [requested schedule](#switching-schedules) takes effect, with the new schedule's ID. Not called for the schedule a run starts with. |
+| `zule_user_hook_tick_end(time_counts)` | Tick | After each tick's processing. |
+| `zule_user_hook_task_start(time_counts, task_id, window_index)` | Application | Immediately before a task function is called. |
+| `zule_user_hook_task_end(time_counts, task_id, window_index)` | Application | Immediately after a task function returns, including after an overrun. |
 
 `time_counts` is a timebase count, read once per event. Convert counts with
 `zule_timebase_hz()`, and measure intervals by unsigned subtraction, which
-handles the count wrapping. Any interval up to one cycle can be measured this
-way: with hooks enabled, initialization checks that every schedule's cycle is
-shorter than 2^32 counts, and `zule_run()` returns `ZULE_RESULT_INVALID_CONFIG` otherwise. For example, `task_end` minus `task_start` is a
+handles the count wrapping. For example, `task_end` minus `task_start` is a
 task's execution time, and `task_start` minus `tick_task_release` is its
 dispatch latency.
 
@@ -173,24 +141,11 @@ can therefore be read by tasks without synchronization; data written by
 handler, hooks must be bounded and nonblocking and must not call Zule or port
 functions. Their run time adds to the tick and to the critical section.
 
-Within each tick, `tick_start` comes first and `tick_end` last. A
-`tick_schedule_switch` comes before any `tick_task_release` in its tick. A window's
-`tick_task_release` comes before its `task_start`, which comes before its
-`task_end`; ticks can occur between a task's start and end. Hooks continue for
-ticks after a fault. Enabled [modules](modules.md) receive the same events
-before the application's hooks.
-
 The [task statistics module](modules.md#task-statistics) measures execution
 time and dispatch latency for every task this way, without any hooks of the
 application's own.
 
 ## Task names and IDs
-
-The generated header `zule_task_ids.h` defines `zule_task_id_t` and constants
-such as `ZULE_TASK_ID_SENSE`, for comparison with `zule_fault_info_t.task_id`.
-IDs are specific to a build; see [task names and IDs](configuration.md#task-names-and-ids).
-Likewise, `zule_schedule_ids.h` defines `zule_schedule_id_t` and constants such
-as `ZULE_SCHEDULE_ID_MAIN`; see [multiple schedules](configuration.md#multiple-schedules).
 
 `zule_task_name_get(task_id)` returns a task's name, or `NULL` for an unknown ID
 or when [task names](configuration.md#task-names) are disabled. It can be called
@@ -202,8 +157,7 @@ Zule needs no C library and includes only the headers C99 guarantees in a
 freestanding environment. Like any C code built with GCC or Clang, it may still
 cause calls to `memcpy`, `memmove`, `memset`, and `memcmp`, for example to copy
 or initialise structures, so the target environment must provide them. A
-target's C library normally does. The [static checks](../TESTING.md#static-checks)
-check this requirement.
+target's C library normally does.
 
 ## CMake integration
 
@@ -247,10 +201,6 @@ Zule provides:
 installed. CMake uses the active virtual environment's interpreter if there is
 one; otherwise pass `-DPython3_EXECUTABLE=<python>`. The choice is cached in the
 build directory. Building Zule without `zule_add_schedule()` needs no Python.
-
-Applications see only the public API. The internal headers in `zule/core/inc/`
-and `zule/modules/inc/` are visible only to the Zule library, its tests, and the
-generated schedule.
 
 ## Other build systems
 

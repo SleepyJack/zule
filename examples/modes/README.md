@@ -12,8 +12,7 @@ and a [switch](../../doc/application.md#switching-schedules) between them:
   next cycle. The tasks print their names.
 
 It uses no build settings, and runs until a fault or port error, like the
-[minimal example](../minimal/README.md). CI runs it briefly on both targets and
-checks that the switch is printed before `sense` first runs.
+[minimal example](../minimal/README.md).
 
 ## Targets
 

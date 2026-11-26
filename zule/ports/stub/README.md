@@ -12,9 +12,7 @@ optional timebase, at a fixed 1 MHz with a constant count, so builds with the
 timebase enabled also link.
 
 The [static checks](../../../TESTING.md#static-checks) use
-it to check the Zule library alone, so a finding cannot come from port code:
-freestanding, with no C library, with strict warnings as errors, and with static
-analysis, including MISRA C:2012 checks. They build it for Cortex-M cores with
+it to check the Zule library alone, so a finding cannot come from port code. They build it for Cortex-M cores with
 the [Cortex-M port's toolchain file](../cortex_m/arm-none-eabi.cmake), but it
 works with any toolchain. It stays alongside real ports, which check their own
 code.
