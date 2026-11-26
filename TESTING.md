@@ -53,8 +53,8 @@ cd zule/tools/schedule
 python -m unittest discover -s tests -v
 ```
 
-They cover loading, validation, and generation; the generation tests also
-compile the generated C with the core and run it. See the
+They cover loading, validation, rendering, and generation; the generation tests
+also compile the generated C with the core and run it. See the
 [schedule tool](zule/tools/schedule/README.md#development) for their layout.
 
 ### Examples

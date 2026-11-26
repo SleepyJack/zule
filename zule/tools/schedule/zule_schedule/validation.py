@@ -21,11 +21,12 @@ def _pointer(parts: Any) -> str:
     ) or "/"
 
 
-def validate_schedule(schedule: Any) -> list[ValidationIssue]:
-    """Return issues, checking semantics only after structural validation passes.
+def schema_issues(schedule: Any) -> list[ValidationIssue]:
+    """Return the structural issues the bundled schema reports.
 
     The bundled schema is authoritative; input $schema values are editor hints
-    and are never fetched. Budgets are declarations, not measured WCET bounds.
+    and are never fetched. No issues means the schedule has the structure the
+    other tools rely on.
     """
     schema = json.loads(
         files("zule_schedule").joinpath("schedule.schema.json").read_text(encoding="utf-8")
@@ -35,10 +36,18 @@ def validate_schedule(schedule: Any) -> list[ValidationIssue]:
         validator.iter_errors(schedule),
         key=lambda error: (_pointer(error.absolute_path), error.message),
     )
-    issues = [
+    return [
         ValidationIssue(_pointer(error.absolute_path), error.message)
         for error in errors
     ]
+
+
+def validate_schedule(schedule: Any) -> list[ValidationIssue]:
+    """Return issues, checking semantics only after structural validation passes.
+
+    Budgets are declarations, not measured WCET bounds.
+    """
+    issues = schema_issues(schedule)
     if issues:
         return issues
 
