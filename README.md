@@ -140,7 +140,7 @@ the smallest complete application.
    ```
 
 Next, add a [fault handler](doc/application.md#fault-handler) and, optionally,
-[task names](doc/configuration.md#task-names-and-ids) for diagnostics, or
+[task names](doc/configuration.md#task-names) for diagnostics, or
 [hooks](doc/application.md#hooks) to measure task timing. The
 [minimal example](examples/minimal/) is exactly this application, and the
 [showcase example](examples/showcase/) adds those features.

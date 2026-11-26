@@ -2,9 +2,8 @@
 
 The application is owned by the user (see [ownership](architecture.md#ownership)).
 It implements the tasks, runs the scheduler, responds to faults, and builds Zule
-into its executable. The public API is [`zule.h`](../zule/core/api/zule.h), whose
-comments describe each function; the [examples](../examples/README.md) are
-complete applications.
+into its executable. The public API is [`zule.h`](../zule/core/api/zule.h);
+the [examples](../examples/README.md) are complete applications.
 
 ## Tasks
 
@@ -17,58 +16,43 @@ void zule_task_sense(void) {
 }
 ```
 
-Tasks run one after another in [application context](architecture.md#application-context),
-so data shared only between tasks needs no synchronization. Data shared with the
-fault handler or tick hooks, which run in tick context, does. A task must return
-within its window's budget; Zule detects an overrun but cannot stop the task.
+All tasks run sequentially in [application context](architecture.md#application-context),
+outside critical sections. There is no preemption between tasks, so data shared
+only between tasks needs no synchronization. Data shared with the
+[fault handler](#fault-handler), which runs in tick context, does.
+
+A task must return within its window's budget. Zule detects an overrun but
+cannot terminate the task; see [deadline monitoring](core.md#task-deadline-monitoring).
 
 ## Running the scheduler
 
-Configure the schedule to start with and, optionally, a fault handler, then run:
-
-```c
-#include "zule.h"
-#include "zule_schedule_ids.h"
-
-static void handle_fault(const zule_fault_info_t *fault) { /* ... */ }
-
-int main(void) {
-    const zule_config_t config = {
-        .on_fault = handle_fault,
-        .schedule_id = ZULE_SCHEDULE_ID_MAIN,
-    };
-    zule_configure(&config);
-    const zule_result_t result = zule_run();
-    /* zule_run() returns only on a fault or port error. */
-    return (int)result;
-}
-```
-
-Set the schedule ID explicitly: ID 0 is the first schedule by name, which may not
-be the intended one.
-
-`zule_run()` blocks until a fault or port error, stops tick delivery, and
-returns the reason:
+`zule_run()` validates the schedule, starts periodic ticks through the port, and
+dispatches tasks. It blocks until a fault or port error, stops and quiesces tick
+delivery, and returns the reason:
 
 | Result | Cause |
 | --- | --- |
 | `ZULE_RESULT_INVALID_SCHEDULE` | The linked schedules failed validation. |
-| `ZULE_RESULT_INVALID_CONFIG` | The configured schedule ID names no schedule, or the timebase cannot support what the enabled features measure. |
+| `ZULE_RESULT_INVALID_CONFIG` | The configured schedule ID names no schedule, or the timebase cannot represent what enabled [hooks](#hooks) or the [tick timing check](core.md#tick-timing-check) measure for the schedules. |
 | `ZULE_RESULT_DISPATCH_MISSED` | A task was not dispatched within its window. |
 | `ZULE_RESULT_EXECUTION_OVERRUN` | A task was still running at the end of its window. |
-| `ZULE_RESULT_TICK_TIMING` | A tick deviated from its expected time by more than the tolerance. |
+| `ZULE_RESULT_TICK_TIMING` | A tick deviated from its expected time by more than the tolerance; see the [tick timing check](core.md#tick-timing-check). |
 | `ZULE_RESULT_PORT_ERROR` | The port failed to start, deliver, or stop ticks. |
-| `ZULE_RESULT_ALREADY_RUNNING` | `zule_run()` was called again while running, for example from a task. |
+| `ZULE_RESULT_ALREADY_RUNNING` | `zule_run()` was called recursively, for example from a task. |
 
-`zule_run()` can be called again after it returns, starting a fresh run. There
-is no public stop API yet.
+Call `zule_run()` and `zule_configure()` from a single application context.
+After `zule_run()` returns, it can be called again; each call reinitializes the
+scheduler and clears the previous fault. A task that never returns prevents
+`zule_run()` from returning. There is no public stop API yet.
 
 ## Switching schedules
 
 With [multiple schedules](configuration.md#multiple-schedules), a task can
-request another:
+switch to another while the scheduler runs:
 
 ```c
+#include "zule_schedule_ids.h"
+
 void zule_task_mode_manager(void) {
     if (startup_complete()) {
         (void)zule_schedule_request(ZULE_SCHEDULE_ID_OPERATIONAL);
@@ -76,53 +60,104 @@ void zule_task_mode_manager(void) {
 }
 ```
 
-The switch takes effect at the start of the next cycle; see
-[schedule switching](core.md#schedule-switching). The last request before then
-wins.
+The switch takes effect at the start of the next cycle: the current schedule
+finishes its cycle, including its final window, and the new schedule starts at
+its slot 0, so its first window can start in the same tick. A later request before then
+replaces an earlier one, and a request for the active schedule cancels a
+pending switch. No switch takes place while a fault is latched.
+
+## Configuration
+
+Configure the scheduler before running: the schedule to start with, and
+optionally a fault handler:
+
+```c
+#include "zule_schedule_ids.h"
+
+static void handle_fault(const zule_fault_info_t *fault) { /* ... */ }
+
+const zule_config_t config = {
+    .on_fault = handle_fault,
+    .schedule_id = ZULE_SCHEDULE_ID_MAIN,
+};
+zule_configure(&config);
+```
+
+| Member | Meaning |
+| --- | --- |
+| `on_fault` | The [fault handler](#fault-handler). Null disables notification; faults still latch. |
+| `schedule_id` | The schedule `zule_run()` starts, a `ZULE_SCHEDULE_ID_<NAME>` constant from the generated `zule_schedule_ids.h`; see [multiple schedules](configuration.md#multiple-schedules). |
+
+Set the schedule ID explicitly: ID 0 is the first schedule by name, which may
+not be the intended one. Without any configuration, `zule_run()` runs the
+schedule with ID 0 and no fault handler.
 
 ## Fault handler
 
+The fault handler is installed by the [configuration](#configuration).
+
 The handler is called once, on the first missed-dispatch, overrun, or tick
-timing fault, with a snapshot of the fault (`zule_fault_info_t`). It runs in
-[tick context](architecture.md#tick-context), possibly interrupting a task, so it
-must be bounded and nonblocking and must not call Zule or port functions. Copy
-what you need from the snapshot; returning does not clear the fault or stop a
-running task, and the application supplies any safe-state response.
+timing fault.
+
+The handler runs in [tick context](architecture.md#tick-context), possibly
+interrupting a task: an ISR on embedded ports, or a timer thread on native ports.
+It must be bounded and nonblocking. Do not call Zule or port functions, allocate,
+or log synchronously from it. The snapshot pointer is valid only during the
+call, so copy what you need. Returning does not clear the fault or stop a running
+task; the application supplies any safe-state response.
 
 The showcase example copies the snapshot in the handler and prints it after
-`zule_run()` returns.
+`zule_run()` returns, when tick delivery is quiescent.
 
 ## Hooks
 
-Hooks report [scheduler events](core.md#hooks) to the application, for
-measurement and diagnostics. Enable each with its
-`ZULE_CONFIG_USER_HOOK_<HOOK>` [build setting](configuration.md#build-settings),
-which requires the timebase, and define the function declared in
-[`zule_hooks.h`](../zule/core/api/zule_hooks.h):
+Hooks report scheduler events to the application, for measurement and
+diagnostics. Each is enabled by its own
+[build setting](configuration.md#build-settings), and requires the
+[timebase](configuration.md#build-settings) (`ZULE_CONFIG_TIMEBASE`). Define a
+function for each enabled hook; the declarations are in
+[`zule_hooks.h`](../zule/core/api/zule_hooks.h), included by `zule.h`.
 
-| Hook | Context | Use |
+| Hook | Context | Called |
 | --- | --- | --- |
-| `zule_user_hook_tick_start` | Tick | Tick arrival time, slot, and cycle count. |
-| `zule_user_hook_tick_end` | Tick | With tick start, the tick handler's duration. |
-| `zule_user_hook_tick_task_release` | Tick | When a window starts. |
-| `zule_user_hook_tick_schedule_switch` | Tick | When a requested schedule takes effect. |
-| `zule_user_hook_task_start` | Application | Just before a task runs: with release, its dispatch latency. |
-| `zule_user_hook_task_end` | Application | Just after a task returns: with start, its execution time. |
+| `zule_user_hook_tick_start(time_counts, slot, cycle_count)` | Tick | Before each tick processes its slot. |
+| `zule_user_hook_tick_task_release(time_counts, task_id, window_index)` | Tick | When a window starts and its task becomes pending. |
+| `zule_user_hook_tick_schedule_switch(time_counts, schedule_id)` | Tick | When a [requested schedule](#switching-schedules) takes effect, with the new schedule's ID. Not called for the schedule a run starts with. |
+| `zule_user_hook_tick_end(time_counts)` | Tick | After each tick's processing. |
+| `zule_user_hook_task_start(time_counts, task_id, window_index)` | Application | Immediately before a task function is called. |
+| `zule_user_hook_task_end(time_counts, task_id, window_index)` | Application | Immediately after a task function returns, including after an overrun. |
 
-Each hook receives a timebase count; convert counts with `zule_timebase_hz()`,
-and measure intervals by unsigned subtraction. Hooks never run concurrently with
-each other or the tick. Like the fault handler, they must be bounded and
-nonblocking and must not call Zule or port functions.
+`time_counts` is a timebase count, read once per event. Convert counts with
+`zule_timebase_hz()`, and measure intervals by unsigned subtraction, which
+handles the count wrapping. For example, `task_end` minus `task_start` is a
+task's execution time, and `task_start` minus `tick_task_release` is its
+dispatch latency.
 
-The [task statistics module](modules.md#task-statistics) makes these
-measurements for every task without any hooks of the application's own.
+Hooks never run concurrently with each other or with the tick: `tick_` hooks
+run in tick context, and the others run in application context inside the
+scheduler's critical section. Data that only application-context hooks write
+can therefore be read by tasks without synchronization; data written by
+`tick_` hooks needs the same care as fault handler data. Like the fault
+handler, hooks must be bounded and nonblocking and must not call Zule or port
+functions. Their run time adds to the tick and to the critical section.
+
+The [task statistics module](modules.md#task-statistics) measures execution
+time and dispatch latency for every task this way, without any hooks of the
+application's own.
+
+## Task names and IDs
+
+`zule_task_name_get(task_id)` returns a task's name, or `NULL` for an unknown ID
+or when [task names](configuration.md#task-names) are disabled. It can be called
+at any time, including before `zule_run()`.
 
 ## Target environment
 
 Zule needs no C library and includes only the headers C99 guarantees in a
 freestanding environment. Like any C code built with GCC or Clang, it may still
-cause calls to `memcpy`, `memmove`, `memset`, and `memcmp`, so the target
-environment must provide them. A target's C library normally does.
+cause calls to `memcpy`, `memmove`, `memset`, and `memcmp`, for example to copy
+or initialise structures, so the target environment must provide them. A
+target's C library normally does.
 
 ## CMake integration
 
@@ -149,19 +184,23 @@ Set these variables before `add_subdirectory()`:
 
 | Variable | Meaning |
 | --- | --- |
-| `ZULE_PORT` | Required. A directory under `zule/ports/`, or `external` for a [custom port](port.md#linking-a-custom-port). |
+| `ZULE_PORT` | Required. A directory under `zule/ports/`, or `external` for a [custom port](port.md#creating-a-port). |
 | `ZULE_USER_CONFIG_DIR` | Optional absolute path of the directory holding [`zule_user_config.h`](configuration.md#build-settings), [`zule_user_port_config.h`](configuration.md#port-settings), or both. |
-| `ZULE_USER_PORT_CONFIG_DIR` | Optional absolute path of a separate directory holding `zule_user_port_config.h`. |
+| `ZULE_USER_PORT_CONFIG_DIR` | Optional absolute path of a separate directory holding [`zule_user_port_config.h`](configuration.md#port-settings), when the port settings are kept apart from the build settings. Only one of the two directories may hold it. |
 | `ZULE_BUILD_TESTS` | Build Zule's own tests. Defaults to `ON` only when `zule/` is the top-level project. |
 
-`zule::zule` is the Zule library: the core and the [modules](modules.md), with
-the public include path and the build settings. `zule_add_schedule(<target>
-SCHEDULE <json> [OUTPUT_DIR <dir>])` generates the schedule at build time and
-links it into `<target>`, whose sources can then include `zule_task_ids.h` and
-`zule_schedule_ids.h`. It needs Python 3.10 or later with
+Zule provides:
+
+| Name | Use |
+| --- | --- |
+| `zule::zule` | The Zule library to link: the core and the [modules](modules.md). It carries the public include path and the build settings, so the application, Zule, the port, and the generated schedule share them. |
+| `zule_add_schedule(<target> SCHEDULE <json> [OUTPUT_DIR <dir>])` | Generates the schedule at build time, compiles it, and links it into `<target>`, whose sources can then include `zule_task_ids.h` and `zule_schedule_ids.h`. Output defaults to `<target>_schedule/` in the calling binary directory. One schedule file per application is supported; it can define [multiple schedules](configuration.md#multiple-schedules). |
+
+`zule_add_schedule()` needs Python 3.10 or later with
 [`zule/tools/schedule/requirements.txt`](../zule/tools/schedule/requirements.txt)
-installed; CMake uses the active virtual environment's interpreter, or pass
-`-DPython3_EXECUTABLE=<python>`.
+installed. CMake uses the active virtual environment's interpreter if there is
+one; otherwise pass `-DPython3_EXECUTABLE=<python>`. The choice is cached in the
+build directory. Building Zule without `zule_add_schedule()` needs no Python.
 
 ## Other build systems
 
@@ -185,5 +224,5 @@ python -m zule_schedule generate path/to/schedule.json path/to/output
 ```
 
 This writes `zule_schedule_definition.c`, `zule_task_ids.h`, and
-`zule_schedule_ids.h` to the output directory, which goes on the application's
-include path.
+`zule_schedule_ids.h`; add the output
+directory to the application's include path.
