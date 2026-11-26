@@ -69,8 +69,6 @@ plus scheduler overhead and interrupt interference; see
 [deadline monitoring](core.md#task-deadline-monitoring), and
 [startup](core.md#scheduler-initialisation) for the first window.
 
-Generation additionally requires every timing value to fit `uint32_t`.
-
 The [schema](../zule/tools/schedule/zule_schedule/schedule.schema.json) defines
 the structure. The [schedule tool](../zule/tools/schedule/README.md) validates
 structure and timing, and generates C. Validation checks internal consistency

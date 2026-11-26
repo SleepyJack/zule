@@ -28,8 +28,7 @@ ctest --preset tests
 
 - **Core and module tests** in `zule/core/tests/` run the core against a
   deterministic test port, with a scripted timebase, so they never depend on
-  host timing. Each feature builds in its own configuration of settings, and
-  `zule_add_test()` adds a test in one call.
+  host timing.
 - **POSIX port tests** in `zule/ports/posix/tests/` run the real port, with
   threads and timers.
 - **Cortex-M port host tests** in `zule/ports/cortex_m/tests/host/` compile the

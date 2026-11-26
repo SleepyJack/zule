@@ -51,12 +51,6 @@ elapsed in the current period, from SysTick's counter. Its resolution is one
 clock count, and it wraps every 2^32 counts, about 171 s at 25 MHz or 25 s at
 170 MHz.
 
-SysTick raises the tick when its counter reaches 0, one count before it reloads,
-so a period starts there. A read masks interrupts briefly, so the handler cannot
-run in the middle of it, and restores the previous mask. While the tick is held
-off, for example inside a critical section, the pending tick shows that a period
-has started that the handler has not yet counted, and the read counts it.
-
 **Limit:** SysTick has a single pending flag, so if the tick is held off for
 longer than a whole period, the periods after the first are not counted, and the
 count falls behind until the next tick. Keep critical sections, and anything
@@ -75,35 +69,11 @@ that.
   mask every interrupt, not only the tick, for their short duration.
 - **The clock must be running** at the configured frequency before `zule_run()`.
 
-## Implementation
-
-- [`zule_port.c`](zule_port.c): the port contract.
-- [`zule_port_cortex_m.h`](zule_port_cortex_m.h): internal register definitions,
-  named after the Arm Architecture Reference Manuals, and the assembly
-  functions.
-- [`zule_port_cortex_m.S`](zule_port_cortex_m.S): the instructions C cannot
-  express (`mrs`, `cpsid`, `msr`, `wfi`, and barriers), and the registers'
-  addresses, so the C has no casts from integers to pointers. Each call to it is
-  opaque to the compiler, so it cannot move accesses to data the tick shares
-  across a critical section's entry or exit.
-
-Ticks stop with SysTick disabled and any pending SysTick exception cleared. On a
-single core, stop runs in application context, which a tick in progress would
-have preempted until it finished, so no callback is in flight when it returns.
-
 ## Tests
 
 - [`tests/host/`](tests/host) checks the port's C on the host, against fake
-  registers and instructions: critical-section nesting, reload values and slot
-  limits at two clock frequencies and both clock sources, tick start and stop,
-  idle, and the timebase's arithmetic.
-- [`tests/qemu/`](tests/qemu) runs the port on a Cortex-M3 in QEMU: the tick
-  rate against an independent timer, critical sections holding ticks off, idle,
-  and stop, then the real scheduler. With all features, it also checks that the
-  timebase keeps pace with the independent timer, never steps backwards across
-  millions of reads, and counts a period that starts while the tick is held off,
-  and runs the scheduler with every hook, the tick timing check, and both
-  modules.
+  registers and instructions.
+- [`tests/qemu/`](tests/qemu) runs the port on a Cortex-M3 in QEMU.
 - The [static checks](../../../TESTING.md#static-checks) build it for Cortex-M0+
   and Cortex-M3, with default and all features, with static analysis.
 

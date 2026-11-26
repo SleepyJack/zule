@@ -13,8 +13,7 @@ The smallest complete Zule application, and the one in the README's
 
 It uses no optional features and produces no output, so it can run on every
 target. It runs until a fault or port error, when `zule_run()` returns and the
-program exits nonzero; while it keeps running, its tasks meet their windows. CI
-runs it briefly as the smoke test, since it does not depend on host timing.
+program exits nonzero; while it keeps running, its tasks meet their windows.
 
 ## Targets
 

@@ -38,32 +38,19 @@ safety tool.
 and writes:
 
 - `zule_schedule_definition.c`, implementing `zule_schedule_definition_get()`
-  from the core's internal `zule_schedule_definition.h`: the slot length and
-  task table, shared by every schedule, and the schedules, indexed by schedule
-  ID;
+  from the core's internal `zule_schedule_definition.h`;
 - `zule_task_ids.h`, a standalone application header with the
   [task ID constants](../../../doc/configuration.md#task-names-and-ids);
 - `zule_schedule_ids.h`, a standalone application header with the
   [schedule ID constants](../../../doc/configuration.md#multiple-schedules).
 
 All input is validated before any file is written, so validation failures
-leave existing outputs untouched. Each file is staged before replacing its
-destination, but replacement of the set is not atomic: if writing fails, rerun
-generation before compiling.
+leave existing outputs untouched.
 
 Generation requires all timing values to fit `uint32_t`; validation alone has no
-width limit (`valid/large-slot.json` exercises this). Tasks and names are
-emitted in task-name order, and schedules in schedule-name order,
-independently of JSON declaration order. Window
-order is preserved. The output is deterministic, with no timestamps or input
-paths. Names are always emitted, guarded by `ZULE_CONFIG_TASK_NAMES`, so
-changing that setting needs no regeneration.
+width limit (`valid/large-slot.json` exercises this).
 
 ## Development
-
-`schedule_io.py` loads JSON for all tools, `validation.py` checks schedules,
-`generation.py` emits C, and `cli.py` handles arguments and output. Each has its
-own test module:
 
 ```sh
 python -m unittest discover -s tests -v
@@ -74,5 +61,3 @@ JSON test cases live in `tests/fixtures/`:
 - `generic/`: reusable JSON values, such as `empty-object.json` and `null.json`.
 - `valid/`: valid schedules, including the control-loop example.
 - `invalid/`: schedules with specific structural, reference, ordering, or timing errors.
-
-Generated formatting issues are fixed in `generation.py`, never in generated output.
