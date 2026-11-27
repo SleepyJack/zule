@@ -58,6 +58,14 @@ python tools/format.py
 python tools/format.py --check
 ```
 
+Schedule JSON files have their own layout, which the
+[schedule tool](zule/tools/schedule/README.md#formatting) applies:
+
+```sh
+cd zule/tools/schedule
+python -m zule_schedule format --check path/to/schedule.json
+```
+
 ## Coding guidelines
 
 See [doc/CODING_GUIDELINES.md](doc/CODING_GUIDELINES.md) for naming, API,

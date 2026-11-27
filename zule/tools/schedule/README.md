@@ -1,7 +1,7 @@
 # Zule schedule tools (draft)
 
 A small Python package that validates [schedules](../../../doc/configuration.md#schedule),
-shows them as a slot grid, and generates their C tables. CMake applications run it through
+shows them as a slot grid, formats them, and generates their C tables. CMake applications run it through
 [`zule_add_schedule()`](../../../doc/application.md#cmake-integration); it can
 also be run directly.
 
@@ -13,6 +13,7 @@ then run from this directory:
 ```sh
 python -m zule_schedule validate tests/fixtures/valid/control-loop.json
 python -m zule_schedule show tests/fixtures/valid/control-loop.json
+python -m zule_schedule format tests/fixtures/valid/control-loop.json
 python -m zule_schedule generate tests/fixtures/valid/control-loop.json generated
 ```
 
@@ -87,6 +88,20 @@ leave existing outputs untouched.
 
 Generation requires all timing values to fit `uint32_t`; validation alone has no
 width limit (`valid/large-slot.json` exercises this).
+
+## Formatting
+
+`format <schedule.json>...` writes each schedule in the project's layout, and
+`--check` reports the files that differ without writing any, returning 1 if
+there are any. The [example schedules](../../../examples/README.md) are kept
+formatted, which CI checks; schedules used as test data are not.
+
+Formatting changes whitespace alone: keys keep the order they were read in, so
+a file is never reordered. A value goes on one line where it fits in 80
+columns, and is expanded over several where it does not, except the schedule
+itself, which is always expanded. Writing a schedule the same way every time
+keeps a timing change to a diff of the timing, and it is what will let the
+editor save a file without rewriting the parts it did not touch.
 
 ## Development
 

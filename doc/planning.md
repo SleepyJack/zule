@@ -101,8 +101,8 @@ Constraints:
   optional and imported lazily.
 - Keep each operation a pure function from one schedule to another, so the
   editor is testable without a terminal.
-- Write the file canonically, preserving descriptions and `$schema`, so that an
-  edit does not produce a noisy diff.
+- Save through the tool's [formatter](../zule/tools/schedule/README.md#formatting),
+  so that an edit does not rewrite the parts it did not touch.
 
 ## Watchdog integration
 
