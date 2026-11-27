@@ -145,3 +145,100 @@ def windows_of(schedule: Any, task: str) -> int:
         1 for cycle in cycles_of(schedule) for window in cycle["windows"] if window["task"] == task
     )
 
+
+def schedule_names(schedule: Any) -> list[str]:
+    """Return the file's schedule names, in the order of their generated IDs."""
+    if "cycle" in schedule:
+        return ["main"]
+    return sorted(schedule["schedules"])
+
+
+def schedule_name_issue(schedule: Any, name: str, renaming: str | None = None) -> str | None:
+    """Return why a schedule cannot be called this, or None if it can."""
+    if not _NAME.match(name):
+        return "a schedule name must be a C identifier"
+    for existing in schedule_names(schedule):
+        if existing != renaming and existing.upper() == name.upper():
+            return f"{existing!r} already takes that name's generated constant"
+    return None
+
+
+def _as_named(schedule: Any) -> Any:
+    """Return the schedule in the named form, which a single cycle calls main.
+
+    The two forms mean the same thing, so converting one is faithful; it is
+    what lets a second schedule be added to a file that has only a cycle.
+    """
+    if "cycle" not in schedule:
+        return schedule
+    converted = {}
+    for key, value in schedule.items():
+        if key == "cycle":
+            converted["schedules"] = {"main": value}
+        else:
+            converted[key] = value
+    return converted
+
+
+def add_schedule(schedule: Any, name: str, slots: int, task: str) -> Any:
+    """Return the schedule with another added, holding one window to begin with.
+
+    A cycle needs a window, so the new schedule starts with one for the given
+    task at slot zero.
+    """
+    edited = _as_named(deepcopy(schedule))
+    edited["schedules"][name] = {
+        "slots": slots,
+        "windows": [{"task": task, "start_slot": 0}],
+    }
+    return edited
+
+
+def rename_schedule(schedule: Any, old: str, new: str) -> Any:
+    """Return the schedule with one renamed, keeping the others in place."""
+    edited = _as_named(deepcopy(schedule))
+    edited["schedules"] = {
+        (new if name == old else name): cycle for name, cycle in edited["schedules"].items()
+    }
+    return edited
+
+
+def delete_schedule(schedule: Any, name: str) -> Any:
+    """Return the schedule without one, which the caller checks is not the last."""
+    edited = _as_named(deepcopy(schedule))
+    del edited["schedules"][name]
+    return edited
+
+
+def set_slots(schedule: Any, name: str, slots: int) -> Any:
+    """Return the schedule with a cycle's length changed.
+
+    A shorter cycle can leave windows past its end, which the checks report.
+    """
+    edited = deepcopy(schedule)
+    cycle_of(edited, name)["slots"] = slots
+    return edited
+
+
+def placement_issue(cycle: Any, tasks: Any, task: str, start: int) -> str | None:
+    """Return why a task's window cannot start at a slot, or None if it can."""
+    budget = tasks.get(task, {}).get("budget_slots", 1)
+    if start + budget > cycle["slots"]:
+        return f"{task} needs {budget} slots and the cycle ends at {cycle['slots']}"
+    reserved = set()
+    for window in cycle["windows"]:
+        held = tasks.get(window["task"], {}).get("budget_slots", 1)
+        reserved.update(range(window["start_slot"], window["start_slot"] + held))
+    if not reserved.isdisjoint(range(start, start + budget)):
+        return f"{task} needs {budget} slots and they are not free here"
+    return None
+
+
+def window_at(cycle: Any, tasks: Any, task: str, slot: int) -> int | None:
+    """Return the index of the task's window covering a slot, if one does."""
+    budget = tasks.get(task, {}).get("budget_slots", 1)
+    for index, window in enumerate(cycle["windows"]):
+        if window["task"] == task and window["start_slot"] <= slot < window["start_slot"] + budget:
+            return index
+    return None
+

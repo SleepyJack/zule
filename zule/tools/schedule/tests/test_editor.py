@@ -1,30 +1,88 @@
+import curses
 import tempfile
 import unittest
 from pathlib import Path
 
-from zule_schedule.editing import delete_window, move_window
-import curses
-
-from zule_schedule.editor import SCHEDULE, SELECTED, TASKS, Editor, frame, key_name, paint
+from zule_schedule.editing import (
+    add_schedule,
+    delete_window,
+    move_window,
+    placement_issue,
+    schedule_names,
+    window_at,
+)
+from zule_schedule.editor import (
+    HELD,
+    NEW_SCHEDULE,
+    NEW_TASK,
+    SCHEDULE_NAME,
+    SCHEDULE_SLOTS,
+    SELECTED,
+    SLOT,
+    TASK_BUDGET,
+    TASK_NAME,
+    Editor,
+    frame,
+    key_name,
+    paint,
+)
 from zule_schedule.schedule_io import load_schedule
+from zule_schedule.validation import validate_schedule
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
-WIDTH = 76
-HEIGHT = 20
 
 
-def editor(name="valid/control-loop.json", path="schedule.json"):
-    return Editor(path, load_schedule(FIXTURES / name))
+def editor(name="valid/control-loop.json", path="schedule.json", width=76, height=30):
+    return Editor(path, load_schedule(FIXTURES / name), width=width, height=height)
 
 
-def rows(editor_):
-    editor_.ensure_visible(WIDTH, HEIGHT)
-    return frame(editor_, WIDTH, HEIGHT)
+def press(state, *keys):
+    for key in keys:
+        state.key(key)
 
 
-def text(row):
-    return "".join(part for part, _ in row)
+def typed(state, line):
+    press(state, *line, "enter")
+
+
+def lines(state):
+    state.scroll()
+    return ["".join(text for text, _ in row) for row in frame(state)]
+
+
+def keys(state):
+    return lines(state)[-1]
+
+
+def status(state):
+    return lines(state)[-2]
+
+
+# The second cell of a row is reached by moving across it.
+ACROSS = {SCHEDULE_SLOTS: SCHEDULE_NAME, TASK_BUDGET: TASK_NAME}
+
+
+def to_cell(state, kind, task=None):
+    """Move the cursor down, then across, until it rests on this kind of cell."""
+    first = ACROSS.get(kind, kind)
+    for _ in range(40):
+        cell = state.cursor()
+        if cell.kind == first and (task is None or cell.task == task):
+            if kind in ACROSS:
+                state.key("right")
+            return state.cursor()
+        state.key("down")
+    raise AssertionError(f"no {kind} cell for {task}")
+
+
+def to_slot(state, task, slot):
+    to_cell(state, SLOT, task)
+    while state.cursor().slot < slot:
+        state.key("right")
+    while state.cursor().slot > slot:
+        state.key("left")
+    return state.cursor()
 
 
 class EditingTests(unittest.TestCase):
@@ -41,17 +99,13 @@ class EditingTests(unittest.TestCase):
 
     def test_a_window_moved_past_another_is_reordered(self):
         """The format requires increasing start slots, so the list is kept sorted."""
-        # sense is at slot 0 with control at 2; moving sense to 3 puts it second.
         moved, index = move_window(self.schedule, "main", 0, 3)
-        self.assertEqual(index, 1)
         self.assertEqual(moved["cycle"]["windows"][index]["task"], "sense")
         starts = [window["start_slot"] for window in moved["cycle"]["windows"]]
         self.assertEqual(starts, sorted(starts))
 
     def test_a_window_cannot_start_outside_its_cycle(self):
-        unchanged, index = move_window(self.schedule, "main", 0, -1)
-        self.assertIs(unchanged, self.schedule)
-        self.assertEqual(index, 0)
+        self.assertIs(move_window(self.schedule, "main", 0, -1)[0], self.schedule)
         self.assertIs(move_window(self.schedule, "main", 2, 5)[0], self.schedule)
 
     def test_deleting_leaves_the_original_schedule_alone(self):
@@ -60,49 +114,311 @@ class EditingTests(unittest.TestCase):
         self.assertEqual(len(deleted["cycle"]["windows"]), 2)
         self.assertEqual(index, 1)
 
+    def test_a_slot_is_free_only_where_the_whole_budget_fits(self):
+        cycle, tasks = self.schedule["cycle"], self.schedule["tasks"]
+        self.assertIsNone(placement_issue(cycle, tasks, "control", 7))
+        self.assertIn("cycle ends", placement_issue(cycle, tasks, "control", 8))
+        self.assertIn("not free", placement_issue(cycle, tasks, "control", 0))
 
-class SelectionTests(unittest.TestCase):
-    def test_selection_moves_and_wraps(self):
-        state = editor()
-        self.assertEqual(state.selected()["task"], "sense")
-        state.key("down")
-        self.assertEqual(state.selected()["task"], "control")
-        state.key("up")
-        state.key("up")
-        self.assertEqual(state.selected()["task"], "output")
+    def test_a_window_is_found_by_the_slots_it_covers(self):
+        cycle, tasks = self.schedule["cycle"], self.schedule["tasks"]
+        self.assertEqual(window_at(cycle, tasks, "control", 4), 1)
+        self.assertIsNone(window_at(cycle, tasks, "control", 5))
+        self.assertIsNone(window_at(cycle, tasks, "sense", 4))
 
-    def test_moving_a_window_keeps_it_selected(self):
-        state = editor()
-        state.key("right")
-        state.key("right")
-        state.key("right")
-        self.assertEqual(state.selected(), {"task": "sense", "start_slot": 3})
-        self.assertTrue(state.modified)
+    def test_adding_a_schedule_turns_one_cycle_into_named_schedules(self):
+        """The two forms mean the same, so a file with a cycle can gain a second."""
+        added = add_schedule(self.schedule, "backup", 6, "sense")
+        self.assertEqual(schedule_names(added), ["backup", "main"])
+        self.assertEqual(validate_schedule(added), [])
+        self.assertEqual(list(added), ["$schema", "slot_us", "tasks", "schedules"])
+        self.assertEqual(self.schedule, self.before)
 
-    def test_a_refused_move_says_why(self):
+
+class CursorTests(unittest.TestCase):
+    def test_the_cursor_starts_on_the_first_task(self):
+        self.assertEqual(editor().cursor().kind, TASK_NAME)
+
+    def test_down_reaches_every_kind_of_cell_in_turn(self):
         state = editor()
+        seen = [state.cursor().kind]
+        for _ in range(12):
+            state.key("down")
+            seen.append(state.cursor().kind)
+        self.assertEqual(
+            [kind for index, kind in enumerate(seen) if index == 0 or kind != seen[index - 1]],
+            [TASK_NAME, NEW_TASK, SCHEDULE_NAME, SLOT, NEW_SCHEDULE],
+        )
+
+    def test_the_cursor_stops_at_the_ends(self):
+        state = editor()
+        press(state, "up", "up")
+        self.assertEqual(state.cursor().kind, TASK_NAME)
+        for _ in range(30):
+            state.key("down")
+        self.assertEqual(state.cursor().kind, NEW_SCHEDULE)
+
+    def test_a_row_is_crossed_cell_by_cell(self):
+        state = editor()
+        self.assertEqual(state.cursor().kind, TASK_NAME)
+        state.key("right")
+        self.assertEqual(state.cursor().kind, TASK_BUDGET)
+        state.key("right")
+        self.assertEqual(state.cursor().kind, TASK_BUDGET)
         state.key("left")
-        self.assertIn("outside its cycle", state.message)
+        self.assertEqual(state.cursor().kind, TASK_NAME)
+
+    def test_a_schedule_heading_holds_its_name_and_its_length(self):
+        state = editor()
+        to_cell(state, SCHEDULE_NAME)
+        state.key("right")
+        self.assertEqual(state.cursor().kind, SCHEDULE_SLOTS)
+
+    def test_moving_down_keeps_the_column_where_it_can(self):
+        state = editor()
+        to_slot(state, "control", 6)
+        state.key("down")
+        self.assertEqual(state.cursor().slot, 6)
+        self.assertEqual(state.cursor().task, "output")
+
+    def test_a_long_cycle_scrolls_at_the_edge_of_the_lane(self):
+        schedule = {
+            "slot_us": 1000,
+            "tasks": {"sense": {"budget_slots": 1}},
+            "cycle": {"slots": 40, "windows": [{"task": "sense", "start_slot": 0}]},
+        }
+        state = Editor("schedule.json", schedule, width=76, height=30)
+        to_cell(state, SLOT)
+        for _ in range(39):
+            state.key("right")
+        self.assertEqual(state.cursor().slot, 39)
+        self.assertGreater(state.first_slot("main"), 0)
+        for _ in range(39):
+            state.key("left")
+        self.assertEqual(state.cursor().slot, 0)
+        self.assertEqual(state.first_slot("main"), 0)
+
+
+class EnterTests(unittest.TestCase):
+    def test_enter_on_an_empty_slot_places_a_window_there(self):
+        state = editor()
+        to_slot(state, "sense", 7)
+        state.key("enter")
+        self.assertIn("placed sense at slot 7", state.message)
+        self.assertIn({"task": "sense", "start_slot": 7}, state.cycles()[0][1]["windows"])
+
+    def test_enter_on_a_slot_with_no_room_says_why(self):
+        state = editor()
+        to_slot(state, "control", 8)
+        state.key("enter")
+        self.assertIn("the cycle ends at 10", state.message)
+        self.assertEqual(len(state.cycles()[0][1]["windows"]), 3)
+
+    def test_enter_on_a_window_picks_it_up(self):
+        state = editor()
+        to_slot(state, "control", 3)
+        state.key("enter")
+        self.assertIsNotNone(state.holding)
+        self.assertIn("←→ move", keys(state))
+
+    def test_enter_on_a_task_asks_for_a_new_name(self):
+        state = editor()
+        state.key("enter")
+        self.assertIn("rename control", state.prompt.label)
+        typed(state, "regulate")
+        self.assertIn("regulate", state.schedule["tasks"])
+        self.assertIn("regulate", [w["task"] for w in state.cycles()[0][1]["windows"]])
+
+    def test_enter_on_a_budget_asks_for_slots(self):
+        state = editor()
+        state.key("right")
+        state.key("enter")
+        typed(state, "4")
+        self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 4)
+
+    def test_enter_on_the_new_task_row_adds_one(self):
+        state = editor()
+        to_cell(state, NEW_TASK)
+        state.key("enter")
+        typed(state, "logger")
+        self.assertIn("budget", state.prompt.label)
+        typed(state, "2")
+        self.assertEqual(state.schedule["tasks"]["logger"], {"budget_slots": 2})
+
+    def test_enter_on_a_schedule_name_renames_it(self):
+        state = editor("valid/modes.json")
+        to_cell(state, SCHEDULE_NAME)
+        state.key("enter")
+        typed(state, "running")
+        self.assertIn("running", schedule_names(state.schedule))
+
+    def test_enter_on_the_cycle_length_changes_it(self):
+        state = editor()
+        to_cell(state, SCHEDULE_SLOTS)
+        state.key("enter")
+        typed(state, "14")
+        self.assertEqual(state.cycles()[0][1]["slots"], 14)
+
+    def test_enter_on_the_new_schedule_row_adds_one(self):
+        state = editor()
+        to_cell(state, NEW_SCHEDULE)
+        state.key("enter")
+        typed(state, "backup")
+        self.assertEqual(schedule_names(state.schedule), ["backup", "main"])
+        self.assertEqual(validate_schedule(state.schedule), [])
+
+    def test_names_are_checked_as_the_generated_constants_need(self):
+        state = editor()
+        state.key("enter")
+        typed(state, "2bad")
+        self.assertIn("C identifier", state.message)
+        self.assertIsNotNone(state.prompt)
+        press(state, *["backspace"] * 4)
+        typed(state, "SENSE")
+        self.assertIn("generated constant", state.message)
+
+    def test_a_length_is_a_whole_number_of_slots(self):
+        state = editor()
+        to_cell(state, SCHEDULE_SLOTS)
+        state.key("enter")
+        typed(state, "none")
+        self.assertIn("whole number", state.message)
+        self.assertIsNotNone(state.prompt)
+
+    def test_escape_abandons_a_prompt(self):
+        state = editor()
+        press(state, "enter", "x", "escape")
+        self.assertIsNone(state.prompt)
         self.assertFalse(state.modified)
 
-    def test_deleting_the_selected_window(self):
+
+class HoldingTests(unittest.TestCase):
+    def held(self, state):
+        return [row for row in frame(state) if any(style == HELD for _, style in row)]
+
+    def test_a_held_window_moves_and_the_cursor_follows(self):
+        state = editor()
+        to_slot(state, "sense", 0)
+        press(state, "enter", "right")
+        self.assertEqual(state.cycles()[0][1]["windows"][0]["start_slot"], 1)
+        self.assertEqual(state.cursor().slot, 1)
+
+    def test_a_held_window_cannot_leave_its_cycle(self):
+        state = editor()
+        to_slot(state, "sense", 0)
+        press(state, "enter", "left")
+        self.assertIn("outside its cycle", state.message)
+        self.assertEqual(state.cycles()[0][1]["windows"][0]["start_slot"], 0)
+
+    def test_a_held_window_is_drawn_as_held(self):
+        state = editor()
+        to_slot(state, "control", 2)
+        self.assertEqual(self.held(state), [])
+        state.key("enter")
+        self.assertEqual(len(self.held(state)), 1)
+
+    def test_enter_puts_a_held_window_down(self):
+        state = editor()
+        to_slot(state, "sense", 0)
+        press(state, "enter", "enter")
+        self.assertIsNone(state.holding)
+        press(state, "enter", "escape")
+        self.assertIsNone(state.holding)
+
+    def test_a_held_window_can_be_deleted(self):
+        state = editor()
+        to_slot(state, "sense", 0)
+        press(state, "enter", "d")
+        self.assertIsNone(state.holding)
+        self.assertEqual([w["task"] for w in state.cycles()[0][1]["windows"]], ["control", "output"])
+
+
+class DeleteTests(unittest.TestCase):
+    def test_d_on_a_window_deletes_it(self):
+        state = editor()
+        to_slot(state, "control", 3)
+        state.key("d")
+        self.assertEqual([w["task"] for w in state.cycles()[0][1]["windows"]], ["sense", "output"])
+
+    def test_d_on_a_placed_task_asks_first(self):
         state = editor()
         state.key("d")
-        self.assertEqual([window["task"] for window in state.windows()], ["control", "output"])
-        self.assertEqual(state.selected()["task"], "control")
+        self.assertIn("1 window", state.message)
+        self.assertIn("control", state.schedule["tasks"])
+        state.key("D")
+        self.assertNotIn("control", state.schedule["tasks"])
 
-    def test_selection_runs_on_into_the_next_schedule(self):
-        """Every schedule is on screen, so there is no mode to switch."""
+    def test_the_last_task_is_kept(self):
+        state = editor("valid/repeated-task.json")
+        state.key("D")
+        self.assertIn("at least one task", state.message)
+
+    def test_d_on_a_schedule_asks_first_and_the_last_is_kept(self):
         state = editor("valid/modes.json")
-        self.assertEqual(state.current()[0], "operational")
-        for _ in range(3):  # operational places three windows
-            state.key("down")
-        self.assertEqual(state.current()[0], "startup")
-        self.assertEqual(state.selected()["task"], "mode_manager")
-        state.key("down")
-        self.assertEqual(state.current()[0], "operational")
-        state.key("up")
-        self.assertEqual(state.current()[0], "startup")
+        to_cell(state, SCHEDULE_NAME)
+        state.key("d")
+        self.assertIn("window", state.message)
+        state.key("D")
+        self.assertEqual(schedule_names(state.schedule), ["startup"])
+        to_cell(state, SCHEDULE_NAME)
+        state.key("D")
+        self.assertIn("at least one schedule", state.message)
+
+
+class FrameTests(unittest.TestCase):
+    def test_the_cursor_cell_is_marked(self):
+        state = editor()
+        marked = [row for row in frame(state) if any(style == SELECTED for _, style in row)]
+        self.assertEqual(len(marked), 1)
+        self.assertEqual(
+            "".join(text for text, style in marked[0] if style == SELECTED), "control"
+        )
+
+    def test_every_task_has_a_lane_in_every_schedule(self):
+        """A lane is where a window is placed, so a task without one still needs it."""
+        drawn = lines(editor("valid/modes.json"))
+        startup = drawn[next(i for i, line in enumerate(drawn) if "schedule startup" in line) :]
+        for task in ("control", "mode_manager", "sense"):
+            self.assertTrue(any(line.startswith(f"  {task}") for line in startup[:6]), task)
+
+    def test_both_rows_that_add_something_are_shown(self):
+        drawn = lines(editor())
+        self.assertTrue(any("+ new task" in line for line in drawn))
+        self.assertTrue(any("+ new schedule" in line for line in drawn))
+
+    def test_the_keys_match_the_cell_under_the_cursor(self):
+        state = editor()
+        self.assertIn("enter rename", keys(state))
+        to_cell(state, NEW_TASK)
+        self.assertIn("enter add a task", keys(state))
+        to_cell(state, SCHEDULE_SLOTS)
+        self.assertIn("cycle length", keys(state))
+        to_slot(state, "sense", 7)
+        self.assertIn("place sense here", keys(state))
+        to_slot(state, "sense", 0)
+        self.assertIn("pick up", keys(state))
+
+    def test_the_status_reports_issues_as_they_appear(self):
+        state = editor()
+        self.assertIn("valid", status(state))
+        to_slot(state, "sense", 0)
+        # sense then covers slots 1 and 2, where control already starts.
+        press(state, "enter", "right")
+        self.assertIn("overlaps", status(state))
+
+    def test_the_frame_fills_the_height(self):
+        for height in (8, 20, 40):
+            with self.subTest(height=height):
+                state = editor(height=height)
+                self.assertEqual(len(lines(state)), height)
+
+    def test_the_view_scrolls_down_to_keep_the_cursor_visible(self):
+        state = editor("valid/modes.json", height=10)
+        self.assertEqual(state.first_row, 0)
+        to_cell(state, NEW_SCHEDULE)
+        state.scroll()
+        self.assertGreater(state.first_row, 0)
+        self.assertTrue(any(any(style == SELECTED for _, style in row) for row in frame(state)))
 
 
 class WritingTests(unittest.TestCase):
@@ -110,23 +426,21 @@ class WritingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "schedule.json"
             path.write_text((FIXTURES / "valid/control-loop.json").read_text())
-            state = Editor(str(path), load_schedule(path))
-            # Move the last window, which has room after it, so that the edit
-            # stays valid and can be written.
-            state.key("up")
-            state.key("right")
+            state = Editor(str(path), load_schedule(path), width=76, height=30)
+            to_slot(state, "sense", 7)
+            state.key("enter")
             self.assertTrue(state.modified)
             state.key("w")
             self.assertIn("written to", state.message)
             self.assertFalse(state.modified)
-            self.assertIn('{ "task": "output", "start_slot": 6 }', path.read_text())
+            self.assertIn('{ "task": "sense", "start_slot": 7 }', path.read_text())
 
     def test_writing_is_refused_while_the_schedule_has_issues(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "schedule.json"
             original = (FIXTURES / "invalid/overlap.json").read_text()
             path.write_text(original)
-            state = Editor(str(path), load_schedule(path))
+            state = Editor(str(path), load_schedule(path), width=76, height=30)
             state.key("w")
             self.assertIn("not written", state.message)
             self.assertEqual(path.read_text(), original)
@@ -137,7 +451,8 @@ class WritingTests(unittest.TestCase):
         self.assertTrue(state.finished)
 
         state = editor()
-        state.key("right")
+        to_slot(state, "sense", 7)
+        state.key("enter")
         state.key("q")
         self.assertFalse(state.finished)
         self.assertIn("unsaved changes", state.message)
@@ -145,253 +460,11 @@ class WritingTests(unittest.TestCase):
         self.assertTrue(state.finished)
 
 
-class FrameTests(unittest.TestCase):
-    def test_the_frame_fills_the_height(self):
-        for height in (8, 20, 40):
-            with self.subTest(height=height):
-                state = editor()
-                state.ensure_visible(WIDTH, height)
-                self.assertEqual(len(frame(state, WIDTH, height)), height)
-
-    def test_the_tasks_come_before_the_schedule(self):
-        lines = [text(row).strip() for row in rows(editor())]
-        self.assertLess(lines.index("tasks"), next(
-            index for index, line in enumerate(lines) if "schedule main" in line
-        ))
-
-    def test_only_the_selected_window_is_highlighted(self):
-        state = editor()
-        highlighted = [row for row in rows(state) if any(style == SELECTED for _, style in row)]
-        self.assertEqual(len(highlighted), 1)
-        self.assertIn("sense", text(highlighted[0]))
-        selected = "".join(part for part, style in highlighted[0] if style == SELECTED)
-        self.assertEqual(selected, "█" * 9)
-
-    def test_the_title_shows_the_path_and_whether_it_is_modified(self):
-        state = editor(path="config/schedule.json")
-        self.assertEqual(text(rows(state)[0]), "config/schedule.json")
-        state.key("right")
-        self.assertIn("modified", text(rows(state)[0]))
-
-    def test_the_status_reports_issues(self):
-        state = editor("invalid/overlap.json")
-        self.assertIn("overlaps", text(rows(state)[-2]))
-        self.assertIn("valid", text(rows(editor())[-2]))
-
-    def test_a_long_cycle_scrolls_to_the_selection(self):
-        schedule = {
-            "slot_us": 1000,
-            "tasks": {"sense": {"budget_slots": 2}},
-            "cycle": {
-                "slots": 40,
-                "windows": [{"task": "sense", "start_slot": 0}, {"task": "sense", "start_slot": 30}],
-            },
-        }
-        state = Editor("schedule.json", schedule)
-        state.ensure_visible(WIDTH, HEIGHT)
-        self.assertEqual(state.first_slot("main"), 0)
-        state.key("down")
-        state.ensure_visible(WIDTH, HEIGHT)
-        # The view holds 13 slots, and scrolls the least that shows slots 30-31.
-        self.assertEqual(state.first_slot("main"), 19)
-        heading = next(text(row) for row in frame(state, WIDTH, HEIGHT) if "showing" in text(row))
-        self.assertIn("showing 19-31", heading)
-
-
-class TaskAreaTests(unittest.TestCase):
-    """The task area, where a window is picked up and tasks are edited."""
-
-    def typed(self, state, line):
-        for character in line:
-            state.key(character)
-        state.key("enter")
-
-    def test_tab_moves_focus_between_the_areas(self):
-        state = editor()
-        self.assertEqual(state.focus, SCHEDULE)
-        state.key("tab")
-        self.assertEqual(state.focus, TASKS)
-        state.key("tab")
-        self.assertEqual(state.focus, SCHEDULE)
-
-    def test_adding_a_window_puts_it_where_it_first_fits(self):
-        state = editor()
-        state.key("tab")
-        state.key("down")
-        state.key("down")  # control, output, sense: select sense
-        self.assertEqual(state.task(), "sense")
-        state.key("a")
-        self.assertEqual(state.focus, SCHEDULE)
-        # sense is 2 slots and slots 0-6 are taken, so the new window is at 7.
-        self.assertEqual(state.selected(), {"task": "sense", "start_slot": 7})
-        self.assertEqual(len(state.windows()), 4)
-
-    def test_a_task_can_have_several_windows(self):
-        state = editor()
-        self.assertEqual([window["task"] for window in state.windows()].count("control"), 1)
-        for _ in range(2):
-            state.key("tab")
-            state.key("a")
-        tasks = [window["task"] for window in state.windows()]
-        self.assertEqual(tasks.count("control"), 3)
-
-    def test_a_window_can_be_added_for_a_task_the_schedule_does_not_place(self):
-        state = editor("valid/modes.json")
-        for _ in range(3):  # into the startup schedule, which places mode_manager alone
-            state.key("down")
-        self.assertEqual([window["task"] for window in state.windows()], ["mode_manager"])
-        state.key("tab")
-        self.assertEqual(state.task(), "control")
-        state.key("a")
-        self.assertIn("control", [window["task"] for window in state.windows()])
-
-    def test_adding_a_task_asks_for_a_name_then_a_budget(self):
-        state = editor()
-        state.key("tab")
-        state.key("n")
-        self.typed(state, "logger")
-        self.assertIsNotNone(state.prompt)
-        self.assertIn("budget", state.prompt.label)
-        self.typed(state, "2")
-        self.assertIsNone(state.prompt)
-        self.assertEqual(state.schedule["tasks"]["logger"], {"budget_slots": 2})
-        self.assertEqual(state.task(), "logger")
-
-    def test_a_task_name_must_suit_the_generated_constants(self):
-        state = editor()
-        state.key("tab")
-        state.key("n")
-        self.typed(state, "2logger")
-        self.assertIn("C identifier", state.message)
-        self.assertEqual(state.prompt.action, "name")
-        for _ in range(len("2logger")):
-            state.key("backspace")
-        self.typed(state, "SENSE")
-        self.assertIn("generated constant", state.message)
-
-    def test_a_budget_must_be_a_whole_number_of_slots(self):
-        state = editor()
-        state.key("tab")
-        state.key("b")
-        self.typed(state, "nope")
-        self.assertIn("whole number", state.message)
-        self.typed(state, "")
-        self.assertIsNotNone(state.prompt)
-
-    def test_changing_a_budget_resizes_every_window_of_that_task(self):
-        state = editor()
-        state.key("tab")
-        state.key("b")
-        self.typed(state, "4")
-        self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 4)
-
-    def test_renaming_a_task_follows_it_into_the_windows(self):
-        state = editor()
-        state.key("tab")
-        state.key("r")
-        self.typed(state, "regulate")
-        self.assertNotIn("control", state.schedule["tasks"])
-        self.assertIn("regulate", [window["task"] for window in state.windows()])
-
-    def test_escape_abandons_a_prompt(self):
-        state = editor()
-        state.key("tab")
-        state.key("r")
-        state.key("x")
-        state.key("escape")
-        self.assertIsNone(state.prompt)
-        self.assertFalse(state.modified)
-
-    def test_deleting_a_placed_task_asks_first(self):
-        state = editor()
-        state.key("tab")
-        state.key("d")
-        self.assertIn("1 window", state.message)
-        self.assertIn("control", state.schedule["tasks"])
-        state.key("D")
-        self.assertNotIn("control", state.schedule["tasks"])
-        self.assertNotIn("control", [window["task"] for window in state.windows()])
-
-    def test_the_last_task_is_kept(self):
-        state = editor("valid/repeated-task.json")
-        state.key("tab")
-        state.key("D")
-        self.assertIn("at least one task", state.message)
-        self.assertEqual(state.task_names(), ["sense"])
-
-    def test_the_focused_area_is_marked_and_its_keys_shown(self):
-        state = editor()
-        lines = [text(row) for row in rows(state)]
-        self.assertIn("▸ schedule main", next(line for line in lines if "schedule main" in line))
-        self.assertIn("←→ move", lines[-1])
-        state.key("tab")
-        self.assertIn("▸ tasks", "".join(text(row) for row in rows(state)))
-        self.assertIn("add window to main", text(rows(state)[-1]))
-
-    def test_the_prompt_is_shown_with_what_has_been_typed(self):
-        state = editor()
-        state.key("tab")
-        state.key("n")
-        state.key("l")
-        state.key("o")
-        self.assertIn("new task name: lo", text(rows(state)[-2]))
-
-
-class StackedScheduleTests(unittest.TestCase):
-    """Every schedule is drawn, one below the next, as show prints them."""
-
-    def test_every_schedule_is_on_screen(self):
-        lines = [text(row) for row in rows(editor("valid/modes.json"))]
-        self.assertTrue(any("schedule operational" in line for line in lines))
-        self.assertTrue(any("schedule startup" in line for line in lines))
-
-    def test_only_the_schedule_holding_the_selection_is_marked(self):
-        state = editor("valid/modes.json")
-        marked = [text(row) for row in rows(state) if text(row).startswith("▸ schedule")]
-        self.assertEqual(len(marked), 1)
-        self.assertIn("operational", marked[0])
-        for _ in range(3):
-            state.key("down")
-        marked = [text(row) for row in rows(state) if text(row).startswith("▸ schedule")]
-        self.assertIn("startup", marked[0])
-
-    def test_each_schedule_scrolls_on_its_own(self):
-        schedule = {
-            "slot_us": 1000,
-            "tasks": {"sense": {"budget_slots": 1}},
-            "schedules": {
-                "long": {"slots": 40, "windows": [{"task": "sense", "start_slot": 39}]},
-                "short": {"slots": 4, "windows": [{"task": "sense", "start_slot": 0}]},
-            },
-        }
-        state = Editor("schedule.json", schedule)
-        state.ensure_visible(WIDTH, 40)
-        self.assertEqual(state.first_slot("short"), 0)
-        self.assertGreater(state.first_slot("long"), 0)
-
-    def test_the_view_scrolls_down_to_keep_the_selection_visible(self):
-        state = editor("valid/modes.json")
-        # Everything fits in a tall terminal, so nothing scrolls.
-        state.ensure_visible(WIDTH, 24)
-        self.assertEqual(state.first_row, 0)
-        # In a short one the last schedule is below the fold, so it does.
-        for _ in range(3):
-            state.key("down")
-        state.ensure_visible(WIDTH, 10)
-        self.assertGreater(state.first_row, 0)
-        # The selected window's lane is among the rows drawn.
-        self.assertTrue(
-            any(
-                any(style == SELECTED for _, style in row)
-                for row in frame(state, WIDTH, 10)
-            )
-        )
-
-
 class InterruptTests(unittest.TestCase):
     def test_an_interrupt_asks_before_losing_work_and_then_quits(self):
         state = editor()
-        state.key("right")
+        to_slot(state, "sense", 7)
+        state.key("enter")
         state.key("interrupt")
         self.assertFalse(state.finished)
         self.assertIn("unsaved changes", state.message)
@@ -405,11 +478,19 @@ class InterruptTests(unittest.TestCase):
 
     def test_another_key_withdraws_the_interrupt(self):
         state = editor()
-        state.key("right")
-        state.key("interrupt")
-        state.key("down")
-        state.key("interrupt")
+        to_slot(state, "sense", 7)
+        press(state, "enter", "interrupt", "down", "interrupt")
         self.assertFalse(state.finished)
+
+
+class EndOfInputTests(unittest.TestCase):
+    def test_the_editor_stops_when_the_terminal_goes(self):
+        """A lost terminal leaves nobody to ask, so the loop must not spin."""
+        state = editor()
+        to_slot(state, "sense", 7)
+        state.key("enter")
+        state.key("eof")
+        self.assertTrue(state.finished)
 
 
 class TerminalTests(unittest.TestCase):
@@ -418,9 +499,10 @@ class TerminalTests(unittest.TestCase):
     def test_keys_are_named(self):
         self.assertEqual(key_name(curses.KEY_LEFT), "left")
         self.assertEqual(key_name(curses.KEY_DOWN), "down")
-        self.assertEqual(key_name(ord("\t")), "tab")
+        self.assertEqual(key_name(10), "enter")
+        self.assertEqual(key_name(27), "escape")
         self.assertEqual(key_name(ord("w")), "w")
-        self.assertEqual(key_name(-1), "")
+        self.assertEqual(key_name(-1), "eof")
 
     def test_painting_places_spans_and_keeps_the_last_column_clear(self):
         class Screen:
