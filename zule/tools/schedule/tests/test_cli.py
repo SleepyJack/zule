@@ -37,6 +37,34 @@ class CLITests(unittest.TestCase):
                 self.assertEqual(main(["generate", str(FIXTURES / "valid/control-loop.json"), str(output_dir)]), 1)
             self.assertIn(str(output_dir), errors.getvalue())
 
+    def test_format_writes_only_files_that_differ(self):
+        with tempfile.TemporaryDirectory() as directory:
+            canonical = Path(directory) / "canonical.json"
+            canonical.write_text((FIXTURES / "valid/control-loop.json").read_text())
+            untidy = Path(directory) / "untidy.json"
+            untidy.write_text('{"slot_us":100,"tasks":{},"cycle":{"slots":1,"windows":[]}}')
+            with redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(main(["format", str(canonical), str(untidy)]), 0)
+            self.assertNotIn("canonical.json", output.getvalue())
+            self.assertIn("untidy.json: formatted", output.getvalue())
+            self.assertTrue(untidy.read_text().startswith("{\n  \"slot_us\": 100,"))
+
+    def test_format_check_reports_without_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            untidy = Path(directory) / "untidy.json"
+            original = '{"slot_us":100,"tasks":{},"cycle":{"slots":1,"windows":[]}}'
+            untidy.write_text(original)
+            with redirect_stderr(io.StringIO()) as errors:
+                self.assertEqual(main(["format", "--check", str(untidy)]), 1)
+            self.assertIn("needs formatting", errors.getvalue())
+            self.assertEqual(untidy.read_text(), original)
+
+    def test_format_reports_unreadable_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with redirect_stderr(io.StringIO()) as errors:
+                self.assertEqual(main(["format", str(Path(directory) / "missing.json")]), 1)
+            self.assertIn("missing.json", errors.getvalue())
+
     def test_show_renders_every_schedule(self):
         with redirect_stdout(io.StringIO()) as output:
             self.assertEqual(main(["show", str(FIXTURES / "valid/modes.json"), "--width", "90"]), 0)

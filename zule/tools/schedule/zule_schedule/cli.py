@@ -4,11 +4,40 @@ import argparse
 import os
 import shutil
 import sys
+from pathlib import Path
 
+from .formatting import format_schedule
 from .generation import generate_schedule
 from .rendering import render_schedule
 from .schedule_io import load_schedule
 from .validation import schema_issues, validate_schedule
+
+
+def _format(paths: list[str], check: bool) -> int:
+    """Write each schedule in the canonical layout, or report those that differ."""
+    status = 0
+    for path in paths:
+        try:
+            original = Path(path).read_text(encoding="utf-8")
+            formatted = format_schedule(load_schedule(path))
+        except (OSError, ValueError) as error:
+            print(f"{path}: {error}", file=sys.stderr)
+            status = 1
+            continue
+        if formatted == original:
+            continue
+        if check:
+            print(f"{path}: needs formatting", file=sys.stderr)
+            status = 1
+            continue
+        try:
+            Path(path).write_text(formatted, encoding="utf-8")
+        except OSError as error:
+            print(f"{path}: {error}", file=sys.stderr)
+            status = 1
+            continue
+        print(f"{path}: formatted")
+    return status
 
 
 def _show(path: str, schedule: object, width: int | None, no_color: bool) -> int:
@@ -34,6 +63,11 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     validate = commands.add_parser("validate", help="validate a JSON schedule")
     validate.add_argument("schedule", help="path to the JSON schedule")
+    formatting = commands.add_parser("format", help="write JSON schedules in the project's layout")
+    formatting.add_argument("schedules", nargs="+", help="paths to JSON schedules")
+    formatting.add_argument(
+        "--check", action="store_true", help="report files that need formatting, writing none"
+    )
     show = commands.add_parser("show", help="render a JSON schedule as a slot grid")
     show.add_argument("schedule", help="path to the JSON schedule")
     show.add_argument("--width", type=int, help="grid width in columns, default the terminal's")
@@ -42,6 +76,9 @@ def main(argv: list[str] | None = None) -> int:
     generate.add_argument("schedule", help="path to the JSON schedule")
     generate.add_argument("output_dir", help="directory for the generated C and ID headers")
     args = parser.parse_args(argv)
+
+    if args.command == "format":
+        return _format(args.schedules, args.check)
 
     try:
         schedule = load_schedule(args.schedule)
