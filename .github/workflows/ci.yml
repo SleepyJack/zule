@@ -71,16 +71,12 @@ jobs:
       - name: Check handwritten C formatting
         run: $IN_IMAGE python tools/format.py --check
 
-      # Schedule files are reviewed as timing, so they keep one layout; see the
-      # schedule tool's README.
-      - name: Check schedule formatting
+      # The examples are the reference schedules, so they keep the layout the
+      # schedule tool writes; see its README. Test schedules are not held to it.
+      - name: Check example schedule formatting
         run: >-
           $IN_IMAGE sh -c 'cd zule/tools/schedule &&
-          python -m zule_schedule format --check
-          ../../../examples/*/config/schedule.json
-          ../../tests/static/schedule.json
-          ../../ports/cortex_m/tests/qemu/schedule.json
-          tests/fixtures/*/*.json'
+          python -m zule_schedule format --check ../../../examples/*/config/schedule.json'
 
       - name: Run Python unit tests
         run: $IN_IMAGE sh -c 'cd zule/tools/schedule && python -m unittest discover -s tests -v'

@@ -93,8 +93,8 @@ width limit (`valid/large-slot.json` exercises this).
 
 `format <schedule.json>...` writes each schedule in the project's layout, and
 `--check` reports the files that differ without writing any, returning 1 if
-there are any. Every schedule file in the repository is kept formatted, which
-CI checks.
+there are any. The [example schedules](../../../examples/README.md) are kept
+formatted, which CI checks; schedules used as test data are not.
 
 Formatting changes whitespace alone: keys keep the order they were read in, so
 a file is never reordered. A value goes on one line where it fits in 80

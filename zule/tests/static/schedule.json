@@ -1,6 +1,11 @@
 {
   "$schema": "../../tools/schedule/zule_schedule/schedule.schema.json",
   "slot_us": 1000,
-  "tasks": { "check": { "budget_slots": 1 } },
-  "cycle": { "slots": 2, "windows": [{ "task": "check", "start_slot": 1 }] }
+  "tasks": {
+    "check": { "budget_slots": 1 }
+  },
+  "cycle": {
+    "slots": 2,
+    "windows": [{ "task": "check", "start_slot": 1 }]
+  }
 }

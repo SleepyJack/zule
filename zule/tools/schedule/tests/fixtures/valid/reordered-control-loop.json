@@ -18,9 +18,18 @@
   "cycle": {
     "slots": 10,
     "windows": [
-      { "task": "sense", "start_slot": 0 },
-      { "task": "control", "start_slot": 2 },
-      { "task": "output", "start_slot": 5 }
+      {
+        "task": "sense",
+        "start_slot": 0
+      },
+      {
+        "task": "control",
+        "start_slot": 2
+      },
+      {
+        "task": "output",
+        "start_slot": 5
+      }
     ]
   }
 }

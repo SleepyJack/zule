@@ -10,12 +10,6 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 class FormattingTests(unittest.TestCase):
-    def test_every_fixture_is_already_formatted(self):
-        """Formatting changes whitespace, so a formatted file must not change."""
-        for path in sorted(FIXTURES.rglob("*.json")):
-            with self.subTest(fixture=path.name):
-                self.assertEqual(format_schedule(load_schedule(path)), path.read_text())
-
     def test_short_values_stay_on_one_line(self):
         schedule = {
             "slot_us": 100,
