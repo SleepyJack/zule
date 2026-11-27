@@ -68,20 +68,13 @@ tools and configurations.
 
 ## Schedule editor
 
-An interactive terminal editor for schedule files, built on the slot grid that
-[`show`](../zule/tools/schedule/README.md#viewing) renders. Its two areas are
-the ones `show` prints: the file's tasks, where tasks are created and edited,
-and the schedule below, where their windows are placed. Focus moves between
-them, so picking a task up in one and placing it in the other needs no prompt
-for which task. A cycle too long for the terminal scrolls, keeping the slot
-width, where `show` wraps onto staves.
+The [editor](../zule/tools/schedule/README.md#editing) selects, moves and
+deletes windows, and writes the file. The stages left, each useful on its own:
 
-Each stage is useful on its own:
-
-- **Windows.** Select a window, move it along its lane, resize it, add and
-  delete. Validate on every change, showing errors in place, and save
-  explicitly. Allow transient invalid states, since some edits need a gap that
-  does not exist yet, but refuse to save one.
+- **Focus between the two areas.** The file's tasks and the schedule below are
+  drawn already; the editor should move focus between them, so that picking a
+  task up in one and placing it in the other needs no prompt for which task.
+  Adding a window waits on that.
 - **Tasks.** Add a task with its name and budget, checked as the generated
   constants require; rename one, rewriting its windows and warning that the
   application's `zule_task_<name>()` must follow; delete one, naming the
@@ -94,15 +87,14 @@ Each stage is useful on its own:
   syntax, so the format, the validator, and the generator are unchanged and the
   committed schedule stays explicit.
 
-Constraints:
+Constraints the editor already follows and the stages above keep to:
 
-- Keep the editor's dependency out of the build path. `zule_add_schedule()`
-  runs the generator in every application build, so a UI dependency must be
-  optional and imported lazily.
-- Keep each operation a pure function from one schedule to another, so the
-  editor is testable without a terminal.
-- Save through the tool's [formatter](../zule/tools/schedule/README.md#formatting),
-  so that an edit does not rewrite the parts it did not touch.
+- Nothing the editor needs is imported by the other commands, which every
+  application build runs. It uses the standard library's `curses` alone.
+- Each edit is a pure function from one schedule to another, and the frame the
+  editor draws is a value, so both are tested without a terminal.
+- Writing goes through the [formatter](../zule/tools/schedule/README.md#formatting),
+  so an edit does not rewrite the parts it did not touch.
 
 ## Watchdog integration
 

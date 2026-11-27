@@ -58,6 +58,50 @@ since seeing the problem is the point, and the issues are reported as for
 `validate`. One whose structure is unusable cannot be drawn, so only its issues
 are reported. Windows of one task that overlap are marked `▒`.
 
+## Editing
+
+`edit <schedule.json>` opens the schedule in the terminal, on the same grid
+`show` draws:
+
+```
+examples/showcase/config/schedule.json · modified
+
+tasks
+  control  ██████████████
+  output   █████████
+  sense    █████████
+
+schedule main · 10 slots · slot 100 us
+           0    1    2    3    4    5    6    7    8    9
+  control  ·    ·    ·    ██████████████ ·    ·    ·    ·
+  output   ·    ·    ·    ·    ·    █████████ ·    ·    ·
+  sense    █████████ ·    ·    ·    ·    ·    ·    ·    ·
+  idle               ░░░░                     ░░░░░░░░░░░░░░
+
+1 issue: /cycle/windows/2: window overlaps window 1
+←→ move  ↑↓ select  d delete  tab schedule  w write  q quit
+```
+
+| Key | Does |
+| --- | --- |
+| ↑ ↓ | Select the previous or next window of this schedule. |
+| ← → | Move the selected window one slot, which cannot take it outside its cycle. Windows are kept in start order, so one moved past another takes its place. |
+| `d` | Delete the selected window. |
+| `tab` | Move to the next schedule, when the file has several. |
+| `w` | Write the file, in the layout [format](#formatting) writes. |
+| `q` | Quit, which asks again if there is unsaved work; `Q` quits anyway. |
+
+The schedule is checked after every key, and the result is shown at the foot of
+the screen, as above. An edit may leave a schedule the checks reject, since
+some edits need a gap that does not exist yet; what is refused is writing one.
+A cycle too long for the terminal scrolls to keep the selection in view, where
+`show` wraps onto staves.
+
+Editing tasks, and adding windows, come later; see
+[the plan](../../../doc/planning.md#schedule-editor). The editor needs a
+terminal with `curses`, which the standard library provides on Unix. The other
+commands do not import it, so an application build never needs one.
+
 ## Validation
 
 Loading rejects duplicate JSON keys and nonstandard constants such as NaN.

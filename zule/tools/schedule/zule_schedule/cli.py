@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
     formatting.add_argument(
         "--check", action="store_true", help="report files that need formatting, writing none"
     )
+    edit = commands.add_parser("edit", help="edit a JSON schedule in the terminal")
+    edit.add_argument("schedule", help="path to the JSON schedule")
     show = commands.add_parser("show", help="render a JSON schedule as a slot grid")
     show.add_argument("schedule", help="path to the JSON schedule")
     show.add_argument("--width", type=int, help="grid width in columns, default the terminal's")
@@ -85,6 +87,18 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as error:
         print(f"{args.schedule}: {error}", file=sys.stderr)
         return 1
+
+    if args.command == "edit":
+        issues = schema_issues(schedule)
+        for issue in issues:
+            print(f"{args.schedule}:{issue.path}: {issue.message}", file=sys.stderr)
+        if issues:
+            return 1
+        # Imported here so that the other commands, which every application
+        # build runs, do not need a terminal library.
+        from .editor import run
+
+        return run(args.schedule, schedule)
 
     if args.command == "show":
         return _show(args.schedule, schedule, args.width, args.no_color)
