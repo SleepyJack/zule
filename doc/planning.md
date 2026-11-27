@@ -69,8 +69,14 @@ tools and configurations.
 ## Schedule editor
 
 An interactive terminal editor for schedule files, built on the slot grid that
-[`show`](../zule/tools/schedule/README.md#viewing) renders. Each stage is useful
-on its own:
+[`show`](../zule/tools/schedule/README.md#viewing) renders. Its two areas are
+the ones `show` prints: the file's tasks, where tasks are created and edited,
+and the schedule below, where their windows are placed. Focus moves between
+them, so picking a task up in one and placing it in the other needs no prompt
+for which task. A cycle too long for the terminal scrolls, keeping the slot
+width, where `show` wraps onto staves.
+
+Each stage is useful on its own:
 
 - **Windows.** Select a window, move it along its lane, resize it, add and
   delete. Validate on every change, showing errors in place, and save

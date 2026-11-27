@@ -22,23 +22,35 @@ identifying the affected location (`/` denotes the document root).
 
 ## Viewing
 
-`show <schedule.json>` renders each schedule as a grid of slots, with one lane
-per task in task ID order:
+`show <schedule.json>` lists the file's tasks, then renders each schedule as a
+grid of slots:
 
 ```
+tasks · 3 tasks
+  control  ██████████████  3 slots
+  output   █████████       2 slots
+  sense    █████████       2 slots
+
 schedule main · 10 slots · 1 ms · slot 100 us
 
-         0    1    2    3    4    5    6    7    8    9
-control  ·    ·    ██████████████ ·    ·    ·    ·    ·      3 slots
-output   ·    ·    ·    ·    ·    █████████ ·    ·    ·      2 slots
-sense    █████████ ·    ·    ·    ·    ·    ·    ·    ·      2 slots
-idle                                        ░░░░ ░░░░ ░░░░
-         7/10 slots reserved · 70%
+           0    1    2    3    4    5    6    7    8    9
+  control  ·    ·    ██████████████ ·    ·    ·    ·    ·
+  output   ·    ·    ·    ·    ·    █████████ ·    ·    ·
+  sense    █████████ ·    ·    ·    ·    ·    ·    ·    ·
+  idle                                        ░░░░░░░░░░░░░░
+           7/10 slots reserved · 70%
 ```
 
-It fits the terminal, or `--width`, scaling the grid down for a long cycle, and
-colours the lanes when standard output is a terminal, unless `--no-color` or
-`NO_COLOR` is set. The grid characters need a UTF-8 terminal.
+The tasks come first because a file's tasks are shared by every schedule in it,
+and each schedule shows a lane only for the tasks it places. Tasks and
+schedules are in the order of their generated IDs. A slot is always the same
+width, so a task's budget is drawn exactly as its windows are; a cycle too long
+for the terminal continues on the next stave, each labelled with its own slots.
+
+The width comes from the terminal, or `--width`. Lanes are coloured when
+standard output is a terminal, unless `--no-color` or `NO_COLOR` is set, and
+each task keeps its colour throughout. The grid characters need a UTF-8
+terminal.
 
 A schedule that fails the [validation](#validation) checks is still rendered,
 since seeing the problem is the point, and the issues are reported as for
