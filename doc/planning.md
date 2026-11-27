@@ -68,18 +68,9 @@ tools and configurations.
 
 ## Schedule editor
 
-The [editor](../zule/tools/schedule/README.md#editing) selects, moves and
-deletes windows, and writes the file. The stages left, each useful on its own:
+The [editor](../zule/tools/schedule/README.md#editing) edits a file's tasks and
+its windows. The stages left, each useful on its own:
 
-- **Focus between the two areas.** The file's tasks and the schedule below are
-  drawn already; the editor should move focus between them, so that picking a
-  task up in one and placing it in the other needs no prompt for which task.
-  Adding a window waits on that.
-- **Tasks.** Add a task with its name and budget, checked as the generated
-  constants require; rename one, rewriting its windows and warning that the
-  application's `zule_task_<name>()` must follow; delete one, naming the
-  schedules that lose windows. A budget belongs to the task, so editing it
-  resizes that task's windows in every schedule: show what that breaks.
 - **Schedules and cycles.** Add, rename, and delete schedules, change the cycle
   length, and convert between the single `cycle` form and `schedules`.
 - **Conveniences.** Recurring placement, undo, and starting a file from

@@ -5,7 +5,7 @@ from pathlib import Path
 from zule_schedule.editing import delete_window, move_window
 import curses
 
-from zule_schedule.editor import SELECTED, Editor, frame, key_name, paint
+from zule_schedule.editor import SCHEDULE, SELECTED, TASKS, Editor, frame, key_name, paint
 from zule_schedule.schedule_io import load_schedule
 
 
@@ -91,12 +91,12 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual([window["task"] for window in state.windows()], ["control", "output"])
         self.assertEqual(state.selected()["task"], "control")
 
-    def test_tab_moves_to_the_next_schedule(self):
+    def test_s_moves_to_the_next_schedule(self):
         state = editor("valid/modes.json")
         self.assertEqual(state.current()[0], "operational")
-        state.key("tab")
+        state.key("s")
         self.assertEqual(state.current()[0], "startup")
-        state.key("tab")
+        state.key("s")
         self.assertEqual(state.current()[0], "operational")
 
 
@@ -149,9 +149,9 @@ class FrameTests(unittest.TestCase):
                 self.assertEqual(len(frame(state, WIDTH, height)), height)
 
     def test_the_tasks_come_before_the_schedule(self):
-        lines = [text(row) for row in rows(editor())]
+        lines = [text(row).strip() for row in rows(editor())]
         self.assertLess(lines.index("tasks"), next(
-            index for index, line in enumerate(lines) if line.startswith("schedule main")
+            index for index, line in enumerate(lines) if "schedule main" in line
         ))
 
     def test_only_the_selected_window_is_highlighted(self):
@@ -191,6 +191,168 @@ class FrameTests(unittest.TestCase):
         self.assertEqual(state.first_slot, 19)
         heading = next(text(row) for row in frame(state, WIDTH, HEIGHT) if "showing" in text(row))
         self.assertIn("showing 19-31", heading)
+
+
+class TaskAreaTests(unittest.TestCase):
+    """The task area, where a window is picked up and tasks are edited."""
+
+    def typed(self, state, line):
+        for character in line:
+            state.key(character)
+        state.key("enter")
+
+    def test_tab_moves_focus_between_the_areas(self):
+        state = editor()
+        self.assertEqual(state.focus, SCHEDULE)
+        state.key("tab")
+        self.assertEqual(state.focus, TASKS)
+        state.key("tab")
+        self.assertEqual(state.focus, SCHEDULE)
+
+    def test_adding_a_window_puts_it_where_it_first_fits(self):
+        state = editor()
+        state.key("tab")
+        state.key("down")
+        state.key("down")  # control, output, sense: select sense
+        self.assertEqual(state.task(), "sense")
+        state.key("a")
+        self.assertEqual(state.focus, SCHEDULE)
+        # sense is 2 slots and slots 0-6 are taken, so the new window is at 7.
+        self.assertEqual(state.selected(), {"task": "sense", "start_slot": 7})
+        self.assertEqual(len(state.windows()), 4)
+
+    def test_a_task_can_have_several_windows(self):
+        state = editor()
+        self.assertEqual([window["task"] for window in state.windows()].count("control"), 1)
+        for _ in range(2):
+            state.key("tab")
+            state.key("a")
+        tasks = [window["task"] for window in state.windows()]
+        self.assertEqual(tasks.count("control"), 3)
+
+    def test_a_window_can_be_added_for_a_task_the_schedule_does_not_place(self):
+        state = editor("valid/modes.json")
+        state.key("s")  # the startup schedule, which places mode_manager alone
+        self.assertEqual([window["task"] for window in state.windows()], ["mode_manager"])
+        state.key("tab")
+        self.assertEqual(state.task(), "control")
+        state.key("a")
+        self.assertIn("control", [window["task"] for window in state.windows()])
+
+    def test_adding_a_task_asks_for_a_name_then_a_budget(self):
+        state = editor()
+        state.key("tab")
+        state.key("n")
+        self.typed(state, "logger")
+        self.assertIsNotNone(state.prompt)
+        self.assertIn("budget", state.prompt.label)
+        self.typed(state, "2")
+        self.assertIsNone(state.prompt)
+        self.assertEqual(state.schedule["tasks"]["logger"], {"budget_slots": 2})
+        self.assertEqual(state.task(), "logger")
+
+    def test_a_task_name_must_suit_the_generated_constants(self):
+        state = editor()
+        state.key("tab")
+        state.key("n")
+        self.typed(state, "2logger")
+        self.assertIn("C identifier", state.message)
+        self.assertEqual(state.prompt.action, "name")
+        for _ in range(len("2logger")):
+            state.key("backspace")
+        self.typed(state, "SENSE")
+        self.assertIn("generated constant", state.message)
+
+    def test_a_budget_must_be_a_whole_number_of_slots(self):
+        state = editor()
+        state.key("tab")
+        state.key("b")
+        self.typed(state, "nope")
+        self.assertIn("whole number", state.message)
+        self.typed(state, "")
+        self.assertIsNotNone(state.prompt)
+
+    def test_changing_a_budget_resizes_every_window_of_that_task(self):
+        state = editor()
+        state.key("tab")
+        state.key("b")
+        self.typed(state, "4")
+        self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 4)
+
+    def test_renaming_a_task_follows_it_into_the_windows(self):
+        state = editor()
+        state.key("tab")
+        state.key("r")
+        self.typed(state, "regulate")
+        self.assertNotIn("control", state.schedule["tasks"])
+        self.assertIn("regulate", [window["task"] for window in state.windows()])
+
+    def test_escape_abandons_a_prompt(self):
+        state = editor()
+        state.key("tab")
+        state.key("r")
+        state.key("x")
+        state.key("escape")
+        self.assertIsNone(state.prompt)
+        self.assertFalse(state.modified)
+
+    def test_deleting_a_placed_task_asks_first(self):
+        state = editor()
+        state.key("tab")
+        state.key("d")
+        self.assertIn("1 window", state.message)
+        self.assertIn("control", state.schedule["tasks"])
+        state.key("D")
+        self.assertNotIn("control", state.schedule["tasks"])
+        self.assertNotIn("control", [window["task"] for window in state.windows()])
+
+    def test_the_last_task_is_kept(self):
+        state = editor("valid/repeated-task.json")
+        state.key("tab")
+        state.key("D")
+        self.assertIn("at least one task", state.message)
+        self.assertEqual(state.task_names(), ["sense"])
+
+    def test_the_focused_area_is_marked_and_its_keys_shown(self):
+        state = editor()
+        lines = [text(row) for row in rows(state)]
+        self.assertIn("▸ schedule main", next(line for line in lines if "schedule main" in line))
+        self.assertIn("next schedule", lines[-1])
+        state.key("tab")
+        self.assertIn("▸ tasks", "".join(text(row) for row in rows(state)))
+        self.assertIn("add window", text(rows(state)[-1]))
+
+    def test_the_prompt_is_shown_with_what_has_been_typed(self):
+        state = editor()
+        state.key("tab")
+        state.key("n")
+        state.key("l")
+        state.key("o")
+        self.assertIn("new task name: lo", text(rows(state)[-2]))
+
+
+class InterruptTests(unittest.TestCase):
+    def test_an_interrupt_asks_before_losing_work_and_then_quits(self):
+        state = editor()
+        state.key("right")
+        state.key("interrupt")
+        self.assertFalse(state.finished)
+        self.assertIn("unsaved changes", state.message)
+        state.key("interrupt")
+        self.assertTrue(state.finished)
+
+    def test_an_interrupt_quits_at_once_with_nothing_to_lose(self):
+        state = editor()
+        state.key("interrupt")
+        self.assertTrue(state.finished)
+
+    def test_another_key_withdraws_the_interrupt(self):
+        state = editor()
+        state.key("right")
+        state.key("interrupt")
+        state.key("down")
+        state.key("interrupt")
+        self.assertFalse(state.finished)
 
 
 class TerminalTests(unittest.TestCase):

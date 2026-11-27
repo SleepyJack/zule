@@ -1,5 +1,10 @@
 """An interactive editor for a schedule file, on the grid that show draws.
 
+The editor has the two areas show prints: the file's tasks, which every
+schedule in it shares, and the schedule below, where their windows are placed.
+Focus moves between them, so a window is added by picking its task up in one
+area and placing it in the other.
+
 The editor's state and the frame it draws are ordinary values, so both are
 tested without a terminal: the curses layer only paints a frame and turns key
 presses into state changes. A frame is rows of (text, style) spans, and the
@@ -11,11 +16,22 @@ that does not exist yet. What refuses an invalid schedule is writing it.
 
 import curses
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from . import grid
-from .editing import delete_window, move_window
+from .editing import (
+    add_task,
+    add_window,
+    delete_task,
+    delete_window,
+    move_window,
+    rename_task,
+    set_budget,
+    task_name_issue,
+    windows_of,
+)
 from .formatting import format_schedule
 from .validation import schedule_cycles, validate_schedule
 
@@ -25,7 +41,24 @@ SELECTED = "selected"
 ERROR = "error"
 TASK = "task"  # Followed by the task's index, so lanes keep their colours.
 
-_KEYS = "←→ move  ↑↓ select  d delete  tab schedule  w write  q quit"
+TASKS = "tasks"
+SCHEDULE = "schedule"
+
+_KEYS = {
+    TASKS: "↑↓ task  a add window  n new  r rename  b budget  d delete"
+    "  tab schedule  w write  q quit",
+    SCHEDULE: "↑↓ window  ←→ move  d delete  s next schedule  tab tasks  w write  q quit",
+}
+
+
+@dataclass
+class Prompt:
+    """A line the editor is asking for, and what to do with it."""
+
+    label: str
+    action: str
+    text: str = ""
+    data: str = ""
 
 
 class Editor:
@@ -35,21 +68,29 @@ class Editor:
         self.path = path
         self.schedule = schedule
         self.saved = deepcopy(schedule)
+        self.focus = SCHEDULE
         self.schedule_index = 0
         self.window_index = 0
+        self.task_index = 0
         self.first_slot = 0
         self.message = ""
+        self.prompt: Prompt | None = None
         self.finished = False
+        self.interrupted = False
 
     @property
     def modified(self) -> bool:
         return self.schedule != self.saved
 
-    def cycles(self) -> list[tuple[str, Any, str]]:
-        return schedule_cycles(self.schedule)
+    def task_names(self) -> list[str]:
+        return sorted(self.schedule["tasks"])
+
+    def task(self) -> str | None:
+        names = self.task_names()
+        return names[min(self.task_index, len(names) - 1)] if names else None
 
     def current(self) -> tuple[str, Any]:
-        name, cycle, _ = self.cycles()[self.schedule_index]
+        name, cycle, _ = schedule_cycles(self.schedule)[self.schedule_index]
         return name, cycle
 
     def windows(self) -> list[Any]:
@@ -65,7 +106,7 @@ class Editor:
 
     def per_view(self, width: int) -> int:
         """Return how many slots the view holds, which the frame also uses."""
-        return grid.slots_per_view(width - grid.label_width(sorted(self.schedule["tasks"])))
+        return grid.slots_per_view(width - grid.label_width(self.task_names()))
 
     def ensure_visible(self, width: int) -> None:
         """Scroll the view the least that shows the selected window."""
@@ -84,7 +125,59 @@ class Editor:
 
     def key(self, name: str) -> None:
         """Apply one key press."""
+        if name != "interrupt":
+            self.interrupted = False
+        if self.prompt is not None:
+            self._answer(name)
+            return
         self.message = ""
+        if name == "tab":
+            self.focus = TASKS if self.focus == SCHEDULE else SCHEDULE
+        elif name == "w":
+            self.write()
+        elif name in ("q", "Q"):
+            self.close(force=name == "Q")
+        elif name == "interrupt":
+            self.close(force=self.interrupted)
+            self.interrupted = not self.finished
+        elif self.focus == TASKS:
+            self._task_key(name)
+        else:
+            self._schedule_key(name)
+
+    def _task_key(self, name: str) -> None:
+        names = self.task_names()
+        task = self.task()
+        if name in ("up", "down") and names:
+            step = 1 if name == "down" else -1
+            self.task_index = (self.task_index + step) % len(names)
+        elif name == "a" and task is not None:
+            self.schedule, self.window_index = add_window(self.schedule, self.current()[0], task)
+            self.focus = SCHEDULE
+            self.message = f"added a window for {task}"
+        elif name == "n":
+            self.prompt = Prompt("new task name", "name")
+        elif name == "r" and task is not None:
+            self.prompt = Prompt(f"rename {task} to", "rename", data=task)
+        elif name == "b" and task is not None:
+            self.prompt = Prompt(f"budget in slots for {task}", "budget", data=task)
+        elif name in ("d", "D") and task is not None:
+            self._delete_task(task, force=name == "D")
+
+    def _delete_task(self, task: str, force: bool) -> None:
+        if len(self.task_names()) == 1:
+            self.message = "a schedule file needs at least one task"
+            return
+        placed = windows_of(self.schedule, task)
+        if placed and not force:
+            self.message = f"{task} has {_windows(placed)}: D deletes it and them"
+            return
+        self.schedule = delete_task(self.schedule, task)
+        self.task_index = min(self.task_index, len(self.task_names()) - 1)
+        self.window_index = 0
+        self.message = f"deleted {task}"
+
+    def _schedule_key(self, name: str) -> None:
         windows = self.windows()
         schedule_name = self.current()[0]
         if name in ("left", "right") and windows:
@@ -101,14 +194,49 @@ class Editor:
             self.schedule, self.window_index = delete_window(
                 self.schedule, schedule_name, self.window_index
             )
-        elif name == "tab":
-            self.schedule_index = (self.schedule_index + 1) % len(self.cycles())
+        elif name == "s":
+            self.schedule_index = (self.schedule_index + 1) % len(schedule_cycles(self.schedule))
             self.window_index = 0
             self.first_slot = 0
-        elif name == "w":
-            self.write()
-        elif name in ("q", "Q"):
-            self.close(force=name == "Q")
+
+    def _answer(self, name: str) -> None:
+        """Collect one key of the line the editor asked for."""
+        prompt = self.prompt
+        if name == "escape":
+            self.prompt = None
+            self.message = "cancelled"
+        elif name == "backspace":
+            prompt.text = prompt.text[:-1]
+        elif name == "enter":
+            self._commit(prompt)
+        elif len(name) == 1 and name.isprintable():
+            prompt.text += name
+
+    def _commit(self, prompt: Prompt) -> None:
+        """Act on a finished line, keeping the prompt open if it cannot be used."""
+        text = prompt.text.strip()
+        self.message = ""
+        if prompt.action in ("name", "rename"):
+            issue = task_name_issue(self.schedule, text, prompt.data or None)
+            if issue:
+                self.message = issue
+                return
+            if prompt.action == "name":
+                self.prompt = Prompt(f"budget in slots for {text}", "new-budget", data=text)
+                return
+            self.schedule = rename_task(self.schedule, prompt.data, text)
+            self.task_index = self.task_names().index(text)
+        else:
+            if not text.isdigit() or int(text) < 1:
+                self.message = "a budget is a whole number of slots, at least one"
+                return
+            if prompt.action == "new-budget":
+                self.schedule = add_task(self.schedule, prompt.data, int(text))
+                self.task_index = self.task_names().index(prompt.data)
+                self.message = f"added {prompt.data}: a gives it a window"
+            else:
+                self.schedule = set_budget(self.schedule, prompt.data, int(text))
+        self.prompt = None
 
     def write(self) -> None:
         """Write the schedule, unless it still has issues to fix."""
@@ -134,25 +262,26 @@ class Editor:
 def frame(editor: Editor, width: int, height: int) -> list[list[tuple[str, str]]]:
     """Return the rows to paint, each a list of (text, style) spans."""
     tasks = editor.schedule["tasks"]
-    names = sorted(tasks)
+    names = editor.task_names()
     labels = grid.label_width(names)
-    per_view = editor.per_view(width)
     styles = {name: f"{TASK}{index % 6}" for index, name in enumerate(names)}
     name, cycle = editor.current()
     first = editor.first_slot
-    last = min(first + per_view, cycle["slots"])
+    last = min(first + editor.per_view(width), cycle["slots"])
 
-    title = editor.path + (" · modified" if editor.modified else "")
-    rows = [[(title, DIM)], [], [("tasks", DIM)]]
+    rows = [[(editor.path + (" · modified" if editor.modified else ""), DIM)], []]
+    rows.append([(_marker(editor, TASKS) + "tasks", DIM)])
     for task in names:
+        bar = grid.bar(tasks[task]["budget_slots"])[: max(width - labels - 1, 1)]
+        chosen = editor.focus == TASKS and task == editor.task()
         rows.append(
-            [(grid.label(task, labels) + grid.bar(tasks[task]["budget_slots"]), styles[task])]
+            [(grid.label(task, labels), SELECTED if chosen else PLAIN), (bar, styles[task])]
         )
 
     rows.append([])
-    rows.append([(_heading(name, cycle, editor.schedule["slot_us"], first, last), DIM)])
+    rows.append([(_marker(editor, SCHEDULE) + _heading(name, cycle, first, last), DIM)])
     rows.append([(" " * labels + grid.ruler(first, last), DIM)])
-    window = editor.selected()
+    window = editor.selected() if editor.focus == SCHEDULE else None
     for task in names:
         held = grid.coverage(cycle, tasks, task)
         if not held:
@@ -168,12 +297,17 @@ def frame(editor: Editor, width: int, height: int) -> list[list[tuple[str, str]]
     body = height - 2
     rows = rows[:body] + [[]] * max(0, body - len(rows))
     rows.append(_status(editor, cycle, idle))
-    rows.append([(_KEYS, DIM)])
+    rows.append([(_KEYS[editor.focus], DIM)])
     return rows
 
 
-def _heading(name: str, cycle: Any, slot_us: int, first: int, last: int) -> str:
-    heading = f"schedule {name} · {cycle['slots']} slots · slot {slot_us} us"
+def _marker(editor: Editor, area: str) -> str:
+    """Mark the area with focus, so that the keys below apply to it."""
+    return "▸ " if editor.focus == area else "  "
+
+
+def _heading(name: str, cycle: Any, first: int, last: int) -> str:
+    heading = f"schedule {name} · {cycle['slots']} slots"
     if last - first < cycle["slots"]:
         heading += f" · showing {first}-{last - 1}"
     return heading
@@ -199,41 +333,66 @@ def _spans(text: str, highlight: tuple[int, int] | None, style: str) -> list[tup
 
 
 def _status(editor: Editor, cycle: Any, idle: dict[int, list[int]]) -> list[tuple[str, str]]:
+    if editor.prompt is not None:
+        return [
+            (f"{editor.prompt.label}: ", PLAIN),
+            (editor.prompt.text + "▌", SELECTED),
+            (f"   {editor.message}" if editor.message else "", ERROR),
+        ]
     if editor.message:
         return [(editor.message, PLAIN)]
     issues = validate_schedule(editor.schedule)
-    reserved = cycle["slots"] - len(idle)
-    usage = f"   {reserved}/{cycle['slots']} slots reserved"
     if issues:
         return [(f"{_issues(len(issues))}: {issues[0].path}: {issues[0].message}", ERROR)]
-    return [("valid", PLAIN), (usage, DIM)]
+    reserved = cycle["slots"] - len(idle)
+    return [("valid", PLAIN), (f"   {reserved}/{cycle['slots']} slots reserved", DIM)]
 
 
 def _issues(count: int) -> str:
     return f"{count} issue" + ("" if count == 1 else "s")
 
 
+def _windows(count: int) -> str:
+    return f"{count} window" + ("" if count == 1 else "s")
+
+
 def run(path: str, schedule: Any) -> int:
     """Edit a schedule in the terminal, returning the process status."""
     editor = Editor(path, schedule)
-    curses.wrapper(_loop, editor)
+    try:
+        curses.wrapper(_loop, editor)
+    except KeyboardInterrupt:
+        return 130
     return 0
 
 
 def _loop(screen: Any, editor: Editor) -> None:
     curses.use_default_colors()
-    for pair in range(1, 7):
-        curses.init_pair(pair, (curses.COLOR_CYAN, curses.COLOR_YELLOW, curses.COLOR_GREEN,
-                                curses.COLOR_MAGENTA, curses.COLOR_BLUE, curses.COLOR_RED)[pair - 1], -1)
+    colours = (
+        curses.COLOR_CYAN,
+        curses.COLOR_YELLOW,
+        curses.COLOR_GREEN,
+        curses.COLOR_MAGENTA,
+        curses.COLOR_BLUE,
+        curses.COLOR_RED,
+    )
+    for pair, colour in enumerate(colours, start=1):
+        curses.init_pair(pair, colour, -1)
     screen.keypad(True)
     while not editor.finished:
         height, width = screen.getmaxyx()
         editor.ensure_visible(width)
         paint(screen, frame(editor, width, height), width)
-        editor.key(key_name(screen.getch()))
+        try:
+            pressed = screen.getch()
+        except KeyboardInterrupt:
+            pressed = _INTERRUPT
+        editor.key(key_name(pressed))
 
 
-def paint(screen: Any, rows: list[list[tuple[str, str]]], width: int, attribute: Any = None) -> None:
+def paint(
+    screen: Any, rows: list[list[tuple[str, str]]], width: int, attribute: Any = None
+) -> None:
     """Draw a frame, leaving the last column clear so that writing never wraps.
 
     What a style looks like is the terminal's business, so tests pass their own.
@@ -258,16 +417,31 @@ def _attribute(style: str) -> int:
     if style == ERROR:
         return curses.A_BOLD
     if style.startswith(TASK):
-        return curses.color_pair(int(style[len(TASK):]) + 1)
+        return curses.color_pair(int(style[len(TASK) :]) + 1)
     return curses.A_NORMAL
+
+
+_INTERRUPT = -2
 
 
 def key_name(key: int) -> str:
     """Return the editor's name for a key press."""
-    return {
+    named = {
+        _INTERRUPT: "interrupt",
+        3: "interrupt",  # Ctrl-C, where the terminal passes it through.
         curses.KEY_LEFT: "left",
         curses.KEY_RIGHT: "right",
         curses.KEY_UP: "up",
         curses.KEY_DOWN: "down",
+        curses.KEY_BACKSPACE: "backspace",
+        curses.KEY_ENTER: "enter",
+        8: "backspace",
+        10: "enter",
+        13: "enter",
+        27: "escape",
+        127: "backspace",
         ord("\t"): "tab",
-    }.get(key, chr(key) if 0 <= key < 0x110000 else "")
+    }
+    if key in named:
+        return named[key]
+    return chr(key) if 0 <= key < 0x110000 else ""

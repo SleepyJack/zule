@@ -61,46 +61,62 @@ are reported. Windows of one task that overlap are marked `▒`.
 ## Editing
 
 `edit <schedule.json>` opens the schedule in the terminal, on the same grid
-`show` draws:
+`show` draws. It has the two areas `show` prints: the file's tasks, which every
+schedule in it shares, and the schedule below, where their windows are placed.
+`tab` moves focus between them, and `▸` marks the area the keys apply to:
 
 ```
-examples/showcase/config/schedule.json · modified
+examples/showcase/config/schedule.json
 
-tasks
+▸ tasks
   control  ██████████████
   output   █████████
   sense    █████████
 
-schedule main · 10 slots · slot 100 us
+  schedule main · 10 slots
            0    1    2    3    4    5    6    7    8    9
-  control  ·    ·    ·    ██████████████ ·    ·    ·    ·
+  control  ·    ·    ██████████████ ·    ·    ·    ·    ·
   output   ·    ·    ·    ·    ·    █████████ ·    ·    ·
   sense    █████████ ·    ·    ·    ·    ·    ·    ·    ·
-  idle               ░░░░                     ░░░░░░░░░░░░░░
+  idle                                        ░░░░░░░░░░░░░░
 
-1 issue: /cycle/windows/2: window overlaps window 1
-←→ move  ↑↓ select  d delete  tab schedule  w write  q quit
+valid   7/10 slots reserved
+↑↓ task  a add window  n new  r rename  b budget  d delete  tab schedule  w write  q quit
 ```
+
+In the **tasks** area:
 
 | Key | Does |
 | --- | --- |
-| ↑ ↓ | Select the previous or next window of this schedule. |
+| ↑ ↓ | Select a task. Every task is listed, including those this schedule does not place. |
+| `a` | Add a window for the selected task to this schedule, where it first fits, and move to it. A task can have as many windows as you add. |
+| `n` | Add a task, asking for its name and its budget in slots. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. |
+| `r` | Rename the selected task. Its windows follow it; the application's `zule_task_<name>()` has to be renamed to match. |
+| `b` | Change the selected task's budget. A budget belongs to the task, so this resizes its windows in every schedule, which can leave one overlapping. |
+| `d` | Delete the selected task. If any schedule places it, `D` deletes it and those windows. The last task is kept, since a file needs one. |
+
+In the **schedule** area:
+
+| Key | Does |
+| --- | --- |
+| ↑ ↓ | Select a window of this schedule. |
 | ← → | Move the selected window one slot, which cannot take it outside its cycle. Windows are kept in start order, so one moved past another takes its place. |
-| `d` | Delete the selected window. |
-| `tab` | Move to the next schedule, when the file has several. |
-| `w` | Write the file, in the layout [format](#formatting) writes. |
-| `q` | Quit, which asks again if there is unsaved work; `Q` quits anyway. |
+| `d` | Delete the selected window, leaving its task in the file. |
+| `s` | Move to the next schedule, when the file has several. |
 
-The schedule is checked after every key, and the result is shown at the foot of
-the screen, as above. An edit may leave a schedule the checks reject, since
-some edits need a gap that does not exist yet; what is refused is writing one.
-A cycle too long for the terminal scrolls to keep the selection in view, where
-`show` wraps onto staves.
+Everywhere, `w` writes the file in the layout [format](#formatting) writes, and
+`q` quits, asking again if there is unsaved work; `Q` and a second Ctrl-C quit
+anyway.
 
-Editing tasks, and adding windows, come later; see
-[the plan](../../../doc/planning.md#schedule-editor). The editor needs a
-terminal with `curses`, which the standard library provides on Unix. The other
-commands do not import it, so an application build never needs one.
+The schedule is checked after every key, and the result is shown above the key
+bar. An edit may leave a schedule the checks reject, since some edits need a gap
+that does not exist yet; what is refused is writing one. A cycle too long for
+the terminal scrolls to keep the selection in view, where `show` wraps onto
+staves.
+
+The editor needs a terminal with `curses`, which the standard library provides
+on Unix. The other commands do not import it, so an application build never
+needs one.
 
 ## Validation
 
