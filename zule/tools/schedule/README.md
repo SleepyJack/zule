@@ -1,7 +1,7 @@
 # Zule schedule tools (draft)
 
-A small Python package that validates [schedules](../../../doc/configuration.md#schedule)
-and generates their C tables. CMake applications run it through
+A small Python package that validates [schedules](../../../doc/configuration.md#schedule),
+shows them as a slot grid, and generates their C tables. CMake applications run it through
 [`zule_add_schedule()`](../../../doc/application.md#cmake-integration); it can
 also be run directly.
 
@@ -12,12 +12,50 @@ then run from this directory:
 
 ```sh
 python -m zule_schedule validate tests/fixtures/valid/control-loop.json
+python -m zule_schedule show tests/fixtures/valid/control-loop.json
 python -m zule_schedule generate tests/fixtures/valid/control-loop.json generated
 ```
 
 The CLI returns 0 on success, 1 for invalid input or file errors, and 2 for
 command usage errors. Validation errors go to stderr with a JSON Pointer
 identifying the affected location (`/` denotes the document root).
+
+## Viewing
+
+`show <schedule.json>` lists the file's tasks, then renders each schedule as a
+grid of slots:
+
+```
+tasks · 3 tasks
+  control  ██████████████  3 slots
+  output   █████████       2 slots
+  sense    █████████       2 slots
+
+schedule main · 10 slots · 1 ms · slot 100 us
+
+           0    1    2    3    4    5    6    7    8    9
+  control  ·    ·    ██████████████ ·    ·    ·    ·    ·
+  output   ·    ·    ·    ·    ·    █████████ ·    ·    ·
+  sense    █████████ ·    ·    ·    ·    ·    ·    ·    ·
+  idle                                        ░░░░░░░░░░░░░░
+           7/10 slots reserved · 70%
+```
+
+The tasks come first because a file's tasks are shared by every schedule in it,
+and each schedule shows a lane only for the tasks it places. Tasks and
+schedules are in the order of their generated IDs. A slot is always the same
+width, so a task's budget is drawn exactly as its windows are; a cycle too long
+for the terminal continues on the next stave, each labelled with its own slots.
+
+The width comes from the terminal, or `--width`. Lanes are coloured when
+standard output is a terminal, unless `--no-color` or `NO_COLOR` is set, and
+each task keeps its colour throughout. The grid characters need a UTF-8
+terminal.
+
+A schedule that fails the [validation](#validation) checks is still rendered,
+since seeing the problem is the point, and the issues are reported as for
+`validate`. One whose structure is unusable cannot be drawn, so only its issues
+are reported. Windows of one task that overlap are marked `▒`.
 
 ## Validation
 

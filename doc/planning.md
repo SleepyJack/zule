@@ -54,8 +54,6 @@ tools and configurations.
 
 ### Continuous integration
 
-- With the Cortex-M port, run its tests and the examples in QEMU; see
-  [examples](#examples).
 - Considered and not planned: ThreadSanitizer, which would only cover the POSIX
   port, a development and demonstration target; and Clang as a second host
   compiler, which adds little beyond the static checks.
@@ -64,15 +62,47 @@ tools and configurations.
 
 - Consider an example for measuring and checking timing on a target, such as
   setting budgets and the tick timing tolerance from the modules' measurements.
+- Make the examples besides the showcase more embedded-focused: shorter slots,
+  and consider dropping their POSIX targets, keeping the showcase runnable on
+  the host for [Getting started](../README.md#getting-started).
 
-## Schedule definition tooling
+## Schedule editor
 
-- Consider a tool to help users define and edit schedules, including task
-  budgets, cycle length, and window placement.
-- Explore suitable interfaces, such as an editor extension, interactive CLI,
-  or visual timeline, without committing to one yet.
-- Reuse the existing schema and validator for feedback on bounds, overlaps,
-  and task references, and save definitions in the existing JSON format.
+An interactive terminal editor for schedule files, built on the slot grid that
+[`show`](../zule/tools/schedule/README.md#viewing) renders. Its two areas are
+the ones `show` prints: the file's tasks, where tasks are created and edited,
+and the schedule below, where their windows are placed. Focus moves between
+them, so picking a task up in one and placing it in the other needs no prompt
+for which task. A cycle too long for the terminal scrolls, keeping the slot
+width, where `show` wraps onto staves.
+
+Each stage is useful on its own:
+
+- **Windows.** Select a window, move it along its lane, resize it, add and
+  delete. Validate on every change, showing errors in place, and save
+  explicitly. Allow transient invalid states, since some edits need a gap that
+  does not exist yet, but refuse to save one.
+- **Tasks.** Add a task with its name and budget, checked as the generated
+  constants require; rename one, rewriting its windows and warning that the
+  application's `zule_task_<name>()` must follow; delete one, naming the
+  schedules that lose windows. A budget belongs to the task, so editing it
+  resizes that task's windows in every schedule: show what that breaks.
+- **Schedules and cycles.** Add, rename, and delete schedules, change the cycle
+  length, and convert between the single `cycle` form and `schedules`.
+- **Conveniences.** Recurring placement, undo, and starting a file from
+  nothing. Recurrence expands to ordinary windows rather than becoming new JSON
+  syntax, so the format, the validator, and the generator are unchanged and the
+  committed schedule stays explicit.
+
+Constraints:
+
+- Keep the editor's dependency out of the build path. `zule_add_schedule()`
+  runs the generator in every application build, so a UI dependency must be
+  optional and imported lazily.
+- Keep each operation a pure function from one schedule to another, so the
+  editor is testable without a terminal.
+- Write the file canonically, preserving descriptions and `$schema`, so that an
+  edit does not produce a noisy diff.
 
 ## Watchdog integration
 
@@ -108,7 +138,7 @@ tools and configurations.
   frozen on a fault or on request to keep the lead-up. Offload it through a
   debugger or the application, and decode it on the host for timeline viewers,
   such as Perfetto or VCD. Consider sharing a timeline renderer with
-  [schedule definition tooling](#schedule-definition-tooling), showing planned
+  [the schedule editor](#schedule-editor), showing planned
   and actual timing together.
 - Simple modules, such as GPIO toggles per event, support measurement with a
   logic analyser.
@@ -129,14 +159,11 @@ tools and configurations.
   terminates, so the example exits cleanly, and CI checks its exit status
   rather than a timeout.
 
-## Naming review
+## Documentation
 
-- Review names now that multiple schedules are complete. It is not evident
-  what distinguishes the schedule definition (`zule_schedule_definition_t`: the slot
-  length, task table, and schedules) from a schedule (one cycle of windows);
-  one option is a distinct name for the container. Also review slot, cycle, and
-  window against established time-triggered terms (minor and major frame,
-  partition window).
+- Review [misc.md](misc.md): move each detail back into the document it came
+  from, keep it there, or drop it, then remove the file.
+- Slim code comments the same way, keeping what the code cannot state itself.
 
 ## Core and port configuration
 

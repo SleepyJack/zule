@@ -37,6 +37,29 @@ class CLITests(unittest.TestCase):
                 self.assertEqual(main(["generate", str(FIXTURES / "valid/control-loop.json"), str(output_dir)]), 1)
             self.assertIn(str(output_dir), errors.getvalue())
 
+    def test_show_renders_every_schedule(self):
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(["show", str(FIXTURES / "valid/modes.json"), "--width", "90"]), 0)
+        self.assertIn("schedule operational", output.getvalue())
+        self.assertIn("schedule startup", output.getvalue())
+
+    def test_show_renders_a_schedule_with_semantic_issues(self):
+        with redirect_stdout(io.StringIO()) as output, redirect_stderr(io.StringIO()) as errors:
+            self.assertEqual(main(["show", str(FIXTURES / "invalid/overlap.json")]), 1)
+        self.assertIn("schedule main", output.getvalue())
+        self.assertIn("overlaps", errors.getvalue())
+
+    def test_show_reports_structural_issues_without_rendering(self):
+        with redirect_stdout(io.StringIO()) as output, redirect_stderr(io.StringIO()) as errors:
+            self.assertEqual(main(["show", str(FIXTURES / "generic/empty-object.json")]), 1)
+        self.assertEqual(output.getvalue(), "")
+        self.assertIn("required property", errors.getvalue())
+
+    def test_show_is_not_coloured_when_redirected(self):
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(["show", str(FIXTURES / "valid/control-loop.json")]), 0)
+        self.assertNotIn("\033", output.getvalue())
+
     def test_validate_success(self):
         with redirect_stdout(io.StringIO()) as output:
             self.assertEqual(main(["validate", str(FIXTURES / "valid/control-loop.json")]), 0)
