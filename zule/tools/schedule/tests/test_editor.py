@@ -19,7 +19,7 @@ def editor(name="valid/control-loop.json", path="schedule.json"):
 
 
 def rows(editor_):
-    editor_.ensure_visible(WIDTH)
+    editor_.ensure_visible(WIDTH, HEIGHT)
     return frame(editor_, WIDTH, HEIGHT)
 
 
@@ -91,13 +91,18 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual([window["task"] for window in state.windows()], ["control", "output"])
         self.assertEqual(state.selected()["task"], "control")
 
-    def test_s_moves_to_the_next_schedule(self):
+    def test_selection_runs_on_into_the_next_schedule(self):
+        """Every schedule is on screen, so there is no mode to switch."""
         state = editor("valid/modes.json")
         self.assertEqual(state.current()[0], "operational")
-        state.key("s")
+        for _ in range(3):  # operational places three windows
+            state.key("down")
         self.assertEqual(state.current()[0], "startup")
-        state.key("s")
+        self.assertEqual(state.selected()["task"], "mode_manager")
+        state.key("down")
         self.assertEqual(state.current()[0], "operational")
+        state.key("up")
+        self.assertEqual(state.current()[0], "startup")
 
 
 class WritingTests(unittest.TestCase):
@@ -145,7 +150,7 @@ class FrameTests(unittest.TestCase):
         for height in (8, 20, 40):
             with self.subTest(height=height):
                 state = editor()
-                state.ensure_visible(WIDTH)
+                state.ensure_visible(WIDTH, height)
                 self.assertEqual(len(frame(state, WIDTH, height)), height)
 
     def test_the_tasks_come_before_the_schedule(self):
@@ -183,12 +188,12 @@ class FrameTests(unittest.TestCase):
             },
         }
         state = Editor("schedule.json", schedule)
-        state.ensure_visible(WIDTH)
-        self.assertEqual(state.first_slot, 0)
+        state.ensure_visible(WIDTH, HEIGHT)
+        self.assertEqual(state.first_slot("main"), 0)
         state.key("down")
-        state.ensure_visible(WIDTH)
+        state.ensure_visible(WIDTH, HEIGHT)
         # The view holds 13 slots, and scrolls the least that shows slots 30-31.
-        self.assertEqual(state.first_slot, 19)
+        self.assertEqual(state.first_slot("main"), 19)
         heading = next(text(row) for row in frame(state, WIDTH, HEIGHT) if "showing" in text(row))
         self.assertIn("showing 19-31", heading)
 
@@ -232,7 +237,8 @@ class TaskAreaTests(unittest.TestCase):
 
     def test_a_window_can_be_added_for_a_task_the_schedule_does_not_place(self):
         state = editor("valid/modes.json")
-        state.key("s")  # the startup schedule, which places mode_manager alone
+        for _ in range(3):  # into the startup schedule, which places mode_manager alone
+            state.key("down")
         self.assertEqual([window["task"] for window in state.windows()], ["mode_manager"])
         state.key("tab")
         self.assertEqual(state.task(), "control")
@@ -317,10 +323,10 @@ class TaskAreaTests(unittest.TestCase):
         state = editor()
         lines = [text(row) for row in rows(state)]
         self.assertIn("▸ schedule main", next(line for line in lines if "schedule main" in line))
-        self.assertIn("next schedule", lines[-1])
+        self.assertIn("←→ move", lines[-1])
         state.key("tab")
         self.assertIn("▸ tasks", "".join(text(row) for row in rows(state)))
-        self.assertIn("add window", text(rows(state)[-1]))
+        self.assertIn("add window to main", text(rows(state)[-1]))
 
     def test_the_prompt_is_shown_with_what_has_been_typed(self):
         state = editor()
@@ -329,6 +335,57 @@ class TaskAreaTests(unittest.TestCase):
         state.key("l")
         state.key("o")
         self.assertIn("new task name: lo", text(rows(state)[-2]))
+
+
+class StackedScheduleTests(unittest.TestCase):
+    """Every schedule is drawn, one below the next, as show prints them."""
+
+    def test_every_schedule_is_on_screen(self):
+        lines = [text(row) for row in rows(editor("valid/modes.json"))]
+        self.assertTrue(any("schedule operational" in line for line in lines))
+        self.assertTrue(any("schedule startup" in line for line in lines))
+
+    def test_only_the_schedule_holding_the_selection_is_marked(self):
+        state = editor("valid/modes.json")
+        marked = [text(row) for row in rows(state) if text(row).startswith("▸ schedule")]
+        self.assertEqual(len(marked), 1)
+        self.assertIn("operational", marked[0])
+        for _ in range(3):
+            state.key("down")
+        marked = [text(row) for row in rows(state) if text(row).startswith("▸ schedule")]
+        self.assertIn("startup", marked[0])
+
+    def test_each_schedule_scrolls_on_its_own(self):
+        schedule = {
+            "slot_us": 1000,
+            "tasks": {"sense": {"budget_slots": 1}},
+            "schedules": {
+                "long": {"slots": 40, "windows": [{"task": "sense", "start_slot": 39}]},
+                "short": {"slots": 4, "windows": [{"task": "sense", "start_slot": 0}]},
+            },
+        }
+        state = Editor("schedule.json", schedule)
+        state.ensure_visible(WIDTH, 40)
+        self.assertEqual(state.first_slot("short"), 0)
+        self.assertGreater(state.first_slot("long"), 0)
+
+    def test_the_view_scrolls_down_to_keep_the_selection_visible(self):
+        state = editor("valid/modes.json")
+        # Everything fits in a tall terminal, so nothing scrolls.
+        state.ensure_visible(WIDTH, 24)
+        self.assertEqual(state.first_row, 0)
+        # In a short one the last schedule is below the fold, so it does.
+        for _ in range(3):
+            state.key("down")
+        state.ensure_visible(WIDTH, 10)
+        self.assertGreater(state.first_row, 0)
+        # The selected window's lane is among the rows drawn.
+        self.assertTrue(
+            any(
+                any(style == SELECTED for _, style in row)
+                for row in frame(state, WIDTH, 10)
+            )
+        )
 
 
 class InterruptTests(unittest.TestCase):

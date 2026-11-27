@@ -1,9 +1,10 @@
 """An interactive editor for a schedule file, on the grid that show draws.
 
 The editor has the two areas show prints: the file's tasks, which every
-schedule in it shares, and the schedule below, where their windows are placed.
-Focus moves between them, so a window is added by picking its task up in one
-area and placing it in the other.
+schedule in it shares, and the schedules below, each a grid of its own. Focus
+moves between the two areas, so a window is added by picking its task up in one
+and placing it in the other. Selecting a window runs through every schedule in
+turn, so there is no mode to be in.
 
 The editor's state and the frame it draws are ordinary values, so both are
 tested without a terminal: the curses layer only paints a frame and turns key
@@ -44,11 +45,7 @@ TASK = "task"  # Followed by the task's index, so lanes keep their colours.
 TASKS = "tasks"
 SCHEDULE = "schedule"
 
-_KEYS = {
-    TASKS: "↑↓ task  a add window  n new  r rename  b budget  d delete"
-    "  tab schedule  w write  q quit",
-    SCHEDULE: "↑↓ window  ←→ move  d delete  s next schedule  tab tasks  w write  q quit",
-}
+_SCHEDULE_KEYS = "↑↓ window  ←→ move  d delete  tab tasks  w write  q quit"
 
 
 @dataclass
@@ -72,7 +69,8 @@ class Editor:
         self.schedule_index = 0
         self.window_index = 0
         self.task_index = 0
-        self.first_slot = 0
+        self.first_slots: dict[str, int] = {}
+        self.first_row = 0
         self.message = ""
         self.prompt: Prompt | None = None
         self.finished = False
@@ -89,39 +87,72 @@ class Editor:
         names = self.task_names()
         return names[min(self.task_index, len(names) - 1)] if names else None
 
+    def cycles(self) -> list[tuple[str, Any]]:
+        return [(name, cycle) for name, cycle, _ in schedule_cycles(self.schedule)]
+
     def current(self) -> tuple[str, Any]:
-        name, cycle, _ = schedule_cycles(self.schedule)[self.schedule_index]
-        return name, cycle
+        """Return the schedule the selection is in, which a new window joins."""
+        cycles = self.cycles()
+        self.schedule_index = min(self.schedule_index, len(cycles) - 1)
+        return cycles[self.schedule_index]
 
     def windows(self) -> list[Any]:
         return self.current()[1]["windows"]
 
     def selected(self) -> Any:
         windows = self.windows()
-        return windows[self.window_index] if windows else None
+        return windows[self.window_index] if self.window_index < len(windows) else None
+
+    def positions(self) -> list[tuple[int, int]]:
+        """Return every window in the file, as the selection runs through them."""
+        return [
+            (index, window)
+            for index, (_, cycle) in enumerate(self.cycles())
+            for window in range(len(cycle["windows"]))
+        ]
 
     def budget(self, task: str) -> int:
         """Return a task's budget, or one slot for a task the file does not declare."""
         return self.schedule["tasks"].get(task, {}).get("budget_slots", 1)
 
     def per_view(self, width: int) -> int:
-        """Return how many slots the view holds, which the frame also uses."""
+        """Return how many slots a grid holds, which the frame also uses."""
         return grid.slots_per_view(width - grid.label_width(self.task_names()))
 
-    def ensure_visible(self, width: int) -> None:
-        """Scroll the view the least that shows the selected window."""
+    def first_slot(self, name: str) -> int:
+        """Return a schedule's own horizontal position, so each scrolls alone."""
+        return self.first_slots.get(name, 0)
+
+    def ensure_visible(self, width: int, height: int) -> None:
+        """Scroll the least that shows the selection, across and down."""
+        self._clamp_selection()
+        name, cycle = self.current()
         per_view = self.per_view(width)
-        _, cycle = self.current()
-        self.first_slot = max(0, min(self.first_slot, max(0, cycle["slots"] - per_view)))
+        first = max(0, min(self.first_slot(name), max(0, cycle["slots"] - per_view)))
         window = self.selected()
-        if window is None:
+        if window is not None:
+            start = window["start_slot"]
+            end = min(start + self.budget(window["task"]), cycle["slots"])
+            if start < first:
+                first = start
+            elif end > first + per_view:
+                first = max(0, end - per_view)
+        self.first_slots[name] = first
+
+        _, row = layout(self, width)
+        body = max(height - 2, 1)
+        self.first_row = max(0, min(self.first_row, row))
+        if row >= self.first_row + body:
+            self.first_row = row - body + 1
+
+    def _clamp_selection(self) -> None:
+        """Keep the selection on a window that still exists."""
+        positions = self.positions()
+        if not positions:
+            self.window_index = 0
             return
-        start = window["start_slot"]
-        end = min(start + self.budget(window["task"]), cycle["slots"])
-        if start < self.first_slot:
-            self.first_slot = start
-        elif end > self.first_slot + per_view:
-            self.first_slot = max(0, end - per_view)
+        if (self.schedule_index, self.window_index) not in positions:
+            self.schedule_index, self.window_index = positions[0]
 
     def key(self, name: str) -> None:
         """Apply one key press."""
@@ -174,30 +205,35 @@ class Editor:
             return
         self.schedule = delete_task(self.schedule, task)
         self.task_index = min(self.task_index, len(self.task_names()) - 1)
-        self.window_index = 0
+        self._clamp_selection()
         self.message = f"deleted {task}"
 
     def _schedule_key(self, name: str) -> None:
+        schedule_name, _ = self.current()
         windows = self.windows()
-        schedule_name = self.current()[0]
-        if name in ("left", "right") and windows:
+        if name in ("left", "right") and self.selected() is not None:
             moved, self.window_index = move_window(
                 self.schedule, schedule_name, self.window_index, -1 if name == "left" else 1
             )
             if moved is self.schedule:
                 self.message = "the window cannot start outside its cycle"
             self.schedule = moved
-        elif name in ("up", "down") and windows:
-            step = 1 if name == "down" else -1
-            self.window_index = (self.window_index + step) % len(windows)
-        elif name == "d" and windows:
+        elif name in ("up", "down"):
+            self._move_selection(1 if name == "down" else -1)
+        elif name == "d" and windows and self.selected() is not None:
             self.schedule, self.window_index = delete_window(
                 self.schedule, schedule_name, self.window_index
             )
-        elif name == "s":
-            self.schedule_index = (self.schedule_index + 1) % len(schedule_cycles(self.schedule))
-            self.window_index = 0
-            self.first_slot = 0
+            self._clamp_selection()
+
+    def _move_selection(self, step: int) -> None:
+        """Move to the next window, continuing into the next schedule."""
+        positions = self.positions()
+        if not positions:
+            return
+        here = (self.schedule_index, self.window_index)
+        at = positions.index(here) if here in positions else 0
+        self.schedule_index, self.window_index = positions[(at + step) % len(positions)]
 
     def _answer(self, name: str) -> None:
         """Collect one key of the line the editor asked for."""
@@ -259,51 +295,76 @@ class Editor:
         self.finished = True
 
 
-def frame(editor: Editor, width: int, height: int) -> list[list[tuple[str, str]]]:
-    """Return the rows to paint, each a list of (text, style) spans."""
+def layout(editor: Editor, width: int) -> tuple[list[list[tuple[str, str]]], int]:
+    """Return every row of the editor's content, and the row the selection is on."""
     tasks = editor.schedule["tasks"]
     names = editor.task_names()
     labels = grid.label_width(names)
     styles = {name: f"{TASK}{index % 6}" for index, name in enumerate(names)}
-    name, cycle = editor.current()
-    first = editor.first_slot
-    last = min(first + editor.per_view(width), cycle["slots"])
+    selected_row = 0
 
-    rows = [[(editor.path + (" · modified" if editor.modified else ""), DIM)], []]
-    rows.append([(_marker(editor, TASKS) + "tasks", DIM)])
+    rows: list[list[tuple[str, str]]] = [
+        [(editor.path + (" · modified" if editor.modified else ""), DIM)],
+        [],
+        [(_marker(editor.focus == TASKS) + "tasks", DIM)],
+    ]
     for task in names:
         bar = grid.bar(tasks[task]["budget_slots"])[: max(width - labels - 1, 1)]
         chosen = editor.focus == TASKS and task == editor.task()
+        if chosen:
+            selected_row = len(rows)
         rows.append(
             [(grid.label(task, labels), SELECTED if chosen else PLAIN), (bar, styles[task])]
         )
 
-    rows.append([])
-    rows.append([(_marker(editor, SCHEDULE) + _heading(name, cycle, first, last), DIM)])
-    rows.append([(" " * labels + grid.ruler(first, last), DIM)])
     window = editor.selected() if editor.focus == SCHEDULE else None
-    for task in names:
-        held = grid.coverage(cycle, tasks, task)
-        if not held:
-            continue
-        text = grid.label(task, labels) + grid.lane(held, first, last)
-        highlight = None
-        if window is not None and window["task"] == task:
-            highlight = _columns(editor, window, first, last, labels)
-        rows.append(_spans(text, highlight, styles[task]))
-    idle = grid.idle_slots(cycle, tasks)
-    rows.append([(grid.label("idle", labels) + grid.lane(idle, first, last, grid.IDLE, " "), DIM)])
+    for index, (name, cycle) in enumerate(editor.cycles()):
+        here = index == editor.schedule_index
+        first = editor.first_slot(name)
+        last = min(first + editor.per_view(width), cycle["slots"])
+        rows.append([])
+        rows.append([(_marker(here and editor.focus == SCHEDULE) + _heading(name, cycle, first, last), DIM)])
+        rows.append([(" " * labels + grid.ruler(first, last), DIM)])
+        for task in names:
+            held = grid.coverage(cycle, tasks, task)
+            if not held:
+                continue
+            text = grid.label(task, labels) + grid.lane(held, first, last)
+            highlight = None
+            if here and window is not None and window["task"] == task:
+                highlight = _columns(editor, window, first, last, labels)
+                selected_row = len(rows)
+            rows.append(_spans(text, highlight, styles[task]))
+        idle = grid.idle_slots(cycle, tasks)
+        rows.append(
+            [(grid.label("idle", labels) + grid.lane(idle, first, last, grid.IDLE, " "), DIM)]
+        )
+    return rows, selected_row
 
-    body = height - 2
-    rows = rows[:body] + [[]] * max(0, body - len(rows))
-    rows.append(_status(editor, cycle, idle))
-    rows.append([(_KEYS[editor.focus], DIM)])
+
+def frame(editor: Editor, width: int, height: int) -> list[list[tuple[str, str]]]:
+    """Return the rows to paint, each a list of (text, style) spans."""
+    rows, _ = layout(editor, width)
+    body = max(height - 2, 1)
+    rows = rows[editor.first_row : editor.first_row + body]
+    rows = rows + [[]] * max(0, body - len(rows))
+    rows.append(_status(editor))
+    rows.append([(_keys(editor), DIM)])
     return rows
 
 
-def _marker(editor: Editor, area: str) -> str:
+def _keys(editor: Editor) -> str:
+    if editor.focus == SCHEDULE:
+        return _SCHEDULE_KEYS
+    return (
+        f"↑↓ task  a add window to {editor.current()[0]}  n new  r rename"
+        "  b budget  d delete  tab schedule  w write  q quit"
+    )
+
+
+def _marker(focused: bool) -> str:
     """Mark the area with focus, so that the keys below apply to it."""
-    return "▸ " if editor.focus == area else "  "
+    return "▸ " if focused else "  "
 
 
 def _heading(name: str, cycle: Any, first: int, last: int) -> str:
@@ -332,7 +393,7 @@ def _spans(text: str, highlight: tuple[int, int] | None, style: str) -> list[tup
     return [(part, part_style) for part, part_style in parts if part]
 
 
-def _status(editor: Editor, cycle: Any, idle: dict[int, list[int]]) -> list[tuple[str, str]]:
+def _status(editor: Editor) -> list[tuple[str, str]]:
     if editor.prompt is not None:
         return [
             (f"{editor.prompt.label}: ", PLAIN),
@@ -344,7 +405,8 @@ def _status(editor: Editor, cycle: Any, idle: dict[int, list[int]]) -> list[tupl
     issues = validate_schedule(editor.schedule)
     if issues:
         return [(f"{_issues(len(issues))}: {issues[0].path}: {issues[0].message}", ERROR)]
-    reserved = cycle["slots"] - len(idle)
+    _, cycle = editor.current()
+    reserved = cycle["slots"] - len(grid.idle_slots(cycle, editor.schedule["tasks"]))
     return [("valid", PLAIN), (f"   {reserved}/{cycle['slots']} slots reserved", DIM)]
 
 
@@ -381,7 +443,7 @@ def _loop(screen: Any, editor: Editor) -> None:
     screen.keypad(True)
     while not editor.finished:
         height, width = screen.getmaxyx()
-        editor.ensure_visible(width)
+        editor.ensure_visible(width, height)
         paint(screen, frame(editor, width, height), width)
         try:
             pressed = screen.getch()

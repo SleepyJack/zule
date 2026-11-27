@@ -61,48 +61,52 @@ are reported. Windows of one task that overlap are marked `▒`.
 ## Editing
 
 `edit <schedule.json>` opens the schedule in the terminal, on the same grid
-`show` draws. It has the two areas `show` prints: the file's tasks, which every
-schedule in it shares, and the schedule below, where their windows are placed.
-`tab` moves focus between them, and `▸` marks the area the keys apply to:
+`show` draws, and laid out the same way: the file's tasks, which every schedule
+in it shares, then each schedule below. `tab` moves focus between the two
+areas, and `▸` marks what the keys apply to.
 
 ```
-examples/showcase/config/schedule.json
+config/schedule.json
 
-▸ tasks
-  control  ██████████████
-  output   █████████
-  sense    █████████
+  tasks
+  control       ██████████████
+  mode_manager  ████
+  sense         █████████
 
-  schedule main · 10 slots
-           0    1    2    3    4    5    6    7    8    9
-  control  ·    ·    ██████████████ ·    ·    ·    ·    ·
-  output   ·    ·    ·    ·    ·    █████████ ·    ·    ·
-  sense    █████████ ·    ·    ·    ·    ·    ·    ·    ·
-  idle                                        ░░░░░░░░░░░░░░
+  schedule operational · 10 slots
+                0    1    2    3    4    5    6    7    8    9
+  control       ·    ·    ██████████████ ·    ·    ·    ·    ·
+  mode_manager  ·    ·    ·    ·    ·    ·    ·    ·    ·    ████
+  sense         █████████ ·    ·    ·    ·    ·    ·    ·    ·
+  idle                                   ░░░░░░░░░░░░░░░░░░░
 
-valid   7/10 slots reserved
-↑↓ task  a add window  n new  r rename  b budget  d delete  tab schedule  w write  q quit
+▸ schedule startup · 5 slots
+                0    1    2    3    4
+  mode_manager  ·    ·    ·    ·    ████
+  idle          ░░░░░░░░░░░░░░░░░░░
+
+valid   1/5 slots reserved
+↑↓ window  ←→ move  d delete  tab tasks  w write  q quit
 ```
-
-In the **tasks** area:
-
-| Key | Does |
-| --- | --- |
-| ↑ ↓ | Select a task. Every task is listed, including those this schedule does not place. |
-| `a` | Add a window for the selected task to this schedule, where it first fits, and move to it. A task can have as many windows as you add. |
-| `n` | Add a task, asking for its name and its budget in slots. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. |
-| `r` | Rename the selected task. Its windows follow it; the application's `zule_task_<name>()` has to be renamed to match. |
-| `b` | Change the selected task's budget. A budget belongs to the task, so this resizes its windows in every schedule, which can leave one overlapping. |
-| `d` | Delete the selected task. If any schedule places it, `D` deletes it and those windows. The last task is kept, since a file needs one. |
 
 In the **schedule** area:
 
 | Key | Does |
 | --- | --- |
-| ↑ ↓ | Select a window of this schedule. |
+| ↑ ↓ | Select a window. Selecting runs on from the last window of one schedule into the first of the next, so every schedule is reached without switching between them. `▸` marks the one the selection is in. |
 | ← → | Move the selected window one slot, which cannot take it outside its cycle. Windows are kept in start order, so one moved past another takes its place. |
 | `d` | Delete the selected window, leaving its task in the file. |
-| `s` | Move to the next schedule, when the file has several. |
+
+In the **tasks** area:
+
+| Key | Does |
+| --- | --- |
+| ↑ ↓ | Select a task. Every task is listed, including those a schedule does not place. |
+| `a` | Add a window for the selected task to the marked schedule, where it first fits, and move to it. The key bar names that schedule. A task can have as many windows as you add. |
+| `n` | Add a task, asking for its name and its budget in slots. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. |
+| `r` | Rename the selected task. Its windows follow it; the application's `zule_task_<name>()` has to be renamed to match. |
+| `b` | Change the selected task's budget. A budget belongs to the task, so this resizes its windows in every schedule, which can leave one overlapping. |
+| `d` | Delete the selected task. If any schedule places it, `D` deletes it and those windows. The last task is kept, since a file needs one. |
 
 Everywhere, `w` writes the file in the layout [format](#formatting) writes, and
 `q` quits, asking again if there is unsaved work; `Q` and a second Ctrl-C quit
@@ -110,9 +114,9 @@ anyway.
 
 The schedule is checked after every key, and the result is shown above the key
 bar. An edit may leave a schedule the checks reject, since some edits need a gap
-that does not exist yet; what is refused is writing one. A cycle too long for
-the terminal scrolls to keep the selection in view, where `show` wraps onto
-staves.
+that does not exist yet; what is refused is writing one. The view scrolls to
+keep the selection in sight: down through the schedules, and across within one
+whose cycle is longer than the terminal, each schedule keeping its own place.
 
 The editor needs a terminal with `curses`, which the standard library provides
 on Unix. The other commands do not import it, so an application build never
