@@ -54,6 +54,14 @@ zule_result_t zule_schedule_request(uint32_t schedule_id) {
     return result;
 }
 
+zule_result_t zule_terminate(void) {
+    zule_result_t result = ZULE_RESULT_NOT_INITIALIZED;
+    if (running) {
+        result = zule_scheduler_terminate();
+    }
+    return result;
+}
+
 #if ZULE_CONFIG_TIMEBASE
 uint32_t zule_timebase_hz(void) {
     return zule_port_time_hz();

@@ -32,8 +32,8 @@ about the examples.
 
 | Target | Port | Notes |
 | --- | --- | --- |
-| `posix` | [POSIX](../zule/ports/posix/README.md) | The host, with no real-time guarantees. Runs until stopped with Ctrl-C. |
-| `qemu-mps2-an385` | [Cortex-M](../zule/ports/cortex_m/README.md) | QEMU's emulation of Arm's MPS2 board with a Cortex-M3, using the [board support](common/targets/qemu-mps2-an385/README.md) in `common/targets/`. Needs the Arm GNU toolchain and QEMU, which the development image has. A fault ends QEMU with a failure status; otherwise it runs until stopped with Ctrl-A, then X. |
+| `posix` | [POSIX](../zule/ports/posix/README.md) | The host, with no real-time guarantees. Runs until the application stops, or until Ctrl-C. |
+| `qemu-mps2-an385` | [Cortex-M](../zule/ports/cortex_m/README.md) | QEMU's emulation of Arm's MPS2 board with a Cortex-M3, using the [board support](common/targets/qemu-mps2-an385/README.md) in `common/targets/`. Needs the Arm GNU toolchain and QEMU, which the development image has. An application's exit status becomes QEMU's, so a fault ends QEMU with a failure; an application that does not stop runs until Ctrl-A, then X. |
 
 On `qemu-mps2-an385`, output goes to QEMU's standard output through
 semihosting.

@@ -17,6 +17,7 @@ typedef enum {
     ZULE_RESULT_ALREADY_RUNNING,
     ZULE_RESULT_INVALID_CONFIG,
     ZULE_RESULT_TICK_TIMING,
+    ZULE_RESULT_TERMINATED,
 } zule_result_t;
 
 typedef struct {
@@ -79,11 +80,26 @@ zule_result_t zule_configure(const zule_config_t *config);
 const char *zule_task_name_get(uint32_t task_id);
 
 /* Initialize the scheduler, start periodic ticks, and dispatch tasks until a
- * scheduler or port failure. This blocking entry point must be called from one
- * application context; recursive calls return ALREADY_RUNNING. Concurrent calls
- * from separate application threads are unsupported. Tick delivery is stopped
- * and quiesced before returning. Tasks must return for the runner to exit. */
+ * scheduler or port failure, or a termination request. This blocking entry point
+ * must be called from one application context; recursive calls return
+ * ALREADY_RUNNING. Concurrent calls from separate application threads are
+ * unsupported. Tick delivery is stopped and quiesced before returning. Tasks
+ * must return for the runner to exit. */
 zule_result_t zule_run(void);
+
+/* Request that the scheduler stop, so that zule_run() returns TERMINATED. Call
+ * from a task. The requesting task runs to its end as usual, and the run then
+ * returns without dispatching another task: a task already released is not
+ * dispatched, and tick delivery is stopped and quiesced before returning, as on
+ * any other exit. A request cannot be withdrawn, and repeating it changes
+ * nothing. Ticks are delivered until the run returns, so one may still retire a
+ * window, release a task that is then never dispatched, or latch a fault and
+ * notify the handler. A fault latched before the run returns takes precedence,
+ * so zule_run() reports the fault rather than the request; one latched after
+ * that does not change what zule_run() returns. Returns OK, or NOT_INITIALIZED
+ * when the scheduler is not running. Each run starts with no request pending, so a terminated
+ * application can call zule_run() again. */
+zule_result_t zule_terminate(void);
 
 /* Request a switch to another schedule, by schedule ID from the generated
  * zule_schedule_ids.h. Call from a task. The switch takes effect at the start of

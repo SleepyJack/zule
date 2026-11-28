@@ -27,7 +27,8 @@ cannot terminate the task; see [deadline monitoring](core.md#task-deadline-monit
 ## Running the scheduler
 
 `zule_run()` validates the schedule, starts periodic ticks through the port, and
-dispatches tasks. It blocks until a fault or port error, stops and quiesces tick
+dispatches tasks. It blocks until a fault, a port error, or a
+[termination request](#stopping-the-scheduler), stops and quiesces tick
 delivery, and returns the reason:
 
 | Result | Cause |
@@ -39,11 +40,12 @@ delivery, and returns the reason:
 | `ZULE_RESULT_TICK_TIMING` | A tick deviated from its expected time by more than the tolerance; see the [tick timing check](core.md#tick-timing-check). |
 | `ZULE_RESULT_PORT_ERROR` | The port failed to start, deliver, or stop ticks. |
 | `ZULE_RESULT_ALREADY_RUNNING` | `zule_run()` was called recursively, for example from a task. |
+| `ZULE_RESULT_TERMINATED` | A task called `zule_terminate()`; see [stopping the scheduler](#stopping-the-scheduler). |
 
 Call `zule_run()` and `zule_configure()` from a single application context.
 After `zule_run()` returns, it can be called again; each call reinitializes the
-scheduler and clears the previous fault. A task that never returns prevents
-`zule_run()` from returning. There is no public stop API yet.
+scheduler and clears the previous fault and any termination request. A task that
+never returns prevents `zule_run()` from returning.
 
 ## Switching schedules
 
@@ -65,6 +67,37 @@ finishes its cycle, including its final window, and the new schedule starts at
 its slot 0, so its first window can start in the same tick. A later request before then
 replaces an earlier one, and a request for the active schedule cancels a
 pending switch. No switch takes place while a fault is latched.
+
+## Stopping the scheduler
+
+A task can stop the run, so that the application decides when scheduling ends:
+
+```c
+void zule_task_safe_state(void) {
+    outputs_safe();
+    (void)zule_terminate();
+}
+```
+
+The requesting task runs to its end as usual, and `zule_run()` then returns
+`ZULE_RESULT_TERMINATED` without dispatching another task: a task already
+released for a later window is not dispatched, and tick delivery is stopped and
+quiesced as on any other exit. A request cannot be withdrawn, and repeating it
+changes nothing.
+
+Ticks are delivered until the run returns, since stopping them is the last thing
+`zule_run()` does, so a tick in between may still retire a window, release a task
+that is then never dispatched, or latch a fault and call the
+[fault handler](#fault-handler). A fault latched before the run returns takes
+precedence, so `zule_run()` reports the fault rather than the request; one
+latched after that does not change what `zule_run()` returns.
+`zule_terminate()` returns `ZULE_RESULT_NOT_INITIALIZED` when the scheduler is
+not running.
+
+With [multiple schedules](configuration.md#multiple-schedules), a shutdown
+schedule whose task puts the outputs in a safe state and then terminates keeps
+the stopping sequence in the schedule, where its timing is reserved like any
+other work. The [modes example](../examples/modes/README.md) does this.
 
 ## Configuration
 

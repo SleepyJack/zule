@@ -14,6 +14,7 @@ static uint32_t first_calls;
 static uint32_t second_calls;
 static bool overrun;
 static bool recurse;
+static bool terminate;
 static bool task_running;
 static bool fault_during_task;
 static uint32_t fault_calls;
@@ -42,6 +43,11 @@ static void first_task(void) {
          * schedule switches nothing. */
         assert(zule_schedule_request(0U) == ZULE_RESULT_OK);
         assert(zule_schedule_request(1U) == ZULE_RESULT_INVALID_CONFIG);
+    }
+    if (terminate) {
+        assert(zule_terminate() == ZULE_RESULT_OK);
+        /* Repeating the request changes nothing, and the task runs on. */
+        assert(zule_terminate() == ZULE_RESULT_OK);
     }
     if (overrun) {
         task_running = true;
@@ -86,6 +92,7 @@ static void check_stopped(void) {
 
 int main(void) {
     assert(zule_schedule_request(0U) == ZULE_RESULT_NOT_INITIALIZED);
+    assert(zule_terminate() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_task_name_get(10U) == NULL);
     definition = NULL;
     assert(zule_task_name_get(UINT32_MAX) == NULL);
@@ -186,6 +193,37 @@ int main(void) {
     assert(fault_calls == 3U);
     check_stopped();
 
+    /* A task can stop the run: it finishes, no further task is dispatched, and
+     * ticks are stopped as on any other exit. */
+    const uint32_t first_mark = first_calls;
+    const uint32_t second_mark = second_calls;
+    zule_test_port_reset();
+    terminate = true;
+    assert(zule_run() == ZULE_RESULT_TERMINATED);
+    terminate = false;
+    assert(first_calls == (first_mark + 1U));
+    assert(second_calls == second_mark);
+    assert(fault_calls == 3U);
+    check_stopped();
+
+    /* The request does not outlast its run: the next one goes on until the port
+     * stops it, dispatching the task the terminated run did not reach. */
+    zule_test_port_reset();
+    assert(zule_run() == ZULE_RESULT_PORT_ERROR);
+    assert(second_calls > second_mark);
+    assert(fault_calls == 3U);
+    check_stopped();
+
+    /* A fault latched before the run returns is reported in place of the
+     * request, since what went wrong matters more than the request to stop. */
+    zule_test_port_reset();
+    terminate = true;
+    overrun = true;
+    assert(zule_run() == ZULE_RESULT_EXECUTION_OVERRUN);
+    terminate = false;
+    overrun = false;
+    check_stopped();
+
     /* With multiple schedules, the configured ID selects the one that runs. The
      * second schedule runs only the second task. */
     static const zule_window_t second_only[] = {{&tasks[1], 0U, 1U}};
@@ -217,7 +255,8 @@ int main(void) {
     zule_test_port_reset();
     assert(zule_run() == ZULE_RESULT_INVALID_CONFIG);
     assert(zule_test_port_control.init_calls == 0U);
-    /* Outside a run, even after one, there is nothing to switch. */
+    /* Outside a run, even after one, there is nothing to switch or to stop. */
     assert(zule_schedule_request(0U) == ZULE_RESULT_NOT_INITIALIZED);
+    assert(zule_terminate() == ZULE_RESULT_NOT_INITIALIZED);
     return 0;
 }

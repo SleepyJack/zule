@@ -33,6 +33,10 @@ typedef struct {
      * next cycle start. */
     bool switch_requested;
     uint32_t requested_schedule_id;
+    /* Termination requested from application context, which run reports once
+     * the requesting task has returned. Written and read in application context
+     * alone, so no tick can see it change. */
+    bool terminate_requested;
     uint32_t slot;
     uint32_t cycle_count;
     size_t active_window_ind;
@@ -128,6 +132,7 @@ zule_result_t zule_scheduler_init(zule_fault_handler_t on_fault, uint32_t schedu
         scheduler.schedule_id = schedule_id;
         scheduler.switch_requested = false;
         scheduler.requested_schedule_id = schedule_id;
+        scheduler.terminate_requested = false;
 #if ZULE_CONFIG_TICK_CHECK
         scheduler.tick_deviation = (zule_tick_deviation_t){0};
 #endif
@@ -314,7 +319,24 @@ zule_result_t zule_scheduler_run(void) {
             }
         }
         result = scheduler.exec.fault;
+        if ((result == ZULE_RESULT_OK) && scheduler.terminate_requested) {
+            /* The requesting task has returned, and no further task is
+             * dispatched: one already released stays undispatched, since the
+             * run ends here. A fault latched by then is reported instead. */
+            result = ZULE_RESULT_TERMINATED;
+        }
         zule_port_critical_exit(critical_state);
+    }
+    return result;
+}
+
+zule_result_t zule_scheduler_terminate(void) {
+    zule_result_t result = ZULE_RESULT_NOT_INITIALIZED;
+    if (scheduler.initialized) {
+        /* No critical section: the tick neither reads nor writes this flag, and
+         * the only caller is a task, which runs in application context. */
+        scheduler.terminate_requested = true;
+        result = ZULE_RESULT_OK;
     }
     return result;
 }

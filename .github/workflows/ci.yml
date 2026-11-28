@@ -110,28 +110,34 @@ jobs:
           build/examples/modes/posix/zule_modes_schedule/zule_task_ids.h
           build/examples/modes/posix/zule_modes_schedule/zule_schedule_ids.h
 
-      # Each example must keep running, since it returns only on a fault, and
-      # print the expected lines, first appearing in the given order: the
-      # showcase every task's name, and the modes example the switch from the
-      # startup schedule before any operational task. The minimal example has
-      # no timing-sensitive checks, so it is the stable smoke test. The script
-      # is passed with -c, since the container has no terminal input.
+      # Each example must print the expected lines, first appearing in the given
+      # order: the showcase every task's name, and the modes example its way
+      # through the three schedules. The minimal and showcase examples return
+      # only on a fault, so they must keep running; the modes example stops
+      # itself, so it must exit 0 of its own accord. The minimal example has no
+      # timing-sensitive checks, so it is the stable smoke test. The script is
+      # passed with -c, since the container has no terminal input.
       - name: Run examples on POSIX
         run: |
           $IN_IMAGE python -c '
           import subprocess
-          def run(example, expected):
+          def run(example, expected, stops=False):
               process = subprocess.Popen(
                   [f"./build/examples/{example}/posix/zule_{example}"],
                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
               )
               try:
-                  output, errors = process.communicate(timeout=2)
+                  output, errors = process.communicate(timeout=10 if stops else 2)
               except subprocess.TimeoutExpired:
                   process.terminate()
                   output, errors = process.communicate(timeout=5)
+                  if stops:
+                      raise SystemExit(f"{example} did not stop by itself\n{output}\n{errors}")
               else:
-                  raise SystemExit(f"{example} exited unexpectedly: {process.returncode}\n{output}\n{errors}")
+                  if not stops:
+                      raise SystemExit(f"{example} exited unexpectedly: {process.returncode}\n{output}\n{errors}")
+                  if process.returncode != 0:
+                      raise SystemExit(f"{example} exited {process.returncode}\n{output}\n{errors}")
               print(output, end="")
               lines = output.splitlines()
               if errors or not all(line in lines for line in expected):
@@ -141,7 +147,14 @@ jobs:
                   raise SystemExit(f"{example} printed the expected lines out of order")
           run("minimal", ())
           run("showcase", ("sense", "control", "output"))
-          run("modes", ("mode_manager: startup complete, switching to operational", "sense", "control"))
+          run("modes", (
+              "mode_manager: startup complete, switching to operational",
+              "sense",
+              "control",
+              "mode_manager: work done, switching to shutdown",
+              "safe_state: outputs safe, stopping the scheduler",
+              "Zule modes: the scheduler stopped as requested",
+          ), stops=True)
           '
 
   static:
@@ -297,9 +310,10 @@ jobs:
           cmake --build --preset sanitize;
           ctest --preset sanitize'
 
-      # The modes example must still be running after two seconds, and switch
+      # The modes example stops itself, so QEMU must exit 0 of its own accord,
+      # within the timeout that is there only to catch a hang. It must switch
       # from the startup schedule, which has no window for sense, before sense
-      # first runs.
+      # first runs, and reach the safe state task after that.
       - name: Run the modes example in QEMU
         run: >-
           docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
@@ -308,13 +322,16 @@ jobs:
           cmake --preset qemu-mps2-an385;
           cmake --build --preset qemu-mps2-an385;
           status=0;
-          timeout 2 qemu-system-arm -machine mps2-an385 -nographic -monitor none
+          timeout 20 qemu-system-arm -machine mps2-an385 -nographic -monitor none
           -semihosting-config enable=on,target=native -icount shift=0,sleep=off
           -kernel ../../build/examples/modes/qemu-mps2-an385/zule_modes
           > /tmp/modes.log 2>&1 || status=$?;
           grep -v -x -e sense -e control /tmp/modes.log | head -n 6;
-          echo "Exit status $status after 2 s";
-          test "$status" -eq 124;
+          echo "Exit status $status";
+          test "$status" -eq 0;
           switch=$(grep -n -m 1 -x "mode_manager: startup complete, switching to operational" /tmp/modes.log | cut -d : -f 1);
           sense=$(grep -n -m 1 -x sense /tmp/modes.log | cut -d : -f 1);
-          test -n "$switch" && test -n "$sense" && test "$switch" -lt "$sense"'
+          safe=$(grep -n -m 1 -x "safe_state: outputs safe, stopping the scheduler" /tmp/modes.log | cut -d : -f 1);
+          test -n "$switch" && test -n "$sense" && test -n "$safe";
+          test "$switch" -lt "$sense" && test "$sense" -lt "$safe";
+          grep -q -x "Zule modes: the scheduler stopped as requested" /tmp/modes.log'

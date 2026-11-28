@@ -36,6 +36,7 @@ void zule_task_check(void) {
     zule_task_stats_reset();
 #endif
     sink = (uint32_t)zule_schedule_request(ZULE_SCHEDULE_ID_MAIN);
+    sink = (uint32_t)zule_terminate();
     ++sink;
 }
 

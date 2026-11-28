@@ -79,6 +79,19 @@ A [switch request](application.md#switching-schedules) from a task is applied
 by the tick that processes slot zero of the next cycle, once the current
 schedule's final window has been retired.
 
+### Termination
+
+A [termination request](application.md#stopping-the-scheduler) from a task is
+recorded in application context and acted on once that task has returned: the
+dispatch loop reports `ZULE_RESULT_TERMINATED` instead of dispatching another
+task, and the scheduler entry point stops tick delivery and waits for any active
+tick handler before returning, as it does for a fault. A latched fault is
+reported in place of the request, since what went wrong outranks the request to
+stop. Ticks continue until the entry point stops delivery, which is the last
+thing it does, so a tick may still retire a window, release a task, or latch a
+fault and notify the handler in the meantime; such a task is never dispatched,
+and such a fault does not change what the entry point returns.
+
 ### Task deadline monitoring
 
 At a window's end, tick context checks the task's execution state. A task still
@@ -131,7 +144,8 @@ and must not call Zule APIs.
 Tick processing continues while a running task completes. Once application
 context observes the fault, the scheduler stops tick delivery and waits for any
 active tick handler before returning. An executing task must return before the
-scheduler entry point can return.
+scheduler entry point can return. A fault outranks a pending
+[termination request](#termination).
 
 ## Hooks
 
