@@ -242,3 +242,23 @@ def window_at(cycle: Any, tasks: Any, task: str, slot: int) -> int | None:
             return index
     return None
 
+
+def window_issue(cycle: Any, tasks: Any, index: int) -> str | None:
+    """Return why a window does not fit where it is, or None if it does.
+
+    This is what placement_issue asks of a slot, asked instead of a window
+    already in the cycle, so that one being moved can say as it goes.
+    """
+    window = cycle["windows"][index]
+    start = window["start_slot"]
+    budget = tasks.get(window["task"], {}).get("budget_slots", 1)
+    if start + budget > cycle["slots"]:
+        return f"{window['task']} would run past the end of the cycle"
+    for other, placed in enumerate(cycle["windows"]):
+        if other == index:
+            continue
+        held = tasks.get(placed["task"], {}).get("budget_slots", 1)
+        if start < placed["start_slot"] + held and placed["start_slot"] < start + budget:
+            return f"{window['task']} would overlap {placed['task']}"
+    return None
+

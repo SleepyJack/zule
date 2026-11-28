@@ -70,9 +70,9 @@ of the screen, so there is nothing to remember and no mode to be in.
 config/schedule.json
 
 tasks
-  control       ██████████████  3 slots
-  mode_manager  ████            1 slot
-  sense         █████████       2 slots
+  control       3 slots   ██████████████
+  mode_manager  1 slot    ████
+  sense         2 slots   █████████
   + new task
 
 schedule operational · 10 slots
@@ -100,12 +100,12 @@ A cell is one of these, and `enter` does what the key bar says:
 | Cell | `enter` | `d` |
 | --- | --- | --- |
 | A task's name | Rename it. Its windows follow; the application's `zule_task_<name>()` has to be renamed to match. | Delete the task. If a schedule places it, `D` deletes it and those windows. The last task is kept. |
-| A task's budget bar | Set the budget. It belongs to the task, so this resizes its windows in every schedule, which can leave one overlapping. | As above. |
+| A task's budget in slots | Set the budget. It belongs to the task, so this resizes its windows in every schedule, which can leave one overlapping. | As above. |
 | `+ new task` | Add a task, asking for its name and budget. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. | |
 | A schedule's name | Rename the schedule. | Delete it. `D` confirms when it holds windows. The last schedule is kept. |
 | A schedule's length | Set the cycle length in slots. | As above. |
 | An empty slot in a task's lane | Place a window for that lane's task there, or say why it will not fit. | |
-| A slot inside a window | Pick the window up: `←→` then move it, `d` deletes it, `enter` puts it down. | Delete the window, leaving its task in the file. |
+| A slot inside a window | Pick the window up: `←→` then move it, `d` deletes it, `enter` puts it down. A held window is drawn whole, and marked where it cannot stay. | Delete the window, leaving its task in the file. |
 | `+ new schedule` | Add a schedule, asking for its name. It starts with one window, since a cycle needs one. A file written as a single `cycle` becomes `schedules`, with the original named `main`. | |
 
 Every schedule shows a lane for every task, dimmed where the task has no window

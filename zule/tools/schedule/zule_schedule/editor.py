@@ -40,6 +40,7 @@ from .editing import (
     set_slots,
     task_name_issue,
     window_at,
+    window_issue,
     windows_of,
 )
 from .formatting import format_schedule
@@ -49,6 +50,7 @@ PLAIN = ""
 DIM = "dim"
 SELECTED = "selected"
 HELD = "held"
+BAD = "bad"  # A held window where it cannot stay.
 ERROR = "error"
 TASK = "task"  # Followed by the task's index, so lanes keep their colours.
 
@@ -448,18 +450,19 @@ def layout(editor: Editor) -> list[list[Span]]:
         _row(),
         _row(Span("tasks", DIM)),
     ]
-    room = max(width - labels - 12, 1)
-    bars = {task: grid.bar(tasks[task]["budget_slots"])[:room] for task in names}
-    widest = max([len(bar) for bar in bars.values()] + [0])
+    counts = {task: _count(tasks[task]["budget_slots"], "slot") for task in names}
+    column = max([len(count) for count in counts.values()] + [0]) + 2
+    room = max(width - labels - column - 1, 1)
     for task in names:
+        budget = str(tasks[task]["budget_slots"])
         rows.append(
             _row(
                 Span(" " * grid.MARGIN),
                 Span(task, PLAIN, Cell(TASK_NAME, task=task)),
                 Span(" " * (labels - grid.MARGIN - len(task))),
-                Span(bars[task], styles[task], Cell(TASK_BUDGET, task=task)),
-                Span(" " * (widest - len(bars[task]))),
-                Span("  " + _count(tasks[task]["budget_slots"], "slot"), DIM),
+                Span(budget, PLAIN, Cell(TASK_BUDGET, task=task)),
+                Span(counts[task][len(budget) :].ljust(column), DIM),
+                Span(grid.bar(tasks[task]["budget_slots"])[:room], styles[task]),
             )
         )
     rows.append(_row(Span(" " * grid.MARGIN), Span("+ new task", DIM, Cell(NEW_TASK))))
@@ -533,15 +536,19 @@ def frame(editor: Editor) -> list[list[tuple[str, str]]]:
     rows = layout(editor)
     editor._clamp(rows)
     here = _cells(rows[editor.row])[editor.cell] if _cells(rows[editor.row]) else -1
+    holding = HELD if _held_issue(editor) is None else BAD
     painted = []
     for row_index, row in enumerate(rows):
         spans = []
         for span_index, span in enumerate(row):
-            style = span.style
             if _is_held(editor, span.cell):
-                style = HELD
-            if row_index == editor.row and span_index == here:
+                # The whole window is drawn as one piece, so the cursor's own
+                # slot is not picked out within it.
+                style = holding
+            elif row_index == editor.row and span_index == here:
                 style = SELECTED
+            else:
+                style = span.style
             spans.append((span.text, style))
         painted.append(spans)
 
@@ -565,6 +572,17 @@ def _is_held(editor: Editor, cell: Cell | None) -> bool:
     return cell.task == task and start <= cell.slot < start + editor.budget(task)
 
 
+def _held_issue(editor: Editor) -> str | None:
+    """Return why a held window cannot stay where it is, or None if it can."""
+    if editor.holding is None:
+        return None
+    index, window = editor.holding
+    _, cycle = editor.cycles()[index]
+    if window >= len(cycle["windows"]):
+        return None
+    return window_issue(cycle, editor.schedule["tasks"], window)
+
+
 def _status(editor: Editor) -> list[tuple[str, str]]:
     if editor.prompt is not None:
         return [
@@ -574,6 +592,9 @@ def _status(editor: Editor) -> list[tuple[str, str]]:
         ]
     if editor.message:
         return [(editor.message, PLAIN)]
+    held = _held_issue(editor)
+    if held:
+        return [(held, ERROR)]
     issues = validate_schedule(editor.schedule)
     if issues:
         return [(f"{_count(len(issues), 'issue')}: {issues[0].path}: {issues[0].message}", ERROR)]
@@ -631,6 +652,7 @@ def _loop(screen: Any, editor: Editor) -> None:
     )
     for pair, colour in enumerate(colours, start=1):
         curses.init_pair(pair, colour, -1)
+    curses.init_pair(_BAD_PAIR, curses.COLOR_RED, -1)
     screen.keypad(True)
     while not editor.finished:
         height, width = screen.getmaxyx()
@@ -669,7 +691,9 @@ def _attribute(style: str) -> int:
     if style == SELECTED:
         return curses.A_REVERSE
     if style == HELD:
-        return curses.A_BOLD | curses.A_UNDERLINE
+        return curses.A_REVERSE
+    if style == BAD:
+        return curses.A_REVERSE | curses.color_pair(_BAD_PAIR)
     if style == ERROR:
         return curses.A_BOLD
     if style.startswith(TASK):
@@ -677,6 +701,7 @@ def _attribute(style: str) -> int:
     return curses.A_NORMAL
 
 
+_BAD_PAIR = 7
 _INTERRUPT = -2
 
 

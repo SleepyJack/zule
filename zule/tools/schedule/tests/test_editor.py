@@ -12,6 +12,7 @@ from zule_schedule.editing import (
     window_at,
 )
 from zule_schedule.editor import (
+    BAD,
     HELD,
     NEW_SCHEDULE,
     NEW_TASK,
@@ -310,12 +311,31 @@ class HoldingTests(unittest.TestCase):
         self.assertIn("outside its cycle", state.message)
         self.assertEqual(state.cycles()[0][1]["windows"][0]["start_slot"], 0)
 
-    def test_a_held_window_is_drawn_as_held(self):
+    def styled(self, state, style):
+        return [
+            "".join(text for text, at in row if at == style)
+            for row in frame(state)
+            if any(at == style for _, at in row)
+        ]
+
+    def test_a_held_window_is_drawn_whole_without_the_cursor_in_it(self):
         state = editor()
-        to_slot(state, "control", 2)
-        self.assertEqual(self.held(state), [])
+        to_slot(state, "sense", 0)
+        self.assertEqual(self.styled(state, SELECTED), ["█████"])
         state.key("enter")
-        self.assertEqual(len(self.held(state)), 1)
+        # Two slots of sense, one column of the second left blank as ever.
+        self.assertEqual(self.styled(state, HELD), ["█████████ "])
+        self.assertEqual(self.styled(state, SELECTED), [])
+
+    def test_a_held_window_is_marked_where_it_cannot_stay(self):
+        state = editor()
+        to_slot(state, "sense", 0)
+        press(state, "enter", "right")
+        self.assertEqual(self.styled(state, BAD), ["█████████ "])
+        self.assertEqual(self.styled(state, HELD), [])
+        state.key("left")
+        self.assertEqual(self.styled(state, BAD), [])
+        self.assertEqual(self.styled(state, HELD), ["█████████ "])
 
     def test_enter_puts_a_held_window_down(self):
         state = editor()
@@ -366,6 +386,10 @@ class DeleteTests(unittest.TestCase):
 
 
 class FrameTests(unittest.TestCase):
+    def test_a_task_shows_its_budget_before_the_bar_that_pictures_it(self):
+        drawn = lines(editor())[3]
+        self.assertEqual(drawn.split(), ["control", "3", "slots", "█" * 14])
+
     def test_the_cursor_cell_is_marked(self):
         state = editor()
         marked = [row for row in frame(state) if any(style == SELECTED for _, style in row)]
@@ -402,8 +426,11 @@ class FrameTests(unittest.TestCase):
         state = editor()
         self.assertIn("valid", status(state))
         to_slot(state, "sense", 0)
-        # sense then covers slots 1 and 2, where control already starts.
+        # sense then covers slots 1 and 2, where control already starts. While
+        # it is held the status names that; once put down, the checks do.
         press(state, "enter", "right")
+        self.assertIn("sense would overlap control", status(state))
+        state.key("enter")
         self.assertIn("overlaps", status(state))
 
     def test_the_frame_fills_the_height(self):
