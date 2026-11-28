@@ -14,6 +14,8 @@ from zule_schedule.editing import (
 )
 from zule_schedule.editor import (
     BAD,
+    DIM,
+    PLAIN,
     Cell,
     HELD,
     LANE,
@@ -27,6 +29,7 @@ from zule_schedule.editor import (
     TASK_BUDGET,
     TASK_NAME,
     Editor,
+    caret,
     frame,
     key_name,
     paint,
@@ -217,13 +220,14 @@ class CursorTests(unittest.TestCase):
             state.key("right")
         self.assertEqual(state.cursor().slot, 39)
         self.assertGreater(state.first_slot("main"), 0)
-        # Coming back, left walks to the lane's label and scrolls on from there.
-        for _ in range(60):
+        # Coming back, the cursor keeps to the lane, scrolling the view with it.
+        for slot in range(38, -1, -1):
             state.key("left")
-        self.assertEqual(state.cursor().kind, LANE)
+            self.assertEqual(state.cursor().slot, slot)
         self.assertEqual(state.first_slot("main"), 0)
-        state.key("right")
-        self.assertEqual(state.cursor().slot, 0)
+        # Only once slot 0 is reached does left leave the lane for its label.
+        state.key("left")
+        self.assertEqual(state.cursor().kind, LANE)
 
 
 class EnterTests(unittest.TestCase):
@@ -395,6 +399,38 @@ def repeating(slots=12, windows=(("sense", 0), ("control", 4))):
 def starts(state, task):
     _, cycle = state.cycles()[0]
     return [w["start_slot"] for w in cycle["windows"] if w["task"] == task]
+
+
+class PromptTests(unittest.TestCase):
+    """What a prompt shows of itself, since it is typed into blind otherwise."""
+
+    def test_the_typed_line_is_drawn_as_text_with_the_cursor_after_it(self):
+        state = editor()
+        to_cell(state, NEW_TASK)
+        press(state, "enter", "l", "o", "g")
+        spans = frame(state)[-2]
+        self.assertEqual([text for text, _ in spans][:3], ["new task name: ", "log", "▌"])
+        self.assertEqual([style for _, style in spans][:3], [DIM, PLAIN, SELECTED])
+        self.assertEqual(caret(state), (state.height - 2, len("new task name: ") + 3))
+
+    def test_the_cursor_is_hidden_when_nothing_is_being_typed(self):
+        self.assertIsNone(caret(editor()))
+
+    def test_the_cursor_stays_on_the_screen_of_a_narrow_terminal(self):
+        state = editor(width=20)
+        to_cell(state, NEW_TASK)
+        press(state, "enter", *"a-long-task-name")
+        row, column = caret(state)
+        self.assertEqual(column, state.width - 2)
+
+    def test_a_refused_line_keeps_what_was_typed_to_correct(self):
+        state = editor()
+        to_cell(state, TASK_BUDGET)
+        press(state, "enter", "0", "enter")
+        self.assertIn("at least one", state.message)
+        self.assertEqual(state.prompt.text, "0")
+        press(state, "backspace", "2", "enter")
+        self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 2)
 
 
 class RepeatTests(unittest.TestCase):
@@ -736,12 +772,36 @@ class TerminalTests(unittest.TestCase):
             def addstr(self, row, column, text, attribute):
                 self.written.append((row, column, text))
 
+            def move(self, row, column):
+                self.written.append(("move", row, column))
+
         screen = Screen()
         paint(screen, [[("ab", ""), ("cd", "dim")], [("x" * 20, "")]], 10, lambda style: 0)
         self.assertEqual(
             screen.written,
             ["erase", (0, 0, "ab"), (0, 2, "cd"), (1, 0, "x" * 9), "refresh"],
         )
+
+    def test_painting_rests_the_cursor_where_it_is_asked_to(self):
+        class Screen:
+            def __init__(self):
+                self.moved = None
+
+            def erase(self):
+                pass
+
+            def refresh(self):
+                pass
+
+            def addstr(self, row, column, text, attribute):
+                pass
+
+            def move(self, row, column):
+                self.moved = (row, column)
+
+        screen = Screen()
+        paint(screen, [[("ab", "")]], 10, lambda style: 0, spot=(4, 7))
+        self.assertEqual(screen.moved, (4, 7))
 
 
 if __name__ == "__main__":

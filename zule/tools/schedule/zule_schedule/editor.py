@@ -289,27 +289,31 @@ class Editor:
         self._clamp(rows)
         row = rows[self.row]
         navigable = _cells(row)
+        here = row[navigable[self.cell]].cell
         target = self.cell + step
-        if 0 <= target < len(navigable):
+        inside = 0 <= target < len(navigable)
+        # Leaving a lane leftwards for its label is the same edge as leaving it
+        # rightwards: the cycle scrolls while there is more of it that way.
+        leaving = not inside or _kind_of(row[navigable[target]].cell) == LANE
+        if leaving and self._scroll_across(here, step):
+            return
+        if inside:
             self.cell = target
             self.column_wanted = row[navigable[target]].column
-            return
-        self._scroll_across(row[navigable[self.cell]].cell, step)
 
-    def _scroll_across(self, cell: Cell | None, step: int) -> None:
-        """At a lane's edge, bring the next slot of a long cycle into view.
-
-        A lane's label is the cell left of its first slot, so left from there
-        is what scrolls a cycle too long to fit back towards its start.
-        """
-        if cell is None or cell.kind not in (SLOT, LANE):
-            return
+    def _scroll_across(self, cell: Cell | None, step: int) -> bool:
+        """At a lane's edge, bring the next slot of a long cycle into view."""
+        if cell is None or cell.kind != SLOT:
+            return False
         name, cycle = self.cycles()[cell.schedule]
         first = self.first_slot(name)
         if step > 0 and first + self.per_view() < cycle["slots"]:
             self.first_slots[name] = first + 1
-        elif step < 0 and first > 0:
+            return True
+        if step < 0 and first > 0:
             self.first_slots[name] = first - 1
+            return True
+        return False
 
     def _enter(self) -> None:
         cell = self.cursor()
@@ -543,6 +547,10 @@ def _commit_issue(editor: Editor, prompt: Prompt, text: str) -> str | None:
     return None
 
 
+def _kind_of(cell: Cell | None) -> str:
+    return cell.kind if cell is not None else ""
+
+
 def _schedule_of(cell: Cell | None) -> int:
     return cell.schedule if cell is not None else -1
 
@@ -707,8 +715,9 @@ def _held_issue(editor: Editor) -> str | None:
 def _status(editor: Editor) -> list[tuple[str, str]]:
     if editor.prompt is not None:
         return [
-            (f"{editor.prompt.label}: ", PLAIN),
-            (editor.prompt.text + "▌", SELECTED),
+            (f"{editor.prompt.label}: ", DIM),
+            (editor.prompt.text, PLAIN),
+            ("▌", SELECTED),
             (f"   {editor.message}" if editor.message else "", ERROR),
         ]
     if editor.message:
@@ -720,6 +729,19 @@ def _status(editor: Editor) -> list[tuple[str, str]]:
     if issues:
         return [(f"{_count(len(issues), 'issue')}: {issues[0].path}: {issues[0].message}", ERROR)]
     return [("valid", PLAIN)]
+
+
+def caret(editor: Editor) -> tuple[int, int] | None:
+    """Return where the terminal's own cursor belongs, or None to hide it.
+
+    A prompt is typed into, so the cursor belongs after what has been typed:
+    the drawn block says where that is, and the real cursor says it again for
+    a terminal whose colours make the block hard to pick out.
+    """
+    if editor.prompt is None:
+        return None
+    column = len(f"{editor.prompt.label}: ") + len(editor.prompt.text)
+    return max(editor.height - 2, 0), max(0, min(column, editor.width - 2))
 
 
 def _keys(editor: Editor) -> str:
@@ -786,7 +808,7 @@ def _loop(screen: Any, editor: Editor) -> None:
         height, width = screen.getmaxyx()
         editor.resize(width, height)
         editor.scroll()
-        paint(screen, frame(editor), width)
+        paint(screen, frame(editor), width, spot=caret(editor))
         try:
             pressed = screen.getch()
         except KeyboardInterrupt:
@@ -795,11 +817,17 @@ def _loop(screen: Any, editor: Editor) -> None:
 
 
 def paint(
-    screen: Any, rows: list[list[tuple[str, str]]], width: int, attribute: Any = None
+    screen: Any,
+    rows: list[list[tuple[str, str]]],
+    width: int,
+    attribute: Any = None,
+    spot: tuple[int, int] | None = None,
 ) -> None:
     """Draw a frame, leaving the last column clear so that writing never wraps.
 
     What a style looks like is the terminal's business, so tests pass their own.
+    The cursor rests where spot says, and is hidden when there is nowhere for
+    it to be, so that it never sits on a row the editor did not put it in.
     """
     attribute = attribute or _attribute
     screen.erase()
@@ -810,6 +838,12 @@ def paint(
             if text:
                 screen.addstr(row, column, text, attribute(style))
             column += len(text)
+    try:
+        curses.curs_set(1 if spot else 0)
+    except curses.error:
+        pass  # A terminal that cannot do without its cursor keeps it.
+    if spot:
+        screen.move(*spot)
     screen.refresh()
 
 
