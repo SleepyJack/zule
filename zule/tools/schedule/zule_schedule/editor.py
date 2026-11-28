@@ -60,7 +60,8 @@ SELECTED = "selected"
 HELD = "held"
 BAD = "bad"  # A held window where it cannot stay.
 ERROR = "error"
-TASK = "task"  # Followed by the task's index, so lanes keep their colours.
+TASK = "task"  # Followed by a colour's number, which a task keeps while it is there.
+_COLOURS = 6  # How many lane colours there are to go round.
 BRIGHT = "bright-"  # Before another style: the cursor's slot, in its own colour.
 
 TASK_NAME = "task-name"
@@ -126,6 +127,7 @@ class Editor:
     saved: Any = None
     first_slots: dict[str, int] = field(default_factory=dict)
     revealed: dict[str, set[str]] = field(default_factory=dict)
+    colours: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.saved = deepcopy(self.schedule)
@@ -144,6 +146,24 @@ class Editor:
     def budget(self, task: str) -> int:
         """Return a task's budget, or one slot for a task the file does not declare."""
         return self.schedule["tasks"].get(task, {}).get("budget_slots", 1)
+
+    def styles(self) -> dict[str, str]:
+        """Return each task's lane colour, which it keeps while it is in the file.
+
+        A colour is given out when a task first needs one and held until the
+        task goes, so adding a task does not recolour the lanes around it. With
+        more tasks than colours a colour is shared, the least used one first.
+        """
+        names = self.task_names()
+        self.colours = {task: style for task, style in self.colours.items() if task in names}
+        for task in names:
+            if task in self.colours:
+                continue
+            used = list(self.colours.values())
+            self.colours[task] = min(
+                (f"{TASK}{number}" for number in range(_COLOURS)), key=used.count
+            )
+        return dict(self.colours)
 
     def lanes(self, name: str, cycle: Any) -> list[str]:
         """Return the tasks one schedule draws a lane for, in task order."""
@@ -472,6 +492,8 @@ class Editor:
                 if prompt.data in tasks:
                     tasks.discard(prompt.data)
                     tasks.add(text)
+            if prompt.data in self.colours:
+                self.colours[text] = self.colours.pop(prompt.data)
         elif prompt.action == "rename-schedule":
             self.schedule = rename_schedule(self.schedule, prompt.data, text)
             for state in (self.revealed, self.first_slots):
@@ -561,7 +583,7 @@ def layout(editor: Editor) -> list[list[Span]]:
     tasks = editor.schedule["tasks"]
     names = editor.task_names()
     labels = grid.label_width(names)
-    styles = {name: f"{TASK}{index % 6}" for index, name in enumerate(names)}
+    styles = editor.styles()
     width = editor.width
 
     rows = [

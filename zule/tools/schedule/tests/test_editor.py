@@ -450,6 +450,60 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 2)
 
 
+class ColourTests(unittest.TestCase):
+    """A lane's colour, which a task keeps for as long as it is in the file."""
+
+    def add(self, state, name, budget="1"):
+        to_cell(state, NEW_TASK)
+        press(state, "enter")
+        typed(state, name)
+        typed(state, budget)
+
+    def test_a_new_task_leaves_the_other_lanes_their_colours(self):
+        state = editor()
+        before = state.styles()
+        # A name before every other one, which an order-based colour would shift.
+        self.add(state, "actuate")
+        after = state.styles()
+        self.assertEqual({task: after[task] for task in before}, before)
+        self.assertNotIn(after["actuate"], before.values())
+
+    def test_a_renamed_task_keeps_its_colour(self):
+        state = editor()
+        colour = state.styles()["sense"]
+        to_cell(state, TASK_NAME, "sense")
+        press(state, "enter")
+        typed(state, "sampler")
+        self.assertEqual(state.styles()["sampler"], colour)
+        self.assertNotIn("sense", state.styles())
+
+    def test_a_deleted_task_gives_its_colour_back(self):
+        state = editor()
+        colour = state.styles()["control"]
+        to_cell(state, TASK_NAME, "control")
+        press(state, "D")
+        self.add(state, "actuate")
+        self.add(state, "brake")
+        self.assertIn(colour, state.styles().values())
+
+    def test_more_tasks_than_colours_share_the_least_used_one(self):
+        state = editor()
+        for index in range(5):
+            self.add(state, f"task{index}")
+        styles = state.styles()
+        self.assertEqual(len(styles), 8)
+        counts = {colour: list(styles.values()).count(colour) for colour in set(styles.values())}
+        self.assertEqual(sorted(counts.values()), [1, 1, 1, 1, 2, 2])
+
+    def test_a_lane_is_drawn_in_its_task_colour(self):
+        state = editor()
+        colour = state.styles()["sense"]
+        painted = [
+            row for row in frame(state) if any(text.startswith("sense") for text, _ in row)
+        ]
+        self.assertTrue(any(style == colour for row in painted for _, style in row))
+
+
 class RepeatTests(unittest.TestCase):
     """A window every n slots, anchored where the cursor is."""
 

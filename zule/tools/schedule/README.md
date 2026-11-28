@@ -132,6 +132,11 @@ of it.
 `w` writes the file in the layout [format](#formatting) writes, and `q` quits,
 asking again if there is unsaved work; `Q` and a second Ctrl-C quit anyway.
 
+Each task keeps one lane colour for as long as it is in the file, so adding a
+task does not recolour the lanes around it; a renamed task takes its colour with
+it, and a deleted one gives it back. With more tasks than colours a colour is
+shared, the least used one first.
+
 The terminal's own cursor rests on the cell the editor's cursor is on, and a
 slot is brightened in its lane's colour rather than reversed: reversing a cell
 sets the lane's colour behind the block drawn in it, which a terminal shows as
