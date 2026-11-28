@@ -132,10 +132,14 @@ of it.
 `w` writes the file in the layout [format](#formatting) writes, and `q` quits,
 asking again if there is unsaved work; `Q` and a second Ctrl-C quit anyway.
 
-A prompt is typed into on the line above the key bar, where the terminal's own
-cursor rests; it is hidden the rest of the time, so it never sits on a row the
-editor did not put it in. A line the checks refuse stays as it was typed, to be
-corrected with `backspace`.
+The terminal's own cursor rests on the cell the editor's cursor is on, and a
+slot is brightened in its lane's colour rather than reversed: reversing a cell
+sets the lane's colour behind the block drawn in it, which a terminal shows as
+stripes. A cell of text is reversed, which is what that looks like on text.
+
+A prompt is typed into on the line above the key bar, with the cursor after what
+has been typed. A line the checks refuse stays as it was typed, to be corrected
+with `backspace`.
 
 The schedule is checked after every key, and the result is shown above the key
 bar. An edit may leave a schedule the checks reject, since some edits need a gap

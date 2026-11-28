@@ -61,6 +61,7 @@ HELD = "held"
 BAD = "bad"  # A held window where it cannot stay.
 ERROR = "error"
 TASK = "task"  # Followed by the task's index, so lanes keep their colours.
+BRIGHT = "bright-"  # Before another style: the cursor's slot, in its own colour.
 
 TASK_NAME = "task-name"
 TASK_BUDGET = "task-budget"
@@ -675,7 +676,9 @@ def frame(editor: Editor) -> list[list[tuple[str, str]]]:
                 # slot is not picked out within it.
                 style = holding
             elif row_index == editor.row and span_index == here:
-                style = SELECTED
+                # A slot keeps its own colour, brightened: reversing a block
+                # sets the lane's colour behind it, which shows as stripes.
+                style = BRIGHT + span.style if _is_slot(span.cell) else SELECTED
             else:
                 style = span.style
             spans.append((span.text, style))
@@ -687,6 +690,11 @@ def frame(editor: Editor) -> list[list[tuple[str, str]]]:
     painted.append(_status(editor))
     painted.append([(_keys(editor), DIM)])
     return painted
+
+
+def _is_slot(cell: Cell | None) -> bool:
+    """Say whether the terminal's own cursor is what marks this cell."""
+    return cell is not None and cell.kind == SLOT
 
 
 def _is_held(editor: Editor, cell: Cell | None) -> bool:
@@ -734,14 +742,24 @@ def _status(editor: Editor) -> list[tuple[str, str]]:
 def caret(editor: Editor) -> tuple[int, int] | None:
     """Return where the terminal's own cursor belongs, or None to hide it.
 
-    A prompt is typed into, so the cursor belongs after what has been typed:
-    the drawn block says where that is, and the real cursor says it again for
-    a terminal whose colours make the block hard to pick out.
+    A prompt is typed into, so the cursor belongs after what has been typed.
+    Otherwise it rests on the cell the cursor is on, which is what marks a
+    slot: reversing one would set the lane's colour as the cell's background
+    and redraw the block over it, which a terminal shows as stripes.
     """
-    if editor.prompt is None:
+    if editor.prompt is not None:
+        column = len(f"{editor.prompt.label}: ") + len(editor.prompt.text)
+        return max(editor.height - 2, 0), max(0, min(column, editor.width - 2))
+    rows = layout(editor)
+    editor._clamp(rows)
+    navigable = _cells(rows[editor.row])
+    if not navigable:
         return None
-    column = len(f"{editor.prompt.label}: ") + len(editor.prompt.text)
-    return max(editor.height - 2, 0), max(0, min(column, editor.width - 2))
+    row = editor.row - editor.first_row
+    if not 0 <= row < max(editor.height - 2, 1):
+        return None
+    column = rows[editor.row][navigable[editor.cell]].column
+    return row, max(0, min(column, editor.width - 2))
 
 
 def _keys(editor: Editor) -> str:
@@ -848,6 +866,11 @@ def paint(
 
 
 def _attribute(style: str) -> int:
+    if style.startswith(BRIGHT):
+        under = style[len(BRIGHT) :]
+        # Bold over dim is undefined between terminals, so a slot with nothing
+        # in it brightens from the plain foreground instead.
+        return curses.A_BOLD | (0 if under == DIM else _attribute(under))
     if style == DIM:
         return curses.A_DIM
     if style == SELECTED:
