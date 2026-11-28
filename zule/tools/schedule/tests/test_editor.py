@@ -14,6 +14,7 @@ from zule_schedule.editing import (
 )
 from zule_schedule.editor import (
     BAD,
+    BRIGHT,
     DIM,
     PLAIN,
     Cell,
@@ -415,22 +416,11 @@ class PromptTests(unittest.TestCase):
         self.assertEqual([style for _, style in spans][:3], [DIM, PLAIN, SELECTED])
         self.assertEqual(caret(state), (state.height - 2, len("new task name: ") + 3))
 
-    def test_outside_a_prompt_the_cursor_rests_on_the_cell(self):
-        """A slot is marked by the cursor, since reversing a block shows stripes."""
+    def test_the_cursor_is_hidden_outside_a_prompt(self):
+        """A terminal reverses a cell to draw its cursor, which stripes a block."""
         state = editor()
-        self.assertEqual(caret(state), (3, grid.MARGIN))
+        self.assertIsNone(caret(state))
         to_slot(state, "sense", 1)
-        row, column = caret(state)
-        drawn = lines(state)[row]
-        # The cursor sits on the first column of the slot it is on, which here
-        # is the second slot of a window, so a block rather than a slot mark.
-        self.assertEqual(column, grid.label_width(state.task_names()) + grid.SLOT_COLUMNS)
-        self.assertEqual(drawn[column], grid.WINDOW)
-
-    def test_the_cursor_is_not_placed_off_the_screen(self):
-        state = editor(height=6)
-        to_cell(state, NEW_SCHEDULE)
-        state.first_row = 0
         self.assertIsNone(caret(state))
 
     def test_the_cursor_stays_on_the_screen_of_a_narrow_terminal(self):
@@ -685,6 +675,26 @@ class FrameTests(unittest.TestCase):
     def test_a_task_shows_its_budget_before_the_bar_that_pictures_it(self):
         drawn = lines(editor())[3]
         self.assertEqual(drawn.split(), ["control", "3", "slots", "█" * 14])
+
+    def test_the_whole_slot_is_marked_and_a_window_by_its_colour(self):
+        """Reverse video stripes a block, so a window's slot brightens instead."""
+        state = editor()
+        to_slot(state, "sense", 7)
+        marked = [
+            (text, style) for row in frame(state) for text, style in row if style == SELECTED
+        ]
+        self.assertEqual(marked, [(grid.SLOT_MARK.ljust(grid.SLOT_COLUMNS), SELECTED)])
+        to_slot(state, "sense", 1)
+        colour = state.styles()["sense"]
+        marked = [
+            (text, style)
+            for row in frame(state)
+            for text, style in row
+            if style == BRIGHT + colour
+        ]
+        # The second slot of the window, whose last column keeps windows apart.
+        self.assertEqual(marked, [(grid.WINDOW * 4 + " ", BRIGHT + colour)])
+        self.assertEqual([style for row in frame(state) for _, style in row].count(SELECTED), 0)
 
     def test_the_cursor_cell_is_marked(self):
         state = editor()

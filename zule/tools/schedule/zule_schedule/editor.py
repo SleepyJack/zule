@@ -698,9 +698,11 @@ def frame(editor: Editor) -> list[list[tuple[str, str]]]:
                 # slot is not picked out within it.
                 style = holding
             elif row_index == editor.row and span_index == here:
-                # A slot keeps its own colour, brightened: reversing a block
-                # sets the lane's colour behind it, which shows as stripes.
-                style = BRIGHT + span.style if _is_slot(span.cell) else SELECTED
+                # A slot a window reserves keeps its colour, brightened:
+                # reversing a block sets that colour behind the block drawn in
+                # it, which shows as stripes. Anything else reverses, which is
+                # what a cursor looks like on a slot mark or on text.
+                style = BRIGHT + span.style if span.style.startswith(TASK) else SELECTED
             else:
                 style = span.style
             spans.append((span.text, style))
@@ -712,11 +714,6 @@ def frame(editor: Editor) -> list[list[tuple[str, str]]]:
     painted.append(_status(editor))
     painted.append([(_keys(editor), DIM)])
     return painted
-
-
-def _is_slot(cell: Cell | None) -> bool:
-    """Say whether the terminal's own cursor is what marks this cell."""
-    return cell is not None and cell.kind == SLOT
 
 
 def _is_held(editor: Editor, cell: Cell | None) -> bool:
@@ -765,23 +762,14 @@ def caret(editor: Editor) -> tuple[int, int] | None:
     """Return where the terminal's own cursor belongs, or None to hide it.
 
     A prompt is typed into, so the cursor belongs after what has been typed.
-    Otherwise it rests on the cell the cursor is on, which is what marks a
-    slot: reversing one would set the lane's colour as the cell's background
-    and redraw the block over it, which a terminal shows as stripes.
+    It is hidden the rest of the time: a terminal draws its cursor by reversing
+    a cell, which on a block is the striping that the frame avoids, and it
+    marks one column where the frame marks the whole slot.
     """
-    if editor.prompt is not None:
-        column = len(f"{editor.prompt.label}: ") + len(editor.prompt.text)
-        return max(editor.height - 2, 0), max(0, min(column, editor.width - 2))
-    rows = layout(editor)
-    editor._clamp(rows)
-    navigable = _cells(rows[editor.row])
-    if not navigable:
+    if editor.prompt is None:
         return None
-    row = editor.row - editor.first_row
-    if not 0 <= row < max(editor.height - 2, 1):
-        return None
-    column = rows[editor.row][navigable[editor.cell]].column
-    return row, max(0, min(column, editor.width - 2))
+    column = len(f"{editor.prompt.label}: ") + len(editor.prompt.text)
+    return max(editor.height - 2, 0), max(0, min(column, editor.width - 2))
 
 
 def _keys(editor: Editor) -> str:
