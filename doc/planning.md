@@ -81,9 +81,9 @@ tools and configurations.
 
 ## Hooks and modules
 
-- Add a fault event, for modules only, with the trace module. The application
-  already receives faults through its fault handler, so there is no user fault
-  hook.
+- Add a fault event, for modules only, with the [trace module](#trace-module),
+  which freezes on it. The application already receives faults through its fault
+  handler, so there is no user fault hook.
 - Add idle start and end events only when a consumer needs them, since they
   fire on every dispatch loop iteration.
 - Deferred: equal treatment for several separate user modules. That needs a
@@ -91,17 +91,70 @@ tools and configurations.
   the hooks each needs. Only the modules layer would change; the core's
   wrappers and the hooks stay the same.
 
+## Trace module
+
+A module that records hook events in a ring buffer, read back through an API,
+for two uses: a fault trace, kept rolling and read once the run has stopped, and
+a stream, drained periodically by a task. One ring serves both, and the
+configuration says which.
+
+- Events are fixed-size records pushed by the hook entry points. Hooks never run
+  concurrently with each other or with the tick, so the ring has one logical
+  producer and one consumer, and a push needs no critical section. A
+  power-of-two capacity makes the wrap a mask, so no division runs on the tick
+  path, and the storage is static, sized by the capacity setting. Initialization
+  rejects a capacity that is not a power of two of at least two events, and the
+  module needs the timebase.
+- One setting per hook decides what enters the buffer, as the user hook settings
+  do, so an event nothing records compiles the hook point out of the core
+  instead of being tested on every tick. On by default: task release, task
+  start, task end, schedule switch, and the [fault event](#hooks-and-modules).
+  Off by default: tick start and tick end, which are two events per tick and the
+  bulk of the volume.
+- Keep the record narrow: a timestamp, the kind, a task ID, and one detail field
+  carrying the window index, slot, or schedule ID. The slot and cycle of an
+  event are then reconstructed on the host from timestamps, which needs an
+  anchor at a known slot: task release fires at a window's start slot, which is
+  why it is on by default and why a timeline does not need tick start.
+- Count what was lost, and make the count readable. A trace with silent holes is
+  worse than no trace.
+- Overwriting the oldest event while a consumer reads is the one combination
+  that cannot work: the producer would reclaim slots the consumer holds, and a
+  record could be read half-overwritten. So the rolling buffer is read once the
+  run has stopped, when ticks are quiescent, and the streaming mode drops new
+  events when full instead, which never tears a record.
+- Freeze the rolling buffer on the fault event, so that the ticks after a fault,
+  which still run, do not overwrite the lead-up the trace was kept for.
+- Read in batches, so a consumer serializes a block at a time, and report what a
+  decoder cannot know: the events enabled, the capacity, the slot length, the
+  timebase frequency, the dropped count, and whether the trace is frozen.
+- Offload through a debugger or the application, and decode on the host, where
+  the schedule JSON supplies task names, budgets, and window boundaries. Keep
+  encoding on the target to packing records into bytes, since formatting there
+  costs code space and tick time for no benefit. Timestamps wrap in 32 bits, so
+  the host works in deltas.
+- Write the decoded trace in a format an existing viewer opens, rather than
+  building a viewer. Chrome's trace event JSON, which Perfetto's web UI reads,
+  draws each task as a labelled span on its own track and is a few lines to
+  emit. VCD, the waveform format that Verilog tools such as GTKWave read, suits
+  comparing a trace against a logic analyser capture of the same run, which the
+  GPIO toggles under
+  [task profiling](#task-profiling-and-benchmarking) produce. Both are text, and
+  neither asks anything of the target.
+- Consider sharing a timeline renderer with the
+  [schedule editor](../zule/tools/schedule/README.md#editing), showing planned
+  and actual timing together.
+- Start with the fault trace: it cannot be approximated another way, needs no
+  fast offload path, and is read when ticks are quiescent, which removes the
+  questions above about reading a live buffer. Streaming follows, adding the
+  drop-counting mode and the batch read from a task. The showcase can then
+  report its trace after zule_run() returns, beside the fault it already prints.
+
 ## Task profiling and benchmarking
 
 - Add host tooling that reads the [task statistics](modules.md#task-statistics)
   with the schedule JSON and reports each task's measured maximum, budget, and
   margin, suggesting `budget_slots`.
-- Consider a trace module: a ring buffer of fixed-size timestamped events,
-  frozen on a fault or on request to keep the lead-up. Offload it through a
-  debugger or the application, and decode it on the host for timeline viewers,
-  such as Perfetto or VCD. Consider sharing a timeline renderer with the
-  [schedule editor](../zule/tools/schedule/README.md#editing), showing planned
-  and actual timing together.
 - Simple modules, such as GPIO toggles per event, support measurement with a
   logic analyser.
 - Benchmark scheduler overhead, dispatch latency, and tick jitter on supported
