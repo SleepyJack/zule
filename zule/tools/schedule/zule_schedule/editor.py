@@ -652,6 +652,7 @@ def _loop(screen: Any, editor: Editor) -> None:
     )
     for pair, colour in enumerate(colours, start=1):
         curses.init_pair(pair, colour, -1)
+    curses.init_pair(_HELD_PAIR, curses.COLOR_WHITE, -1)
     curses.init_pair(_BAD_PAIR, curses.COLOR_RED, -1)
     screen.keypad(True)
     while not editor.finished:
@@ -690,10 +691,13 @@ def _attribute(style: str) -> int:
         return curses.A_DIM
     if style == SELECTED:
         return curses.A_REVERSE
+    # A held window is drawn in colour rather than reversed: reversing a full
+    # block paints the cell in the background colour, which turns the window
+    # dark instead of lifting it, and leaves little of it to colour red.
     if style == HELD:
-        return curses.A_REVERSE
+        return curses.A_BOLD | curses.color_pair(_HELD_PAIR)
     if style == BAD:
-        return curses.A_REVERSE | curses.color_pair(_BAD_PAIR)
+        return curses.A_BOLD | curses.color_pair(_BAD_PAIR)
     if style == ERROR:
         return curses.A_BOLD
     if style.startswith(TASK):
@@ -701,7 +705,8 @@ def _attribute(style: str) -> int:
     return curses.A_NORMAL
 
 
-_BAD_PAIR = 7
+_HELD_PAIR = 7
+_BAD_PAIR = 8
 _INTERRUPT = -2
 
 
