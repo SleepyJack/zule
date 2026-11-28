@@ -60,7 +60,9 @@ SELECTED = "selected"
 HELD = "held"
 BAD = "bad"  # A held window where it cannot stay.
 ERROR = "error"
-TASK = "task"  # Followed by the task's index, so lanes keep their colours.
+TASK = "task"  # Followed by a colour's number, which a task keeps while it is there.
+_COLOURS = 6  # How many lane colours there are to go round.
+BRIGHT = "bright-"  # Before another style: the cursor's slot, in its own colour.
 
 TASK_NAME = "task-name"
 TASK_BUDGET = "task-budget"
@@ -125,6 +127,7 @@ class Editor:
     saved: Any = None
     first_slots: dict[str, int] = field(default_factory=dict)
     revealed: dict[str, set[str]] = field(default_factory=dict)
+    colours: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.saved = deepcopy(self.schedule)
@@ -143,6 +146,24 @@ class Editor:
     def budget(self, task: str) -> int:
         """Return a task's budget, or one slot for a task the file does not declare."""
         return self.schedule["tasks"].get(task, {}).get("budget_slots", 1)
+
+    def styles(self) -> dict[str, str]:
+        """Return each task's lane colour, which it keeps while it is in the file.
+
+        A colour is given out when a task first needs one and held until the
+        task goes, so adding a task does not recolour the lanes around it. With
+        more tasks than colours a colour is shared, the least used one first.
+        """
+        names = self.task_names()
+        self.colours = {task: style for task, style in self.colours.items() if task in names}
+        for task in names:
+            if task in self.colours:
+                continue
+            used = list(self.colours.values())
+            self.colours[task] = min(
+                (f"{TASK}{number}" for number in range(_COLOURS)), key=used.count
+            )
+        return dict(self.colours)
 
     def lanes(self, name: str, cycle: Any) -> list[str]:
         """Return the tasks one schedule draws a lane for, in task order."""
@@ -471,6 +492,8 @@ class Editor:
                 if prompt.data in tasks:
                     tasks.discard(prompt.data)
                     tasks.add(text)
+            if prompt.data in self.colours:
+                self.colours[text] = self.colours.pop(prompt.data)
         elif prompt.action == "rename-schedule":
             self.schedule = rename_schedule(self.schedule, prompt.data, text)
             for state in (self.revealed, self.first_slots):
@@ -560,7 +583,7 @@ def layout(editor: Editor) -> list[list[Span]]:
     tasks = editor.schedule["tasks"]
     names = editor.task_names()
     labels = grid.label_width(names)
-    styles = {name: f"{TASK}{index % 6}" for index, name in enumerate(names)}
+    styles = editor.styles()
     width = editor.width
 
     rows = [
@@ -675,7 +698,11 @@ def frame(editor: Editor) -> list[list[tuple[str, str]]]:
                 # slot is not picked out within it.
                 style = holding
             elif row_index == editor.row and span_index == here:
-                style = SELECTED
+                # A slot a window reserves keeps its colour, brightened:
+                # reversing a block sets that colour behind the block drawn in
+                # it, which shows as stripes. Anything else reverses, which is
+                # what a cursor looks like on a slot mark or on text.
+                style = BRIGHT + span.style if span.style.startswith(TASK) else SELECTED
             else:
                 style = span.style
             spans.append((span.text, style))
@@ -734,9 +761,10 @@ def _status(editor: Editor) -> list[tuple[str, str]]:
 def caret(editor: Editor) -> tuple[int, int] | None:
     """Return where the terminal's own cursor belongs, or None to hide it.
 
-    A prompt is typed into, so the cursor belongs after what has been typed:
-    the drawn block says where that is, and the real cursor says it again for
-    a terminal whose colours make the block hard to pick out.
+    A prompt is typed into, so the cursor belongs after what has been typed.
+    It is hidden the rest of the time: a terminal draws its cursor by reversing
+    a cell, which on a block is the striping that the frame avoids, and it
+    marks one column where the frame marks the whole slot.
     """
     if editor.prompt is None:
         return None
@@ -848,6 +876,11 @@ def paint(
 
 
 def _attribute(style: str) -> int:
+    if style.startswith(BRIGHT):
+        under = style[len(BRIGHT) :]
+        # Bold over dim is undefined between terminals, so a slot with nothing
+        # in it brightens from the plain foreground instead.
+        return curses.A_BOLD | (0 if under == DIM else _attribute(under))
     if style == DIM:
         return curses.A_DIM
     if style == SELECTED:

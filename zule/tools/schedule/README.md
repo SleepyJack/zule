@@ -132,10 +132,20 @@ of it.
 `w` writes the file in the layout [format](#formatting) writes, and `q` quits,
 asking again if there is unsaved work; `Q` and a second Ctrl-C quit anyway.
 
-A prompt is typed into on the line above the key bar, where the terminal's own
-cursor rests; it is hidden the rest of the time, so it never sits on a row the
-editor did not put it in. A line the checks refuse stays as it was typed, to be
-corrected with `backspace`.
+Each task keeps one lane colour for as long as it is in the file, so adding a
+task does not recolour the lanes around it; a renamed task takes its colour with
+it, and a deleted one gives it back. With more tasks than colours a colour is
+shared, the least used one first.
+
+The cursor marks a whole cell. A slot a window reserves is brightened in its
+lane's colour, because reversing a cell sets that colour behind the block drawn
+in it, which a terminal shows as stripes; everything else is reversed, which is
+what a cursor looks like on a slot mark or on text.
+
+The terminal's own cursor is shown only in a prompt, after what has been typed,
+since a terminal draws its cursor by reversing one cell: on the grid that would
+be the same striping on one column of a slot the frame marks whole. A line the
+checks refuse stays as it was typed, to be corrected with `backspace`.
 
 The schedule is checked after every key, and the result is shown above the key
 bar. An edit may leave a schedule the checks reject, since some edits need a gap

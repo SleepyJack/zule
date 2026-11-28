@@ -14,6 +14,7 @@ from zule_schedule.editing import (
 )
 from zule_schedule.editor import (
     BAD,
+    BRIGHT,
     DIM,
     PLAIN,
     Cell,
@@ -34,6 +35,7 @@ from zule_schedule.editor import (
     key_name,
     paint,
 )
+from zule_schedule import grid
 from zule_schedule.schedule_io import load_schedule
 from zule_schedule.validation import validate_schedule
 
@@ -351,7 +353,8 @@ class HoldingTests(unittest.TestCase):
     def test_a_held_window_is_drawn_whole_without_the_cursor_in_it(self):
         state = editor()
         to_slot(state, "sense", 0)
-        self.assertEqual(self.styled(state, SELECTED), ["█████"])
+        # A slot is marked by the terminal's own cursor, not by its style.
+        self.assertEqual(self.styled(state, SELECTED), [])
         state.key("enter")
         # Two slots of sense, one column of the second left blank as ever.
         self.assertEqual(self.styled(state, HELD), ["█████████ "])
@@ -413,8 +416,12 @@ class PromptTests(unittest.TestCase):
         self.assertEqual([style for _, style in spans][:3], [DIM, PLAIN, SELECTED])
         self.assertEqual(caret(state), (state.height - 2, len("new task name: ") + 3))
 
-    def test_the_cursor_is_hidden_when_nothing_is_being_typed(self):
-        self.assertIsNone(caret(editor()))
+    def test_the_cursor_is_hidden_outside_a_prompt(self):
+        """A terminal reverses a cell to draw its cursor, which stripes a block."""
+        state = editor()
+        self.assertIsNone(caret(state))
+        to_slot(state, "sense", 1)
+        self.assertIsNone(caret(state))
 
     def test_the_cursor_stays_on_the_screen_of_a_narrow_terminal(self):
         state = editor(width=20)
@@ -431,6 +438,60 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(state.prompt.text, "0")
         press(state, "backspace", "2", "enter")
         self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 2)
+
+
+class ColourTests(unittest.TestCase):
+    """A lane's colour, which a task keeps for as long as it is in the file."""
+
+    def add(self, state, name, budget="1"):
+        to_cell(state, NEW_TASK)
+        press(state, "enter")
+        typed(state, name)
+        typed(state, budget)
+
+    def test_a_new_task_leaves_the_other_lanes_their_colours(self):
+        state = editor()
+        before = state.styles()
+        # A name before every other one, which an order-based colour would shift.
+        self.add(state, "actuate")
+        after = state.styles()
+        self.assertEqual({task: after[task] for task in before}, before)
+        self.assertNotIn(after["actuate"], before.values())
+
+    def test_a_renamed_task_keeps_its_colour(self):
+        state = editor()
+        colour = state.styles()["sense"]
+        to_cell(state, TASK_NAME, "sense")
+        press(state, "enter")
+        typed(state, "sampler")
+        self.assertEqual(state.styles()["sampler"], colour)
+        self.assertNotIn("sense", state.styles())
+
+    def test_a_deleted_task_gives_its_colour_back(self):
+        state = editor()
+        colour = state.styles()["control"]
+        to_cell(state, TASK_NAME, "control")
+        press(state, "D")
+        self.add(state, "actuate")
+        self.add(state, "brake")
+        self.assertIn(colour, state.styles().values())
+
+    def test_more_tasks_than_colours_share_the_least_used_one(self):
+        state = editor()
+        for index in range(5):
+            self.add(state, f"task{index}")
+        styles = state.styles()
+        self.assertEqual(len(styles), 8)
+        counts = {colour: list(styles.values()).count(colour) for colour in set(styles.values())}
+        self.assertEqual(sorted(counts.values()), [1, 1, 1, 1, 2, 2])
+
+    def test_a_lane_is_drawn_in_its_task_colour(self):
+        state = editor()
+        colour = state.styles()["sense"]
+        painted = [
+            row for row in frame(state) if any(text.startswith("sense") for text, _ in row)
+        ]
+        self.assertTrue(any(style == colour for row in painted for _, style in row))
 
 
 class RepeatTests(unittest.TestCase):
@@ -614,6 +675,26 @@ class FrameTests(unittest.TestCase):
     def test_a_task_shows_its_budget_before_the_bar_that_pictures_it(self):
         drawn = lines(editor())[3]
         self.assertEqual(drawn.split(), ["control", "3", "slots", "█" * 14])
+
+    def test_the_whole_slot_is_marked_and_a_window_by_its_colour(self):
+        """Reverse video stripes a block, so a window's slot brightens instead."""
+        state = editor()
+        to_slot(state, "sense", 7)
+        marked = [
+            (text, style) for row in frame(state) for text, style in row if style == SELECTED
+        ]
+        self.assertEqual(marked, [(grid.SLOT_MARK.ljust(grid.SLOT_COLUMNS), SELECTED)])
+        to_slot(state, "sense", 1)
+        colour = state.styles()["sense"]
+        marked = [
+            (text, style)
+            for row in frame(state)
+            for text, style in row
+            if style == BRIGHT + colour
+        ]
+        # The second slot of the window, whose last column keeps windows apart.
+        self.assertEqual(marked, [(grid.WINDOW * 4 + " ", BRIGHT + colour)])
+        self.assertEqual([style for row in frame(state) for _, style in row].count(SELECTED), 0)
 
     def test_the_cursor_cell_is_marked(self):
         state = editor()
