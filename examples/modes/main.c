@@ -50,7 +50,8 @@ void zule_task_mode_manager(void) {
 
 void zule_task_safe_state(void) {
     /* Stands in for putting the outputs in a safe state before stopping. The
-     * task returns as usual, and the run ends without dispatching another. */
+     * task returns as usual, and the run ends without dispatching another, so
+     * the shutdown cycle never repeats. */
     puts("safe_state: outputs safe, stopping the scheduler");
     if (zule_terminate() != ZULE_RESULT_OK) {
         (void)fputs("safe_state: the scheduler refused to stop\n", stderr);

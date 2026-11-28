@@ -33,7 +33,7 @@
       ]
     },
     "shutdown": {
-      "slots": 4,
+      "slots": 2,
       "windows": [{ "task": "safe_state", "start_slot": 0 }]
     }
   }

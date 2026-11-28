@@ -7,9 +7,10 @@ a [switch](../../doc/application.md#switching-schedules) between them, and a
 - [`config/schedule.json`](config/schedule.json): three schedules of 10 ms slots
   sharing four tasks. `startup` is four slots: three idle, which absorb
   startup latency, then `mode_manager`. `operational` runs `sense` and
-  `control`, with `mode_manager` in its last slot. `shutdown` is four slots
-  beginning with `safe_state`, whose two slots are reserved for stopping as they
-  would be for any other work.
+  `control`, with `mode_manager` in its last slot. `shutdown` is two slots, all of
+  them `safe_state`: stopping is reserved time like any other work, and the
+  cycle is no longer than the window, since the task ends the run rather than
+  waiting for the next cycle.
 - [`main.c`](main.c): the run starts with `startup`. The mode manager stands in
   for startup checks, then requests `operational`, which starts at slot 0 of the
   next cycle. The tasks print their names. After three operational cycles the
