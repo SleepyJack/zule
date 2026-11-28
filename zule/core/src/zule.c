@@ -8,6 +8,13 @@
 static bool running;
 static zule_config_t configuration;
 
+/* The section an application holds, with the port's state kept here so that the
+ * public API need not expose a port type, and a depth so that nesting saves and
+ * restores it once. Only application context touches these: the scheduler calls
+ * tasks outside its own critical section, and tick context must not call in. */
+static zule_port_critical_state_t application_critical_state;
+static uint32_t application_critical_depth;
+
 /* Whether a schedule ID names one of the application's schedules. Init checks
  * again, after validating the schedules. */
 static bool schedule_id_valid(uint32_t schedule_id) {
@@ -52,6 +59,22 @@ zule_result_t zule_schedule_request(uint32_t schedule_id) {
         result = zule_scheduler_schedule_request(schedule_id);
     }
     return result;
+}
+
+void zule_critical_enter(void) {
+    if (application_critical_depth == 0U) {
+        application_critical_state = zule_port_critical_enter();
+    }
+    ++application_critical_depth;
+}
+
+void zule_critical_exit(void) {
+    if (application_critical_depth != 0U) {
+        --application_critical_depth;
+        if (application_critical_depth == 0U) {
+            zule_port_critical_exit(application_critical_state);
+        }
+    }
 }
 
 zule_result_t zule_terminate(void) {

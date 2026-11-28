@@ -15,6 +15,7 @@ static uint32_t second_calls;
 static bool overrun;
 static bool recurse;
 static bool terminate;
+static bool guard;
 static bool task_running;
 static bool fault_during_task;
 static uint32_t fault_calls;
@@ -32,9 +33,29 @@ static void unexpected_fault(const zule_fault_info_t *fault) {
     assert(false);
 }
 
+/* A section a task holds excludes tick context, and nests. */
+static void check_guard(void) {
+    assert(!zule_test_port_is_critical());
+    zule_critical_enter();
+    assert(zule_test_port_is_critical());
+    zule_critical_enter();
+    assert(zule_test_port_is_critical());
+    zule_critical_exit();
+    /* Still held: only the outermost exit ends exclusion. */
+    assert(zule_test_port_is_critical());
+    zule_critical_exit();
+    assert(!zule_test_port_is_critical());
+    /* An exit without an enter does nothing. */
+    zule_critical_exit();
+    assert(!zule_test_port_is_critical());
+}
+
 static void first_task(void) {
     assert(!zule_test_port_is_critical());
     ++first_calls;
+    if (guard) {
+        check_guard();
+    }
     if (recurse) {
         assert(zule_run() == ZULE_RESULT_ALREADY_RUNNING);
         const zule_config_t disabled = {.on_fault = NULL};
@@ -91,6 +112,8 @@ static void check_stopped(void) {
 }
 
 int main(void) {
+    /* The section needs no scheduler: the port's is ready before any run. */
+    check_guard();
     assert(zule_schedule_request(0U) == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_terminate() == ZULE_RESULT_NOT_INITIALIZED);
     assert(zule_task_name_get(10U) == NULL);
@@ -192,6 +215,14 @@ int main(void) {
     assert(zule_run() == ZULE_RESULT_DISPATCH_MISSED);
     assert(fault_calls == 3U);
     check_stopped();
+
+    /* A task holding a section still runs and completes as usual. */
+    zule_test_port_reset();
+    guard = true;
+    assert(zule_run() == ZULE_RESULT_PORT_ERROR);
+    guard = false;
+    check_stopped();
+    check_guard();
 
     /* A task can stop the run: it finishes, no further task is dispatched, and
      * ticks are stopped as on any other exit. */
