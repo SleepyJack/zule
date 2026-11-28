@@ -30,6 +30,7 @@ from typing import Any
 
 from . import grid
 from .editing import (
+    add_recurring,
     add_schedule,
     add_task,
     add_window,
@@ -266,6 +267,8 @@ class Editor:
             self._move_cell(1 if name == "right" else -1)
         elif name == "enter":
             self._enter()
+        elif name == "r":
+            self._repeat()
         elif name in ("d", "D"):
             self._delete(force=name == "D")
 
@@ -349,6 +352,20 @@ class Editor:
         self.holding = (cell.schedule, index)
         self._follow()
         self.holding = None
+
+    def _repeat(self) -> None:
+        """Ask for the period of a series of windows anchored where the cursor is."""
+        cell = self.cursor()
+        if cell is None or cell.kind != SLOT:
+            return
+        name, cycle = self.cycles()[cell.schedule]
+        index = window_at(cycle, self.schedule["tasks"], cell.task, cell.slot)
+        start = cycle["windows"][index]["start_slot"] if index is not None else cell.slot
+        self.prompt = Prompt(
+            f"a {cell.task} window every how many slots, from slot {start}",
+            "repeat",
+            data=(name, cell.task, start),
+        )
 
     def _delete(self, force: bool) -> None:
         cell = self.cursor()
@@ -436,6 +453,12 @@ class Editor:
                 self.schedule, text, cycle["slots"], self.task_names()[0]
             )
             self.message = f"added schedule {text} with one window"
+        elif prompt.action == "repeat":
+            name, task, start = prompt.data
+            self.schedule, placed, skipped = add_recurring(
+                self.schedule, name, task, start, int(text)
+            )
+            self.message = _repeated(task, start, placed, skipped)
         elif prompt.action == "place-task":
             self._place_task(prompt.data, text)
         elif prompt.action == "rename-task":
@@ -486,6 +509,18 @@ class Editor:
         self.finished = True
 
 
+def _repeated(task: str, start: int, placed: list[int], skipped: list[tuple[int, str]]) -> str:
+    """Say what a series of windows managed, since a period need not divide a cycle."""
+    if not placed and not skipped:
+        return f"no further {task} window fits from slot {start}"
+    done = f"placed {_count(len(placed), 'window')}" if placed else "placed nothing"
+    if not skipped:
+        return done
+    slots = ", ".join(str(slot) for slot, _ in skipped[:4])
+    more = "" if len(skipped) <= 4 else ", …"
+    return f"{done}; no room at {'slot' if len(skipped) == 1 else 'slots'} {slots}{more}"
+
+
 def _commit_issue(editor: Editor, prompt: Prompt, text: str) -> str | None:
     """Return why a finished line cannot be used, or None if it can."""
     if prompt.action in ("new-task", "rename-task"):
@@ -497,9 +532,14 @@ def _commit_issue(editor: Editor, prompt: Prompt, text: str) -> str | None:
         if text not in editor.unplaced(prompt.data, cycle):
             return f"{prompt.data} has no unplaced task called {text!r}"
         return None
+    nouns = {"slots": "cycle", "repeat": "period"}
     if not text.isdigit() or int(text) < 1:
-        noun = "cycle" if prompt.action == "slots" else "budget"
-        return f"a {noun} is a whole number of slots, at least one"
+        return f"a {nouns.get(prompt.action, 'budget')} is a whole number of slots, at least one"
+    if prompt.action == "repeat":
+        _, task, _ = prompt.data
+        budget = editor.budget(task)
+        if int(text) < budget:
+            return f"{task} needs {_count(budget, 'slot')}, so its windows cannot be that close"
     return None
 
 
@@ -699,8 +739,8 @@ def _keys(editor: Editor) -> str:
     if cell.kind == SLOT:
         name, cycle = editor.cycles()[cell.schedule]
         if window_at(cycle, editor.schedule["tasks"], cell.task, cell.slot) is not None:
-            return "  enter pick up  d delete" + _MOVE
-        return f"  enter place {cell.task} here" + _MOVE
+            return "  enter pick up  d delete  r repeat" + _MOVE
+        return f"  enter place {cell.task} here  r repeat" + _MOVE
     offers = {
         TASK_NAME: "  enter rename  d delete",
         TASK_BUDGET: "  enter set budget  d delete",

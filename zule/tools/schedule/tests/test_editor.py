@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from zule_schedule.editing import (
+    add_recurring,
     add_schedule,
     delete_window,
     move_window,
@@ -103,6 +104,17 @@ class EditingTests(unittest.TestCase):
     def setUp(self):
         self.schedule = load_schedule(FIXTURES / "valid/control-loop.json")
         self.before = load_schedule(FIXTURES / "valid/control-loop.json")
+
+    def test_a_series_reports_what_it_skipped_and_changes_nothing_given(self):
+        edited, placed, skipped = add_recurring(self.schedule, "main", "sense", 0, 4)
+        self.assertEqual(self.schedule, self.before)
+        # control holds slots 2 to 4, so the series skips that one and goes on.
+        self.assertEqual(placed, [8])
+        self.assertEqual([slot for slot, _ in skipped], [4])
+        self.assertEqual(
+            [w["start_slot"] for w in edited["cycle"]["windows"] if w["task"] == "sense"],
+            [0, 8],
+        )
 
     def test_moving_leaves_the_original_schedule_alone(self):
         moved, _ = move_window(self.schedule, "main", 0, 1)
@@ -365,6 +377,84 @@ class HoldingTests(unittest.TestCase):
         press(state, "enter", "d")
         self.assertIsNone(state.holding)
         self.assertEqual([w["task"] for w in state.cycles()[0][1]["windows"]], ["control", "output"])
+
+
+def repeating(slots=12, windows=(("sense", 0), ("control", 4))):
+    """An editor on a cycle with room for a series, and something in its way."""
+    schedule = {
+        "slot_us": 100,
+        "tasks": {"sense": {"budget_slots": 2}, "control": {"budget_slots": 3}},
+        "cycle": {
+            "slots": slots,
+            "windows": [{"task": task, "start_slot": slot} for task, slot in windows],
+        },
+    }
+    return Editor("schedule.json", schedule, width=76, height=30)
+
+
+def starts(state, task):
+    _, cycle = state.cycles()[0]
+    return [w["start_slot"] for w in cycle["windows"] if w["task"] == task]
+
+
+class RepeatTests(unittest.TestCase):
+    """A window every n slots, anchored where the cursor is."""
+
+    def test_r_places_a_window_every_period_while_they_fit(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        self.assertIn("r repeat", keys(state))
+        state.key("r")
+        self.assertIn("every how many slots, from slot 0", status(state))
+        typed(state, "4")
+        self.assertEqual(starts(state, "sense"), [0, 8])
+        self.assertEqual(state.message, "placed 1 window; no room at slot 4")
+
+    def test_the_anchor_is_the_window_start_not_the_cursor_slot(self):
+        state = repeating()
+        to_slot(state, "sense", 1)
+        state.key("r")
+        self.assertIn("from slot 0", status(state))
+        typed(state, "8")
+        # Counted from slot 0, not from the slot the cursor was in.
+        self.assertEqual(starts(state, "sense"), [0, 8])
+
+    def test_an_empty_slot_anchors_the_series_on_itself(self):
+        state = repeating(windows=(("sense", 0),))
+        to_slot(state, "sense", 3)
+        state.key("r")
+        typed(state, "3")
+        self.assertEqual(starts(state, "sense"), [0, 3, 6, 9])
+
+    def test_a_period_shorter_than_the_budget_is_refused(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        state.key("r")
+        typed(state, "1")
+        self.assertIn("cannot be that close", state.message)
+        self.assertIsNotNone(state.prompt)
+        self.assertEqual(starts(state, "sense"), [0])
+
+    def test_a_period_must_be_a_number_of_slots(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        state.key("r")
+        typed(state, "x")
+        self.assertIn("a period is a whole number of slots", state.message)
+
+    def test_a_series_with_no_room_left_says_so(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        state.key("r")
+        typed(state, "20")
+        self.assertEqual(state.message, "no further sense window fits from slot 0")
+        self.assertEqual(starts(state, "sense"), [0])
+
+    def test_r_does_nothing_off_the_grid(self):
+        state = repeating()
+        to_cell(state, NEW_TASK)
+        state.key("r")
+        self.assertIsNone(state.prompt)
 
 
 class LaneTests(unittest.TestCase):

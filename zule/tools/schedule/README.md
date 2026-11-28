@@ -91,7 +91,7 @@ schedule startup · 4 slots
   + new schedule
 
 valid
-  enter place mode_manager here  ↑↓←→ move  w write  q quit
+  enter place mode_manager here  r repeat  ↑↓←→ move  w write  q quit
 ```
 
 A cell is one of these, and `enter` does what the key bar says:
@@ -117,6 +117,16 @@ one left without windows is simply not there when the file is opened again.
 
 A lane's name is the cell left of its first slot, so in a cycle too long for the
 terminal `←` from there scrolls back towards slot 0.
+
+`r` on a slot places a window there and every *n* slots after it, asking only
+for the period: the slot the cursor is in is the phase, and on a slot inside a
+window the series starts at that window instead. Windows go in while they fit,
+and a slot that cannot take one is reported rather than refusing the rest, since
+a period that does not divide the cycle is a reason to see what did fit:
+`placed 3 windows; no room at slot 4`. A period shorter than the task's budget
+is refused, because such windows would overlap each other. A series is ordinary
+windows once placed, so the file, the validator, and the generator know nothing
+of it.
 
 `w` writes the file in the layout [format](#formatting) writes, and `q` quits,
 asking again if there is unsaved work; `Q` and a second Ctrl-C quit anyway.

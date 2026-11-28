@@ -106,6 +106,37 @@ def add_window(schedule: Any, name: str, task: str, start: int | None = None) ->
     return edited, order.index(len(windows) - 1)
 
 
+def add_recurring(
+    schedule: Any, name: str, task: str, start: int, period: int
+) -> tuple[Any, list[int], list[tuple[int, str]]]:
+    """Return the schedule with a window every period slots from one slot on.
+
+    Windows go in while they fit, and a slot that cannot take one is reported
+    rather than refusing the rest: a period that does not divide a cycle is a
+    reason to see what did fit, not to place nothing. A window of the task that
+    already starts on one of the slots is left where it is.
+    """
+    edited = schedule
+    placed: list[int] = []
+    skipped: list[tuple[int, str]] = []
+    tasks = schedule["tasks"]
+    cycle = cycle_of(schedule, name)
+    budget = tasks.get(task, {}).get("budget_slots", 1)
+    for slot in range(start, max(cycle["slots"] - budget + 1, start), period):
+        if any(
+            window["task"] == task and window["start_slot"] == slot
+            for window in cycle_of(edited, name)["windows"]
+        ):
+            continue
+        issue = placement_issue(cycle_of(edited, name), tasks, task, slot)
+        if issue:
+            skipped.append((slot, issue))
+            continue
+        edited, _ = add_window(edited, name, task, slot)
+        placed.append(slot)
+    return edited, placed, skipped
+
+
 def task_name_issue(schedule: Any, name: str, renaming: str | None = None) -> str | None:
     """Return why a task cannot be called this, or None if it can."""
     if not _NAME.match(name):
