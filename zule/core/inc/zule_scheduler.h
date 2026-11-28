@@ -29,6 +29,13 @@ zule_result_t zule_scheduler_run(void);
  * schedule table, keeping any earlier request, and otherwise OK. */
 zule_result_t zule_scheduler_schedule_request(uint32_t schedule_id);
 
+/* Request that the run stop, from application context. The task that requests
+ * it runs to its end, and run then reports TERMINATED instead of dispatching
+ * another task; a latched fault is reported in its place. A request cannot be
+ * withdrawn, and init clears it, so each run starts without one. Returns
+ * NOT_INITIALIZED before successful initialization, and otherwise OK. */
+zule_result_t zule_scheduler_terminate(void);
+
 /* Wait for the next tick from the main loop when no task is pending. The check and the port's
  * idle wait share one critical section, so a tick that marks a task pending cannot be lost
  * between them. Returns a latched fault without waiting, PORT_ERROR if the port wait fails,

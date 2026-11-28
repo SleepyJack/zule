@@ -38,7 +38,8 @@ cmake --build --preset posix
 
 The cycle repeats until a fault or port error, when the showcase prints the
 fault, including the task's name, and exits nonzero. On the host, press Ctrl-C
-to stop it; there is no public stop API yet.
+to stop it; the [modes example](../modes/README.md) shows an application that
+[stops itself](../../doc/application.md#stopping-the-scheduler) instead.
 
 | Target | Output |
 | --- | --- |

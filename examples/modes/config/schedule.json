@@ -13,6 +13,10 @@
     "mode_manager": {
       "description": "Check the system and choose the schedule for the next cycle.",
       "budget_slots": 1
+    },
+    "safe_state": {
+      "description": "Put the outputs in a safe state and stop the scheduler.",
+      "budget_slots": 2
     }
   },
   "schedules": {
@@ -27,6 +31,10 @@
         { "task": "control", "start_slot": 2 },
         { "task": "mode_manager", "start_slot": 9 }
       ]
+    },
+    "shutdown": {
+      "slots": 4,
+      "windows": [{ "task": "safe_state", "start_slot": 0 }]
     }
   }
 }

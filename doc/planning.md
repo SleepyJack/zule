@@ -109,18 +109,6 @@ tools and configurations.
 - Define reproducible workloads and record target, clock, compiler, and build
   settings. Distinguish measured results from proven worst-case timing bounds.
 
-## Scheduler termination API
-
-- Add an API to request that the scheduler halt, causing the run loop to exit
-  and return `ZULE_RESULT_TERMINATED`.
-- Stop and quiesce tick delivery before returning. Define allowed caller
-  contexts, treatment of an executing task, and precedence between termination
-  requests and faults.
-- Show it in the [`modes` example](../examples/modes/README.md): a third,
-  shutdown schedule whose task puts outputs in a safe state and then
-  terminates, so the example exits cleanly, and CI checks its exit status
-  rather than a timeout.
-
 ## Documentation
 
 - Review [misc.md](misc.md): move each detail back into the document it came
