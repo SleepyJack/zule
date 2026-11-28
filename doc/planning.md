@@ -71,14 +71,12 @@ tools and configurations.
 The [editor](../zule/tools/schedule/README.md#editing) edits a file's tasks,
 schedules and windows, with one cursor over the whole grid. What is left:
 
-- **Fewer lanes.** Every schedule draws a lane for every task, because a lane
-  is where a window is placed. Instead, draw only the tasks a schedule places,
-  and a `+` row, shown when any task is unplaced, that brings one into the
-  schedule.
-- **Conveniences.** Recurring placement, undo, and starting a file from
-  nothing. Recurrence expands to ordinary windows rather than becoming new JSON
-  syntax, so the format, the validator, and the generator are unchanged and the
-  committed schedule stays explicit.
+- **Recurring placement.** A key on a slot that places a window there and every
+  *n* slots after it, while they fit. The cursor's slot is the phase, so one
+  period is all it asks for. Recurrence expands to ordinary windows rather than
+  becoming new JSON syntax, so the format, the validator, and the generator are
+  unchanged and the committed schedule stays explicit.
+- **Conveniences.** Undo, and starting a file from nothing.
 
 Constraints the editor already follows and the stages above keep to:
 

@@ -82,12 +82,11 @@ schedule operational · 10 slots
   sense         █████████ ·    ·    ·    ·    ·    ·    ·    ·
   idle                                   ░░░░░░░░░░░░░░░░░░░
 
-schedule startup · 5 slots
-                0    1    2    3    4
-  control       ·    ·    ·    ·    ·
-  mode_manager  ·    ·    ·    ·    ████
-  sense         ·    ·    ·    ·    ·
-  idle          ░░░░░░░░░░░░░░░░░░░
+schedule startup · 4 slots
+                0    1    2    3
+  mode_manager  ·    ·    ·    ████
+  idle          ░░░░░░░░░░░░░░
+  + place task
 
   + new schedule
 
@@ -104,13 +103,20 @@ A cell is one of these, and `enter` does what the key bar says:
 | `+ new task` | Add a task, asking for its name and budget. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. | |
 | A schedule's name | Rename the schedule. | Delete it. `D` confirms when it holds windows. The last schedule is kept. |
 | A schedule's length | Set the cycle length in slots. | As above. |
+| A lane's task name | — | Clear that task's windows from this schedule, leaving the task and its windows elsewhere. `D` confirms when the lane holds more than one. A lane with no windows is hidden again. |
 | An empty slot in a task's lane | Place a window for that lane's task there, or say why it will not fit. | |
 | A slot inside a window | Pick the window up: `←→` then move it, `d` deletes it, `enter` puts it down. A held window is drawn whole, and marked where it cannot stay. | Delete the window, leaving its task in the file. |
+| `+ place task` | Give a task a lane in this schedule, asking which of the ones it does not place yet. The lane appears empty, with the cursor in it, and windows go in the ordinary way. | |
 | `+ new schedule` | Add a schedule, asking for its name. It starts with one window, since a cycle needs one. A file written as a single `cycle` becomes `schedules`, with the original named `main`. | |
 
-Every schedule shows a lane for every task, dimmed where the task has no window
-there, because a lane is where its windows are placed. Which task a new window
-is for therefore needs no asking: it is the lane the cursor is in.
+A schedule draws a lane for each task it places, as `show` does. Which task a
+new window is for therefore needs no asking: it is the lane the cursor is in.
+A task the schedule does not place has no lane, and `+ place task` reveals an
+empty one for it. That lane is the editor's own state rather than the file's, so
+one left without windows is simply not there when the file is opened again.
+
+A lane's name is the cell left of its first slot, so in a cycle too long for the
+terminal `←` from there scrolls back towards slot 0.
 
 `w` writes the file in the layout [format](#formatting) writes, and `q` quits,
 asking again if there is unsaved work; `Q` and a second Ctrl-C quit anyway.

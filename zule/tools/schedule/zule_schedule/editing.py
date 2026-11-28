@@ -51,6 +51,23 @@ def delete_window(schedule: Any, name: str, index: int) -> tuple[Any, int]:
     return edited, max(0, min(index, len(windows) - 1))
 
 
+def delete_lane(schedule: Any, name: str, task: str) -> Any:
+    """Return the schedule without a task's windows in one named schedule.
+
+    The task itself stays, and so do its windows in every other schedule: a
+    lane is a task's use of one cycle, not the task.
+    """
+    edited = deepcopy(schedule)
+    cycle = cycle_of(edited, name)
+    cycle["windows"] = [window for window in cycle["windows"] if window["task"] != task]
+    return edited
+
+
+def lane_windows(cycle: Any, task: str) -> int:
+    """Return how many windows place a task in one cycle."""
+    return sum(1 for window in cycle["windows"] if window["task"] == task)
+
+
 def cycles_of(schedule: Any) -> list[Any]:
     """Return every cycle in a schedule file, whichever form it uses."""
     if "cycle" in schedule:
