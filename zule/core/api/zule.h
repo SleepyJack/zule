@@ -92,10 +92,12 @@ zule_result_t zule_run(void);
  * returns without dispatching another task: a task already released is not
  * dispatched, and tick delivery is stopped and quiesced before returning, as on
  * any other exit. A request cannot be withdrawn, and repeating it changes
- * nothing. A fault latched before the run returns takes precedence, so
- * zule_run() reports the fault rather than the request; a fault detected after
- * the request is not reported. Returns OK, or NOT_INITIALIZED when the scheduler
- * is not running. Each run starts with no request pending, so a terminated
+ * nothing. Ticks are delivered until the run returns, so one may still retire a
+ * window, release a task that is then never dispatched, or latch a fault and
+ * notify the handler. A fault latched before the run returns takes precedence,
+ * so zule_run() reports the fault rather than the request; one latched after
+ * that does not change what zule_run() returns. Returns OK, or NOT_INITIALIZED
+ * when the scheduler is not running. Each run starts with no request pending, so a terminated
  * application can call zule_run() again. */
 zule_result_t zule_terminate(void);
 

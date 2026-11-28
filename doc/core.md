@@ -87,8 +87,10 @@ dispatch loop reports `ZULE_RESULT_TERMINATED` instead of dispatching another
 task, and the scheduler entry point stops tick delivery and waits for any active
 tick handler before returning, as it does for a fault. A latched fault is
 reported in place of the request, since what went wrong outranks the request to
-stop. Ticks continue until the loop observes the request, so a window may be
-retired or a task released in the meantime; such a task is never dispatched.
+stop. Ticks continue until the entry point stops delivery, which is the last
+thing it does, so a tick may still retire a window, release a task, or latch a
+fault and notify the handler in the meantime; such a task is never dispatched,
+and such a fault does not change what the entry point returns.
 
 ### Task deadline monitoring
 

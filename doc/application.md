@@ -85,10 +85,14 @@ released for a later window is not dispatched, and tick delivery is stopped and
 quiesced as on any other exit. A request cannot be withdrawn, and repeating it
 changes nothing.
 
-A fault latched before the run returns takes precedence, so `zule_run()` reports
-the fault rather than the request; a fault detected after the request is not
-reported. `zule_terminate()` returns `ZULE_RESULT_NOT_INITIALIZED` when the
-scheduler is not running.
+Ticks are delivered until the run returns, since stopping them is the last thing
+`zule_run()` does, so a tick in between may still retire a window, release a task
+that is then never dispatched, or latch a fault and call the
+[fault handler](#fault-handler). A fault latched before the run returns takes
+precedence, so `zule_run()` reports the fault rather than the request; one
+latched after that does not change what `zule_run()` returns.
+`zule_terminate()` returns `ZULE_RESULT_NOT_INITIALIZED` when the scheduler is
+not running.
 
 With [multiple schedules](configuration.md#multiple-schedules), a shutdown
 schedule whose task puts the outputs in a safe state and then terminates keeps
