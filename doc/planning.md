@@ -72,11 +72,11 @@ The [editor](../zule/tools/schedule/README.md#editing) edits a file's tasks,
 schedules and windows, with one cursor over the whole grid. Recurring placement
 expands to ordinary windows rather than becoming new JSON syntax, so the format,
 the validator, and the generator are unchanged and the committed schedule stays
-explicit. What is left:
+explicit. A file that is not there yet is started by the editor rather than by
+hand, and the slot length, the cycle lengths, the tasks and the windows are all
+cells, so a schedule can be written without touching the JSON.
 
-- **Conveniences.** Undo, and starting a file from nothing.
-
-Constraints the editor already follows and the stages above keep to:
+Constraints the editor follows:
 
 - Nothing the editor needs is imported by the other commands, which every
   application build runs. It uses the standard library's `curses` alone.
