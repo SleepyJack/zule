@@ -33,7 +33,10 @@ targets it is normally a timer ISR; the POSIX port uses a thread. Either way:
 
 ### Critical sections
 
-The core keeps critical sections short and never runs tasks inside them.
+The core keeps critical sections short and never runs tasks inside them. The
+public API also wraps them for application code, which Zule holds to the same
+rules; see
+[sharing data with tick context](application.md#sharing-data-with-tick-context).
 
 - Entry saves the current exclusion state; exit restores exactly that state.
   Never unconditionally re-enable interrupts on exit.

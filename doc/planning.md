@@ -123,14 +123,6 @@ tools and configurations.
 - Consider detecting settings that differ between components, which a build
   outside CMake can cause by not giving every component the same definitions.
 
-## Application critical sections
-
-- Fault handlers run in tick context, so data shared between a fault handler and
-  application context needs exclusion. Consider public wrappers for the port's
-  critical section, with the same nesting and short-duration rules.
-- Have the showcase example use them to protect the state its fault handler
-  writes.
-
 ## Additional ports
 
 The [Cortex-M port](../zule/ports/cortex_m/README.md) provides critical

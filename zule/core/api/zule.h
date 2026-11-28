@@ -101,17 +101,16 @@ zule_result_t zule_run(void);
  * application can call zule_run() again. */
 zule_result_t zule_terminate(void);
 
-/* Exclude tick context for a few instructions of a task, for state that a tick
- * hook or the fault handler shares with tasks and that no single word can
- * publish: a snapshot of several values that must agree, or an object both
- * sides update. Call from a task. A tick hook and the fault handler need no
- * section of their own, since they already exclude tasks and each other, and
- * must not call these; nor may a section be held across a call to another Zule
- * API. Sections nest, and the outermost exit ends exclusion; an exit without an
- * enter does nothing. What is held delays the tick, so hold it for a few
- * instructions only: a section that spans a slot boundary causes the dispatch
- * or tick timing fault it was taken to report. A single word-sized flag, read
- * or written whole, needs no section. */
+/* Exclude tick context around a few instructions of a task. Zule protects its
+ * own state; application data shared between application context and tick
+ * context is the application's to protect, and these are for the cases where
+ * atomic access for the target is not enough. Call them from a task: a tick
+ * hook and the fault handler already exclude tasks and each other, must not
+ * call these, and no Zule API may be called while a section is held. Sections
+ * nest, and the outermost exit ends exclusion; an exit without an enter does
+ * nothing. What a section holds delays the tick, so hold it for a few
+ * instructions only: one that spans a slot boundary causes the dispatch or tick
+ * timing fault it was taken to report. */
 void zule_critical_enter(void);
 void zule_critical_exit(void);
 
