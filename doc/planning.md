@@ -66,25 +66,6 @@ tools and configurations.
   and consider dropping their POSIX targets, keeping the showcase runnable on
   the host for [Getting started](../README.md#getting-started).
 
-## Schedule editor
-
-The [editor](../zule/tools/schedule/README.md#editing) edits a file's tasks,
-schedules and windows, with one cursor over the whole grid. Recurring placement
-expands to ordinary windows rather than becoming new JSON syntax, so the format,
-the validator, and the generator are unchanged and the committed schedule stays
-explicit. A file that is not there yet is started by the editor rather than by
-hand, and the slot length, the cycle lengths, the tasks and the windows are all
-cells, so a schedule can be written without touching the JSON.
-
-Constraints the editor follows:
-
-- Nothing the editor needs is imported by the other commands, which every
-  application build runs. It uses the standard library's `curses` alone.
-- Each edit is a pure function from one schedule to another, and the frame the
-  editor draws is a value, so both are tested without a terminal.
-- Writing goes through the [formatter](../zule/tools/schedule/README.md#formatting),
-  so an edit does not rewrite the parts it did not touch.
-
 ## Watchdog integration
 
 - Consider an application callback from tick context to support watchdog
@@ -118,8 +99,8 @@ Constraints the editor follows:
 - Consider a trace module: a ring buffer of fixed-size timestamped events,
   frozen on a fault or on request to keep the lead-up. Offload it through a
   debugger or the application, and decode it on the host for timeline viewers,
-  such as Perfetto or VCD. Consider sharing a timeline renderer with
-  [the schedule editor](#schedule-editor), showing planned
+  such as Perfetto or VCD. Consider sharing a timeline renderer with the
+  [schedule editor](../zule/tools/schedule/README.md#editing), showing planned
   and actual timing together.
 - Simple modules, such as GPIO toggles per event, support measurement with a
   logic analyser.
