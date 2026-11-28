@@ -58,6 +58,73 @@ since seeing the problem is the point, and the issues are reported as for
 `validate`. One whose structure is unusable cannot be drawn, so only its issues
 are reported. Windows of one task that overlap are marked `▒`.
 
+## Editing
+
+`edit <schedule.json>` opens the schedule in the terminal, laid out as `show`
+prints it: the file's tasks, which every schedule in it shares, then each
+schedule below. One cursor moves over the whole of it with the arrow keys, and
+`enter` acts on the cell it is on. What that cell offers is listed at the foot
+of the screen, so there is nothing to remember and no mode to be in.
+
+```
+config/schedule.json
+
+tasks
+  control       3 slots   ██████████████
+  mode_manager  1 slot    ████
+  sense         2 slots   █████████
+  + new task
+
+schedule operational · 10 slots
+                0    1    2    3    4    5    6    7    8    9
+  control       ·    ·    ██████████████ ·    ·    ·    ·    ·
+  mode_manager  ·    ·    ·    ·    ·    ·    ·    ·    ·    ████
+  sense         █████████ ·    ·    ·    ·    ·    ·    ·    ·
+  idle                                   ░░░░░░░░░░░░░░░░░░░
+
+schedule startup · 5 slots
+                0    1    2    3    4
+  control       ·    ·    ·    ·    ·
+  mode_manager  ·    ·    ·    ·    ████
+  sense         ·    ·    ·    ·    ·
+  idle          ░░░░░░░░░░░░░░░░░░░
+
+  + new schedule
+
+valid
+  enter place mode_manager here  ↑↓←→ move  w write  q quit
+```
+
+A cell is one of these, and `enter` does what the key bar says:
+
+| Cell | `enter` | `d` |
+| --- | --- | --- |
+| A task's name | Rename it. Its windows follow; the application's `zule_task_<name>()` has to be renamed to match. | Delete the task. If a schedule places it, `D` deletes it and those windows. The last task is kept. |
+| A task's budget in slots | Set the budget. It belongs to the task, so this resizes its windows in every schedule, which can leave one overlapping. | As above. |
+| `+ new task` | Add a task, asking for its name and budget. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. | |
+| A schedule's name | Rename the schedule. | Delete it. `D` confirms when it holds windows. The last schedule is kept. |
+| A schedule's length | Set the cycle length in slots. | As above. |
+| An empty slot in a task's lane | Place a window for that lane's task there, or say why it will not fit. | |
+| A slot inside a window | Pick the window up: `←→` then move it, `d` deletes it, `enter` puts it down. A held window is drawn whole, and marked where it cannot stay. | Delete the window, leaving its task in the file. |
+| `+ new schedule` | Add a schedule, asking for its name. It starts with one window, since a cycle needs one. A file written as a single `cycle` becomes `schedules`, with the original named `main`. | |
+
+Every schedule shows a lane for every task, dimmed where the task has no window
+there, because a lane is where its windows are placed. Which task a new window
+is for therefore needs no asking: it is the lane the cursor is in.
+
+`w` writes the file in the layout [format](#formatting) writes, and `q` quits,
+asking again if there is unsaved work; `Q` and a second Ctrl-C quit anyway.
+
+The schedule is checked after every key, and the result is shown above the key
+bar. An edit may leave a schedule the checks reject, since some edits need a gap
+that does not exist yet; what is refused is writing one. The view scrolls to
+keep the cursor in sight: down through the schedules, and across within one
+whose cycle is longer than the terminal, each schedule keeping its own place.
+
+The editor needs a terminal with `curses`, which the standard library provides
+on Unix. The other commands do not import it, so an application build never
+needs one.
+
 ## Validation
 
 Loading rejects duplicate JSON keys and nonstandard constants such as NaN.
