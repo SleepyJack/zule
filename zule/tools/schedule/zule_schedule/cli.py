@@ -6,6 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from .editing import new_schedule
 from .formatting import format_schedule
 from .generation import generate_schedule
 from .rendering import render_schedule
@@ -81,6 +82,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "format":
         return _format(args.schedules, args.check)
+
+    if args.command == "edit" and not Path(args.schedule).exists():
+        # A file that is not there is one to start, which the editor does from
+        # the emptiest schedule it can draw; nothing is written until it is.
+        from .editor import run
+
+        return run(args.schedule, new_schedule(), new=True)
 
     try:
         schedule = load_schedule(args.schedule)

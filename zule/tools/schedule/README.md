@@ -12,6 +12,7 @@ then run from this directory:
 
 ```sh
 python -m zule_schedule validate tests/fixtures/valid/control-loop.json
+python -m zule_schedule edit tests/fixtures/valid/control-loop.json
 python -m zule_schedule show tests/fixtures/valid/control-loop.json
 python -m zule_schedule format tests/fixtures/valid/control-loop.json
 python -m zule_schedule generate tests/fixtures/valid/control-loop.json generated
@@ -66,8 +67,16 @@ schedule below. One cursor moves over the whole of it with the arrow keys, and
 `enter` acts on the cell it is on. What that cell offers is listed at the foot
 of the screen, so there is nothing to remember and no mode to be in.
 
+`edit <schedule.json>` on a file that is not there starts one: it opens a
+schedule with a millisecond slot, a `main` cycle of ten slots, no tasks and no
+windows, asking for the first task's name. Both lengths are cells like any
+other, nothing is invented beyond them, and the checks name what is still
+missing until a task and a window are there. Nothing is written until `w`, so a
+path typed by mistake costs a `q`.
+
 ```
 config/schedule.json
+slot 10000 us · 10 ms
 
 tasks
   control       3 slots   ██████████████
@@ -98,9 +107,10 @@ A cell is one of these, and `enter` does what the key bar says:
 
 | Cell | `enter` | `d` |
 | --- | --- | --- |
+| The slot length | Set it in microseconds. Every schedule in the file shares it, so this changes what every cycle lasts. | |
 | A task's name | Rename it. Its windows follow; the application's `zule_task_<name>()` has to be renamed to match. | Delete the task. If a schedule places it, `D` deletes it and those windows. The last task is kept. |
 | A task's budget in slots | Set the budget. It belongs to the task, so this resizes its windows in every schedule, which can leave one overlapping. | As above. |
-| `+ new task` | Add a task, asking for its name and budget. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. | |
+| `+ new task` | Add a task, asking for its name and budget. A name must be a C identifier whose uppercase form no other task takes, as the generated constants need. Its lane is then drawn in the schedule the cursor is in, with the cursor on it, ready for a window. | |
 | A schedule's name | Rename the schedule. | Delete it. `D` confirms when it holds windows. The last schedule is kept. |
 | A schedule's length | Set the cycle length in slots. | As above. |
 | A lane's task name | — | Clear that task's windows from this schedule, leaving the task and its windows elsewhere. `D` confirms when the lane holds more than one. A lane with no windows is hidden again. |

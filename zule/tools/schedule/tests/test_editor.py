@@ -6,6 +6,7 @@ from pathlib import Path
 from zule_schedule.editing import (
     add_recurring,
     add_schedule,
+    new_schedule,
     delete_window,
     move_window,
     placement_issue,
@@ -25,11 +26,13 @@ from zule_schedule.editor import (
     PLACE_TASK,
     SCHEDULE_NAME,
     SCHEDULE_SLOTS,
+    SLOT_US,
     SELECTED,
     SLOT,
     TASK_BUDGET,
     TASK_NAME,
     Editor,
+    Prompt,
     caret,
     frame,
     key_name,
@@ -78,8 +81,8 @@ def to_cell(state, kind, task=None, schedule=None):
     first = ACROSS.get(kind, kind)
     for _ in range(40):
         state.key("up")
-    for _ in range(4):
-        state.key("left")
+    # The column the cursor remembers decides which cell of a row it lands on.
+    state.column_wanted = 0
     for _ in range(40):
         cell = state.cursor()
         wanted = (task is None or cell.task == task) and (
@@ -182,7 +185,7 @@ class CursorTests(unittest.TestCase):
     def test_the_cursor_stops_at_the_ends(self):
         state = editor()
         press(state, "up", "up")
-        self.assertEqual(state.cursor().kind, TASK_NAME)
+        self.assertEqual(state.cursor().kind, SLOT_US)
         for _ in range(30):
             state.key("down")
         self.assertEqual(state.cursor().kind, NEW_SCHEDULE)
@@ -440,6 +443,78 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 2)
 
 
+class NewFileTests(unittest.TestCase):
+    """A file that is not there yet, which the editor starts from nothing."""
+
+    def opened(self, path="new.json"):
+        state = Editor(path, new_schedule(), new=True)
+        state.prompt = Prompt("new task name", "new-task")
+        return state
+
+    def test_the_skeleton_has_nothing_in_it_but_what_it_must(self):
+        self.assertEqual(
+            new_schedule(),
+            {"slot_us": 1000, "tasks": {}, "cycle": {"slots": 10, "windows": []}},
+        )
+
+    def test_it_says_the_file_is_not_there_and_asks_for_a_task(self):
+        state = self.opened()
+        self.assertIn("new.json · new", lines(state)[0])
+        self.assertIn("new task name", status(state))
+
+    def test_the_checks_name_what_is_missing_until_it_is_there(self):
+        state = self.opened()
+        press(state, "escape", "down")
+        self.assertIn("should be non-empty", status(state))
+        state.key("w")
+        self.assertIn("not written", state.message)
+
+    def test_a_new_task_lands_on_its_own_lane_ready_to_place(self):
+        state = self.opened()
+        typed(state, "control")
+        typed(state, "2")
+        self.assertEqual(state.cursor(), Cell(SLOT, 0, "control", 0))
+        self.assertIn("enter places a window in main", state.message)
+
+    def test_a_task_and_a_window_make_it_a_schedule_that_writes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "new.json"
+            state = self.opened(str(path))
+            typed(state, "control")
+            typed(state, "2")
+            press(state, "enter", "w")
+            self.assertIn("written", state.message)
+            self.assertFalse(state.new)
+            self.assertEqual(
+                load_schedule(path),
+                {
+                    "slot_us": 1000,
+                    "tasks": {"control": {"budget_slots": 2}},
+                    "cycle": {"slots": 10, "windows": [{"task": "control", "start_slot": 0}]},
+                },
+            )
+
+    def test_a_schedule_cannot_be_added_before_a_task(self):
+        state = self.opened()
+        state.key("escape")
+        to_cell(state, NEW_SCHEDULE)
+        state.key("enter")
+        self.assertIn("add a task first", state.message)
+        self.assertIsNone(state.prompt)
+
+    def test_the_slot_length_is_a_cell(self):
+        state = editor()
+        to_cell(state, SLOT_US)
+        self.assertIn("enter set the slot length", keys(state))
+        self.assertIn("slot 100 us", lines(state)[1])
+        state.key("enter")
+        typed(state, "0")
+        self.assertIn("whole number of microseconds", state.message)
+        typed(state, "2000")
+        self.assertEqual(state.schedule["slot_us"], 2000)
+        self.assertIn("slot 2000 us · 2 ms", lines(state)[1])
+
+
 class ColourTests(unittest.TestCase):
     """A lane's colour, which a task keeps for as long as it is in the file."""
 
@@ -673,7 +748,7 @@ class DeleteTests(unittest.TestCase):
 
 class FrameTests(unittest.TestCase):
     def test_a_task_shows_its_budget_before_the_bar_that_pictures_it(self):
-        drawn = lines(editor())[3]
+        drawn = next(line for line in lines(editor()) if line.startswith("  control"))
         self.assertEqual(drawn.split(), ["control", "3", "slots", "█" * 14])
 
     def test_the_whole_slot_is_marked_and_a_window_by_its_colour(self):

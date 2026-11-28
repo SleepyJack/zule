@@ -268,6 +268,24 @@ def set_slots(schedule: Any, name: str, slots: int) -> Any:
     return edited
 
 
+def set_slot_us(schedule: Any, slot_us: int) -> Any:
+    """Return the schedule with a different slot length, which every cycle shares."""
+    edited = deepcopy(schedule)
+    edited["slot_us"] = slot_us
+    return edited
+
+
+def new_schedule(slot_us: int = 1000, slots: int = 10) -> Any:
+    """Return the emptiest schedule the editor can open, for a file that is not there.
+
+    It has no tasks and no windows, which the checks report until they are
+    added, so that nothing is invented for a file to carry: the slot length and
+    the cycle length are a millisecond and ten slots only because an editor
+    needs something to draw, and both are cells.
+    """
+    return {"slot_us": slot_us, "tasks": {}, "cycle": {"slots": slots, "windows": []}}
+
+
 def placement_issue(cycle: Any, tasks: Any, task: str, start: int) -> str | None:
     """Return why a task's window cannot start at a slot, or None if it can."""
     budget = tasks.get(task, {}).get("budget_slots", 1)

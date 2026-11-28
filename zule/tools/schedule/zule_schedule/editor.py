@@ -45,6 +45,7 @@ from .editing import (
     rename_task,
     schedule_name_issue,
     set_budget,
+    set_slot_us,
     set_slots,
     task_name_issue,
     window_at,
@@ -64,6 +65,7 @@ TASK = "task"  # Followed by a colour's number, which a task keeps while it is t
 _COLOURS = 6  # How many lane colours there are to go round.
 BRIGHT = "bright-"  # Before another style: the cursor's slot, in its own colour.
 
+SLOT_US = "slot-us"
 TASK_NAME = "task-name"
 TASK_BUDGET = "task-budget"
 NEW_TASK = "new-task"
@@ -113,6 +115,7 @@ class Editor:
 
     path: str
     schedule: Any
+    new: bool = False
     width: int = 80
     height: int = 24
     row: int = 0
@@ -131,7 +134,17 @@ class Editor:
 
     def __post_init__(self) -> None:
         self.saved = deepcopy(self.schedule)
-        self.row = _rows_with_cells(layout(self))[0]
+        rows = layout(self)
+        # The first task, rather than the slot length above it, since the tasks
+        # and the schedules below them are what an editor is opened for.
+        self.row = next(
+            (
+                index
+                for index in _rows_with_cells(rows)
+                if _kind_of(rows[index][_cells(rows[index])[0]].cell) == TASK_NAME
+            ),
+            _rows_with_cells(rows)[0],
+        )
 
     @property
     def modified(self) -> bool:
@@ -342,6 +355,8 @@ class Editor:
             return
         if cell.kind == SLOT:
             self._enter_slot(cell)
+        elif cell.kind == SLOT_US:
+            self.prompt = Prompt("slot length in microseconds", "slot-us")
         elif cell.kind == TASK_NAME:
             self.prompt = Prompt(f"rename {cell.task} to", "rename-task", data=cell.task)
         elif cell.kind == TASK_BUDGET:
@@ -359,6 +374,9 @@ class Editor:
             choices = ", ".join(self.unplaced(name, cycle))
             self.prompt = Prompt(f"place which task ({choices})", "place-task", data=name)
         elif cell.kind == NEW_SCHEDULE:
+            if not self.task_names():
+                self.message = "a cycle needs a window: add a task first"
+                return
             self.prompt = Prompt("new schedule name", "new-schedule")
 
     def _enter_slot(self, cell: Cell) -> None:
@@ -501,11 +519,20 @@ class Editor:
                     state[text] = state.pop(prompt.data)
         elif prompt.action == "new-task-budget":
             self.schedule = add_task(self.schedule, prompt.data, int(text))
-            self.message = f"added {prompt.data}: place task gives it a lane"
+            # A task is added in order to run it, so its lane is drawn at once
+            # in the schedule the cursor is in, ready for a window.
+            index = max(_schedule_of(self.cursor()), 0)
+            name, _ = self.cycles()[index]
+            self.reveal(name, prompt.data)
+            self.prompt = None
+            self._put_on(Cell(SLOT, index, prompt.data, self.first_slot(name)))
+            self.message = f"added {prompt.data}: enter places a window in {name}"
         elif prompt.action == "budget":
             self.schedule = set_budget(self.schedule, prompt.data, int(text))
         elif prompt.action == "slots":
             self.schedule = set_slots(self.schedule, prompt.data, int(text))
+        elif prompt.action == "slot-us":
+            self.schedule = set_slot_us(self.schedule, int(text))
         self.prompt = None
 
     def _place_task(self, schedule: str, task: str) -> None:
@@ -527,6 +554,7 @@ class Editor:
             self.message = f"not written: {error}"
             return
         self.saved = deepcopy(self.schedule)
+        self.new = False
         self.message = f"written to {self.path}"
 
     def close(self, force: bool) -> None:
@@ -559,6 +587,10 @@ def _commit_issue(editor: Editor, prompt: Prompt, text: str) -> str | None:
         if text not in editor.unplaced(prompt.data, cycle):
             return f"{prompt.data} has no unplaced task called {text!r}"
         return None
+    if prompt.action == "slot-us":
+        if not text.isdigit() or int(text) < 1:
+            return "a slot length is a whole number of microseconds, at least one"
+        return None
     nouns = {"slots": "cycle", "repeat": "period"}
     if not text.isdigit() or int(text) < 1:
         return f"a {nouns.get(prompt.action, 'budget')} is a whole number of slots, at least one"
@@ -586,8 +618,15 @@ def layout(editor: Editor) -> list[list[Span]]:
     styles = editor.styles()
     width = editor.width
 
+    marks = (" · new" if editor.new else "") + (" · modified" if editor.modified else "")
+    slot_us = str(editor.schedule["slot_us"])
     rows = [
-        _row(Span(editor.path + (" · modified" if editor.modified else ""), DIM)),
+        _row(Span(editor.path + marks, DIM)),
+        _row(
+            Span("slot ", DIM),
+            Span(slot_us, PLAIN, Cell(SLOT_US)),
+            Span(f" us · {_duration(editor.schedule['slot_us'])}", DIM),
+        ),
         _row(),
         _row(Span("tasks", DIM)),
     ]
@@ -796,6 +835,7 @@ def _keys(editor: Editor) -> str:
         TASK_BUDGET: "  enter set budget  d delete",
         NEW_TASK: "  enter add a task",
         SCHEDULE_NAME: "  enter rename  d delete",
+        SLOT_US: "  enter set the slot length",
         SCHEDULE_SLOTS: "  enter set cycle length  d delete",
         PLACE_TASK: "  enter give a task a lane here",
         NEW_SCHEDULE: "  enter add a schedule",
@@ -803,13 +843,26 @@ def _keys(editor: Editor) -> str:
     return offers[cell.kind] + _MOVE
 
 
+def _duration(microseconds: int) -> str:
+    """Say a slot length the way show does, since the number itself is the cell."""
+    if microseconds >= 1000000 and microseconds % 1000000 == 0:
+        return f"{microseconds // 1000000} s"
+    if microseconds >= 1000 and microseconds % 1000 == 0:
+        return f"{microseconds // 1000} ms"
+    return f"{microseconds} us"
+
+
 def _count(count: int, noun: str) -> str:
     return f"{count} {noun}" + ("" if count == 1 else "s")
 
 
-def run(path: str, schedule: Any) -> int:
+def run(path: str, schedule: Any, new: bool = False) -> int:
     """Edit a schedule in the terminal, returning the process status."""
-    editor = Editor(path, schedule)
+    editor = Editor(path, schedule, new=new)
+    if new:
+        # A file with nothing in it needs a task before anything else can go in,
+        # so it opens asking for one; escape leaves an editor like any other.
+        editor.prompt = Prompt("new task name", "new-task")
     try:
         curses.wrapper(_loop, editor)
     except KeyboardInterrupt:
