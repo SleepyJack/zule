@@ -38,13 +38,14 @@ def render_schedule(schedule: Any, *, width: int = 80, color: bool = False) -> s
 def _task_block(
     tasks: Any, names: list[str], labels: int, width: int, colours: Any, color: bool
 ) -> str:
-    """Return the task list, each task's budget drawn as a window would be."""
-    bars = {name: bar(tasks[name]["budget_slots"]) for name in names}
-    columns = min(max([len(text) for text in bars.values()] + [0]), max(width - labels, SLOT_COLUMNS))
+    """Return the task list, each budget in slots and then drawn as a window."""
+    counts = {name: _slots(tasks[name]["budget_slots"]) for name in names}
+    column = max([len(count) for count in counts.values()] + [0]) + 2
+    room = max(width - labels - column, SLOT_COLUMNS)
     lines = [_paint(f"tasks · {_count(len(names), 'task')}", _DIM, color)]
     for name in names:
-        line = label(name, labels) + bars[name][:columns].ljust(columns + 2)
-        lines.append(_paint(line + _slots(tasks[name]["budget_slots"]), colours[name], color))
+        line = label(name, labels) + counts[name].ljust(column)
+        lines.append(_paint(line + bar(tasks[name]["budget_slots"])[:room], colours[name], color))
     return "\n".join(line.rstrip() for line in lines)
 
 

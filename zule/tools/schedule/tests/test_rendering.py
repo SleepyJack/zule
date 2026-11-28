@@ -59,6 +59,14 @@ class TaskBlockTests(unittest.TestCase):
         text = render_schedule(load_schedule(FIXTURES / "valid/unused-task.json"), width=76)
         self.assertEqual(len(lanes(block(text, "tasks"))), 2)
 
+    def test_the_budget_comes_before_the_bar_that_pictures_it(self):
+        """The editor puts the number first, where it is edited, so show does too."""
+        text = render_schedule(load_schedule(FIXTURES / "valid/modes.json"), width=76)
+        self.assertEqual(
+            lanes(block(text, "tasks"))["control"].split(),
+            ["control", "3", "slots", "█" * 14],
+        )
+
     def test_budget_is_drawn_as_a_window_of_that_task_is(self):
         """The shared slot width is the point of the task block: sizes compare."""
         text = render_schedule(load_schedule(FIXTURES / "valid/control-loop.json"), width=76)

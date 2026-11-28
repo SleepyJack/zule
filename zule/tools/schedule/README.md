@@ -28,9 +28,9 @@ grid of slots:
 
 ```
 tasks · 3 tasks
-  control  ██████████████  3 slots
-  output   █████████       2 slots
-  sense    █████████       2 slots
+  control  3 slots  ██████████████
+  output   2 slots  █████████
+  sense    2 slots  █████████
 
 schedule main · 10 slots · 1 ms · slot 100 us
 
