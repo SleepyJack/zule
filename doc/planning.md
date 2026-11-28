@@ -23,10 +23,6 @@ tools and configurations.
 
 ### Static checks
 
-- Keep the stub port alongside real ports. It checks the Zule library alone, so
-  a finding cannot come from port code or vendor headers; it is the only way to
-  check targets without a port; and it shows the smallest valid port. Real ports
-  check their own code and, in QEMU, behaviour, which the stub cannot.
 - Consider presets for combinations of features between the defaults and
   everything enabled, such as the tick check without hooks, if code depends on
   how settings combine. The host tests already build each feature in its own
@@ -54,17 +50,10 @@ tools and configurations.
 
 ### Continuous integration
 
-- Considered and not planned: ThreadSanitizer, which would only cover the POSIX
-  port, a development and demonstration target; and Clang as a second host
-  compiler, which adds little beyond the static checks.
-
 ### Examples
 
 - Consider an example for measuring and checking timing on a target, such as
   setting budgets and the tick timing tolerance from the modules' measurements.
-- Make the examples besides the showcase more embedded-focused: shorter slots,
-  and consider dropping their POSIX targets, keeping the showcase runnable on
-  the host for [Getting started](../README.md#getting-started).
 
 ## Watchdog integration
 
@@ -86,10 +75,6 @@ tools and configurations.
   handler, so there is no user fault hook.
 - Add idle start and end events only when a consumer needs them, since they
   fire on every dispatch loop iteration.
-- Deferred: equal treatment for several separate user modules. That needs a
-  registry, most cleanly a generated dispatcher built from a list of modules and
-  the hooks each needs. Only the modules layer would change; the core's
-  wrappers and the hooks stay the same.
 
 ## Trace module
 
