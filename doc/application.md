@@ -18,8 +18,8 @@ void zule_task_sense(void) {
 
 All tasks run sequentially in [application context](architecture.md#application-context),
 outside critical sections. There is no preemption between tasks, so data shared
-only between tasks needs no synchronization. Data shared with the
-[fault handler](#fault-handler), which runs in tick context, does.
+only between tasks needs no synchronization. Data shared with tick context does;
+see [sharing data with tick context](#sharing-data-with-tick-context).
 
 A task must return within its window's budget. Zule detects an overrun but
 cannot terminate the task; see [deadline monitoring](core.md#task-deadline-monitoring).
@@ -142,6 +142,34 @@ task; the application supplies any safe-state response.
 The showcase example copies the snapshot in the handler and prints it after
 `zule_run()` returns, when tick delivery is quiescent.
 
+## Sharing data with tick context
+
+Zule protects its own state. Application data shared between application context
+and tick context — with the [fault handler](#fault-handler) or a `tick_`
+[hook](#hooks) — is the application's to protect against concurrent access.
+
+Use atomic access appropriate to the target where it is enough, since it costs
+the tick nothing. Where it is not, `zule_critical_enter()` and
+`zule_critical_exit()` exclude tick context around a few instructions of a task:
+
+```c
+void zule_task_report(void) {
+    zule_critical_enter();
+    const shared_state_t copy = shared;
+    zule_critical_exit();
+    report(&copy);
+}
+```
+
+Call them from a task. A `tick_` hook and the fault handler need no section,
+since they already exclude tasks and each other, and must not call these; no
+Zule API may be called while a section is held. Sections nest, and the outermost
+exit ends exclusion.
+
+What a section holds delays the tick, so hold it for a few instructions only: a
+section that spans a slot boundary causes the dispatch or
+[tick timing](core.md#tick-timing-check) fault it was taken to report.
+
 ## Hooks
 
 Hooks report scheduler events to the application, for measurement and
@@ -170,7 +198,9 @@ Hooks never run concurrently with each other or with the tick: `tick_` hooks
 run in tick context, and the others run in application context inside the
 scheduler's critical section. Data that only application-context hooks write
 can therefore be read by tasks without synchronization; data written by
-`tick_` hooks needs the same care as fault handler data. Like the fault
+`tick_` hooks needs
+[protecting](#sharing-data-with-tick-context) like any other data shared with
+tick context. Like the fault
 handler, hooks must be bounded and nonblocking and must not call Zule or port
 functions. Their run time adds to the tick and to the critical section.
 

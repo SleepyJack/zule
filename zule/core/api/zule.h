@@ -101,6 +101,19 @@ zule_result_t zule_run(void);
  * application can call zule_run() again. */
 zule_result_t zule_terminate(void);
 
+/* Exclude tick context around a few instructions of a task. Zule protects its
+ * own state; application data shared between application context and tick
+ * context is the application's to protect, and these are for the cases where
+ * atomic access for the target is not enough. Call them from a task: a tick
+ * hook and the fault handler already exclude tasks and each other, must not
+ * call these, and no Zule API may be called while a section is held. Sections
+ * nest, and the outermost exit ends exclusion; an exit without an enter does
+ * nothing. What a section holds delays the tick, so hold it for a few
+ * instructions only: one that spans a slot boundary causes the dispatch or tick
+ * timing fault it was taken to report. */
+void zule_critical_enter(void);
+void zule_critical_exit(void);
+
 /* Request a switch to another schedule, by schedule ID from the generated
  * zule_schedule_ids.h. Call from a task. The switch takes effect at the start of
  * the next cycle, after the current schedule's final window: its first window
