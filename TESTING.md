@@ -69,21 +69,35 @@ cmake --build --preset posix
 ../../build/examples/showcase/posix/zule_showcase
 ```
 
-An example runs until stopped, since it returns only on a fault, so CI runs each
-for two seconds and checks it is still running:
+[`tools/check_examples.py`](tools/check_examples.py) builds an example, runs it,
+and checks what it does, which is what CI runs:
+
+```sh
+python tools/check_examples.py                             # every example, every target
+python tools/check_examples.py --target posix              # one target
+python tools/check_examples.py --example modes --no-build  # one example, already built
+python tools/check_examples.py --list                      # what it would check
+```
+
+A table in the script holds what each example promises, so adding one, or an
+expectation, is an edit there. The minimal and showcase examples return only on
+a fault, so each must still be running when its time is up; the modes example
+stops itself, so it must exit zero of its own accord, within a time that is
+there only to catch a hang.
 
 - **On POSIX,** the minimal example is the stable smoke test, since it does not
   depend on host timing. The showcase must also print every task's name, and its
   tick check can fault on a heavily loaded host. The modes example must print
-  its switch to the operational schedule before `sense` first runs.
+  its way through the three schedules, switching to the operational schedule
+  before `sense` first runs.
 - **On `qemu-mps2-an385`,** the examples run in QEMU with `-icount` and
-  `sleep=off`, so their timing is deterministic, and a fault ends QEMU with a
-  failure status. The minimal example prints nothing, so CI also counts SysTick
-  exceptions in QEMU's exception log (`-d int`), to tell a running scheduler
-  from a stuck program. The showcase prints through semihosting: CI checks
-  every task's name, and that its tick timing report shows no deviation, which
-  only QEMU's exact timing can promise. The modes example is checked as on
-  POSIX.
+  `sleep=off`, so their timing is deterministic, and an example's exit status
+  becomes QEMU's. The minimal example prints nothing, so the check also counts
+  SysTick exceptions in QEMU's exception log (`-d int`), to tell a running
+  scheduler from a stuck program. The showcase prints through semihosting: the
+  check looks for every task's name, and for a tick timing report with no
+  deviation, which only QEMU's exact timing can promise. The modes example is
+  checked as on POSIX.
 
 ## Target tests
 
@@ -140,6 +154,16 @@ with the target's type sizes, fails the build. GCC requires `memcpy`,
 `memmove`, `memset`, and `memcmp` even in a freestanding build, so the program
 provides them, standing in for the target environment.
 
+[`tools/build_presets.py`](tools/build_presets.py) builds every preset a
+project's `CMakePresets.json` offers, and tests those it gives a test preset,
+which is how CI runs the static checks and the target tests:
+
+```sh
+python tools/build_presets.py zule/tests/static         # every static check
+python tools/build_presets.py zule/core/tests/qemu     # build and run on the target
+python tools/build_presets.py --list zule/tests/static  # what it would build
+```
+
 Its presets, named `<port>-<core>[-all]`, choose the port, the core, and the
 features:
 
@@ -186,7 +210,8 @@ code rather than suppress the finding; see
 - **The schedule tool:** a test module in `zule/tools/schedule/tests/`, with JSON
   cases in its `fixtures/`.
 - **A static check for a new core, port, or feature set:** a preset in
-  `zule/tests/static/CMakePresets.json`, added to the CI job's list.
+  `zule/tests/static/CMakePresets.json`, which CI then builds, since it builds
+  every preset the file offers.
 
 ## Continuous integration
 

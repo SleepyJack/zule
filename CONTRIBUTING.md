@@ -42,7 +42,14 @@ ctest --preset tests
 ```
 
 [TESTING.md](TESTING.md) describes every kind of test and check, how to run
-each, and what CI runs.
+each, and what CI runs. The checks that need more than one command are scripts
+in [`tools/`](tools), so CI invokes them rather than defining them, and they run
+the same way locally:
+
+```sh
+python tools/build_presets.py zule/tests/static   # build and analyse every static preset
+python tools/check_examples.py --target posix     # build, run, and check the examples
+```
 
 To add a source file to the core or a module, list it in
 [`zule/zule_sources.txt`](zule/zule_sources.txt). The Zule library, the core
