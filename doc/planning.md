@@ -128,11 +128,19 @@ configuration says which.
 - Read in batches, so a consumer serializes a block at a time, and report what a
   decoder cannot know: the events enabled, the capacity, the slot length, the
   timebase frequency, the dropped count, and whether the trace is frozen.
-- Offload through a debugger or the application, and decode on the host, for
-  timeline viewers such as Perfetto or VCD, where the schedule JSON supplies
-  task names, budgets, and window boundaries. Keep encoding on the target to
-  packing records into bytes, since formatting there costs code space and tick
-  time for no benefit. Timestamps wrap in 32 bits, so the host works in deltas.
+- Offload through a debugger or the application, and decode on the host, where
+  the schedule JSON supplies task names, budgets, and window boundaries. Keep
+  encoding on the target to packing records into bytes, since formatting there
+  costs code space and tick time for no benefit. Timestamps wrap in 32 bits, so
+  the host works in deltas.
+- Write the decoded trace in a format an existing viewer opens, rather than
+  building a viewer. Chrome's trace event JSON, which Perfetto's web UI reads,
+  draws each task as a labelled span on its own track and is a few lines to
+  emit. VCD, the waveform format that Verilog tools such as GTKWave read, suits
+  comparing a trace against a logic analyser capture of the same run, which the
+  GPIO toggles under
+  [task profiling](#task-profiling-and-benchmarking) produce. Both are text, and
+  neither asks anything of the target.
 - Consider sharing a timeline renderer with the
   [schedule editor](../zule/tools/schedule/README.md#editing), showing planned
   and actual timing together.
