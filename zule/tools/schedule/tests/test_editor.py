@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from zule_schedule.editing import (
+    add_recurring,
     add_schedule,
     delete_window,
     move_window,
@@ -13,6 +14,8 @@ from zule_schedule.editing import (
 )
 from zule_schedule.editor import (
     BAD,
+    DIM,
+    PLAIN,
     Cell,
     HELD,
     LANE,
@@ -26,6 +29,7 @@ from zule_schedule.editor import (
     TASK_BUDGET,
     TASK_NAME,
     Editor,
+    caret,
     frame,
     key_name,
     paint,
@@ -103,6 +107,17 @@ class EditingTests(unittest.TestCase):
     def setUp(self):
         self.schedule = load_schedule(FIXTURES / "valid/control-loop.json")
         self.before = load_schedule(FIXTURES / "valid/control-loop.json")
+
+    def test_a_series_reports_what_it_skipped_and_changes_nothing_given(self):
+        edited, placed, skipped = add_recurring(self.schedule, "main", "sense", 0, 4)
+        self.assertEqual(self.schedule, self.before)
+        # control holds slots 2 to 4, so the series skips that one and goes on.
+        self.assertEqual(placed, [8])
+        self.assertEqual([slot for slot, _ in skipped], [4])
+        self.assertEqual(
+            [w["start_slot"] for w in edited["cycle"]["windows"] if w["task"] == "sense"],
+            [0, 8],
+        )
 
     def test_moving_leaves_the_original_schedule_alone(self):
         moved, _ = move_window(self.schedule, "main", 0, 1)
@@ -205,13 +220,14 @@ class CursorTests(unittest.TestCase):
             state.key("right")
         self.assertEqual(state.cursor().slot, 39)
         self.assertGreater(state.first_slot("main"), 0)
-        # Coming back, left walks to the lane's label and scrolls on from there.
-        for _ in range(60):
+        # Coming back, the cursor keeps to the lane, scrolling the view with it.
+        for slot in range(38, -1, -1):
             state.key("left")
-        self.assertEqual(state.cursor().kind, LANE)
+            self.assertEqual(state.cursor().slot, slot)
         self.assertEqual(state.first_slot("main"), 0)
-        state.key("right")
-        self.assertEqual(state.cursor().slot, 0)
+        # Only once slot 0 is reached does left leave the lane for its label.
+        state.key("left")
+        self.assertEqual(state.cursor().kind, LANE)
 
 
 class EnterTests(unittest.TestCase):
@@ -365,6 +381,116 @@ class HoldingTests(unittest.TestCase):
         press(state, "enter", "d")
         self.assertIsNone(state.holding)
         self.assertEqual([w["task"] for w in state.cycles()[0][1]["windows"]], ["control", "output"])
+
+
+def repeating(slots=12, windows=(("sense", 0), ("control", 4))):
+    """An editor on a cycle with room for a series, and something in its way."""
+    schedule = {
+        "slot_us": 100,
+        "tasks": {"sense": {"budget_slots": 2}, "control": {"budget_slots": 3}},
+        "cycle": {
+            "slots": slots,
+            "windows": [{"task": task, "start_slot": slot} for task, slot in windows],
+        },
+    }
+    return Editor("schedule.json", schedule, width=76, height=30)
+
+
+def starts(state, task):
+    _, cycle = state.cycles()[0]
+    return [w["start_slot"] for w in cycle["windows"] if w["task"] == task]
+
+
+class PromptTests(unittest.TestCase):
+    """What a prompt shows of itself, since it is typed into blind otherwise."""
+
+    def test_the_typed_line_is_drawn_as_text_with_the_cursor_after_it(self):
+        state = editor()
+        to_cell(state, NEW_TASK)
+        press(state, "enter", "l", "o", "g")
+        spans = frame(state)[-2]
+        self.assertEqual([text for text, _ in spans][:3], ["new task name: ", "log", "▌"])
+        self.assertEqual([style for _, style in spans][:3], [DIM, PLAIN, SELECTED])
+        self.assertEqual(caret(state), (state.height - 2, len("new task name: ") + 3))
+
+    def test_the_cursor_is_hidden_when_nothing_is_being_typed(self):
+        self.assertIsNone(caret(editor()))
+
+    def test_the_cursor_stays_on_the_screen_of_a_narrow_terminal(self):
+        state = editor(width=20)
+        to_cell(state, NEW_TASK)
+        press(state, "enter", *"a-long-task-name")
+        row, column = caret(state)
+        self.assertEqual(column, state.width - 2)
+
+    def test_a_refused_line_keeps_what_was_typed_to_correct(self):
+        state = editor()
+        to_cell(state, TASK_BUDGET)
+        press(state, "enter", "0", "enter")
+        self.assertIn("at least one", state.message)
+        self.assertEqual(state.prompt.text, "0")
+        press(state, "backspace", "2", "enter")
+        self.assertEqual(state.schedule["tasks"]["control"]["budget_slots"], 2)
+
+
+class RepeatTests(unittest.TestCase):
+    """A window every n slots, anchored where the cursor is."""
+
+    def test_r_places_a_window_every_period_while_they_fit(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        self.assertIn("r repeat", keys(state))
+        state.key("r")
+        self.assertIn("every how many slots, from slot 0", status(state))
+        typed(state, "4")
+        self.assertEqual(starts(state, "sense"), [0, 8])
+        self.assertEqual(state.message, "placed 1 window; no room at slot 4")
+
+    def test_the_anchor_is_the_window_start_not_the_cursor_slot(self):
+        state = repeating()
+        to_slot(state, "sense", 1)
+        state.key("r")
+        self.assertIn("from slot 0", status(state))
+        typed(state, "8")
+        # Counted from slot 0, not from the slot the cursor was in.
+        self.assertEqual(starts(state, "sense"), [0, 8])
+
+    def test_an_empty_slot_anchors_the_series_on_itself(self):
+        state = repeating(windows=(("sense", 0),))
+        to_slot(state, "sense", 3)
+        state.key("r")
+        typed(state, "3")
+        self.assertEqual(starts(state, "sense"), [0, 3, 6, 9])
+
+    def test_a_period_shorter_than_the_budget_is_refused(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        state.key("r")
+        typed(state, "1")
+        self.assertIn("cannot be that close", state.message)
+        self.assertIsNotNone(state.prompt)
+        self.assertEqual(starts(state, "sense"), [0])
+
+    def test_a_period_must_be_a_number_of_slots(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        state.key("r")
+        typed(state, "x")
+        self.assertIn("a period is a whole number of slots", state.message)
+
+    def test_a_series_with_no_room_left_says_so(self):
+        state = repeating()
+        to_slot(state, "sense", 0)
+        state.key("r")
+        typed(state, "20")
+        self.assertEqual(state.message, "no further sense window fits from slot 0")
+        self.assertEqual(starts(state, "sense"), [0])
+
+    def test_r_does_nothing_off_the_grid(self):
+        state = repeating()
+        to_cell(state, NEW_TASK)
+        state.key("r")
+        self.assertIsNone(state.prompt)
 
 
 class LaneTests(unittest.TestCase):
@@ -646,12 +772,36 @@ class TerminalTests(unittest.TestCase):
             def addstr(self, row, column, text, attribute):
                 self.written.append((row, column, text))
 
+            def move(self, row, column):
+                self.written.append(("move", row, column))
+
         screen = Screen()
         paint(screen, [[("ab", ""), ("cd", "dim")], [("x" * 20, "")]], 10, lambda style: 0)
         self.assertEqual(
             screen.written,
             ["erase", (0, 0, "ab"), (0, 2, "cd"), (1, 0, "x" * 9), "refresh"],
         )
+
+    def test_painting_rests_the_cursor_where_it_is_asked_to(self):
+        class Screen:
+            def __init__(self):
+                self.moved = None
+
+            def erase(self):
+                pass
+
+            def refresh(self):
+                pass
+
+            def addstr(self, row, column, text, attribute):
+                pass
+
+            def move(self, row, column):
+                self.moved = (row, column)
+
+        screen = Screen()
+        paint(screen, [[("ab", "")]], 10, lambda style: 0, spot=(4, 7))
+        self.assertEqual(screen.moved, (4, 7))
 
 
 if __name__ == "__main__":

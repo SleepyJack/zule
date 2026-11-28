@@ -69,13 +69,11 @@ tools and configurations.
 ## Schedule editor
 
 The [editor](../zule/tools/schedule/README.md#editing) edits a file's tasks,
-schedules and windows, with one cursor over the whole grid. What is left:
+schedules and windows, with one cursor over the whole grid. Recurring placement
+expands to ordinary windows rather than becoming new JSON syntax, so the format,
+the validator, and the generator are unchanged and the committed schedule stays
+explicit. What is left:
 
-- **Recurring placement.** A key on a slot that places a window there and every
-  *n* slots after it, while they fit. The cursor's slot is the phase, so one
-  period is all it asks for. Recurrence expands to ordinary windows rather than
-  becoming new JSON syntax, so the format, the validator, and the generator are
-  unchanged and the committed schedule stays explicit.
 - **Conveniences.** Undo, and starting a file from nothing.
 
 Constraints the editor already follows and the stages above keep to:

@@ -30,6 +30,7 @@ from typing import Any
 
 from . import grid
 from .editing import (
+    add_recurring,
     add_schedule,
     add_task,
     add_window,
@@ -266,6 +267,8 @@ class Editor:
             self._move_cell(1 if name == "right" else -1)
         elif name == "enter":
             self._enter()
+        elif name == "r":
+            self._repeat()
         elif name in ("d", "D"):
             self._delete(force=name == "D")
 
@@ -286,27 +289,31 @@ class Editor:
         self._clamp(rows)
         row = rows[self.row]
         navigable = _cells(row)
+        here = row[navigable[self.cell]].cell
         target = self.cell + step
-        if 0 <= target < len(navigable):
+        inside = 0 <= target < len(navigable)
+        # Leaving a lane leftwards for its label is the same edge as leaving it
+        # rightwards: the cycle scrolls while there is more of it that way.
+        leaving = not inside or _kind_of(row[navigable[target]].cell) == LANE
+        if leaving and self._scroll_across(here, step):
+            return
+        if inside:
             self.cell = target
             self.column_wanted = row[navigable[target]].column
-            return
-        self._scroll_across(row[navigable[self.cell]].cell, step)
 
-    def _scroll_across(self, cell: Cell | None, step: int) -> None:
-        """At a lane's edge, bring the next slot of a long cycle into view.
-
-        A lane's label is the cell left of its first slot, so left from there
-        is what scrolls a cycle too long to fit back towards its start.
-        """
-        if cell is None or cell.kind not in (SLOT, LANE):
-            return
+    def _scroll_across(self, cell: Cell | None, step: int) -> bool:
+        """At a lane's edge, bring the next slot of a long cycle into view."""
+        if cell is None or cell.kind != SLOT:
+            return False
         name, cycle = self.cycles()[cell.schedule]
         first = self.first_slot(name)
         if step > 0 and first + self.per_view() < cycle["slots"]:
             self.first_slots[name] = first + 1
-        elif step < 0 and first > 0:
+            return True
+        if step < 0 and first > 0:
             self.first_slots[name] = first - 1
+            return True
+        return False
 
     def _enter(self) -> None:
         cell = self.cursor()
@@ -349,6 +356,20 @@ class Editor:
         self.holding = (cell.schedule, index)
         self._follow()
         self.holding = None
+
+    def _repeat(self) -> None:
+        """Ask for the period of a series of windows anchored where the cursor is."""
+        cell = self.cursor()
+        if cell is None or cell.kind != SLOT:
+            return
+        name, cycle = self.cycles()[cell.schedule]
+        index = window_at(cycle, self.schedule["tasks"], cell.task, cell.slot)
+        start = cycle["windows"][index]["start_slot"] if index is not None else cell.slot
+        self.prompt = Prompt(
+            f"a {cell.task} window every how many slots, from slot {start}",
+            "repeat",
+            data=(name, cell.task, start),
+        )
 
     def _delete(self, force: bool) -> None:
         cell = self.cursor()
@@ -436,6 +457,12 @@ class Editor:
                 self.schedule, text, cycle["slots"], self.task_names()[0]
             )
             self.message = f"added schedule {text} with one window"
+        elif prompt.action == "repeat":
+            name, task, start = prompt.data
+            self.schedule, placed, skipped = add_recurring(
+                self.schedule, name, task, start, int(text)
+            )
+            self.message = _repeated(task, start, placed, skipped)
         elif prompt.action == "place-task":
             self._place_task(prompt.data, text)
         elif prompt.action == "rename-task":
@@ -486,6 +513,18 @@ class Editor:
         self.finished = True
 
 
+def _repeated(task: str, start: int, placed: list[int], skipped: list[tuple[int, str]]) -> str:
+    """Say what a series of windows managed, since a period need not divide a cycle."""
+    if not placed and not skipped:
+        return f"no further {task} window fits from slot {start}"
+    done = f"placed {_count(len(placed), 'window')}" if placed else "placed nothing"
+    if not skipped:
+        return done
+    slots = ", ".join(str(slot) for slot, _ in skipped[:4])
+    more = "" if len(skipped) <= 4 else ", …"
+    return f"{done}; no room at {'slot' if len(skipped) == 1 else 'slots'} {slots}{more}"
+
+
 def _commit_issue(editor: Editor, prompt: Prompt, text: str) -> str | None:
     """Return why a finished line cannot be used, or None if it can."""
     if prompt.action in ("new-task", "rename-task"):
@@ -497,10 +536,19 @@ def _commit_issue(editor: Editor, prompt: Prompt, text: str) -> str | None:
         if text not in editor.unplaced(prompt.data, cycle):
             return f"{prompt.data} has no unplaced task called {text!r}"
         return None
+    nouns = {"slots": "cycle", "repeat": "period"}
     if not text.isdigit() or int(text) < 1:
-        noun = "cycle" if prompt.action == "slots" else "budget"
-        return f"a {noun} is a whole number of slots, at least one"
+        return f"a {nouns.get(prompt.action, 'budget')} is a whole number of slots, at least one"
+    if prompt.action == "repeat":
+        _, task, _ = prompt.data
+        budget = editor.budget(task)
+        if int(text) < budget:
+            return f"{task} needs {_count(budget, 'slot')}, so its windows cannot be that close"
     return None
+
+
+def _kind_of(cell: Cell | None) -> str:
+    return cell.kind if cell is not None else ""
 
 
 def _schedule_of(cell: Cell | None) -> int:
@@ -667,8 +715,9 @@ def _held_issue(editor: Editor) -> str | None:
 def _status(editor: Editor) -> list[tuple[str, str]]:
     if editor.prompt is not None:
         return [
-            (f"{editor.prompt.label}: ", PLAIN),
-            (editor.prompt.text + "▌", SELECTED),
+            (f"{editor.prompt.label}: ", DIM),
+            (editor.prompt.text, PLAIN),
+            ("▌", SELECTED),
             (f"   {editor.message}" if editor.message else "", ERROR),
         ]
     if editor.message:
@@ -680,6 +729,19 @@ def _status(editor: Editor) -> list[tuple[str, str]]:
     if issues:
         return [(f"{_count(len(issues), 'issue')}: {issues[0].path}: {issues[0].message}", ERROR)]
     return [("valid", PLAIN)]
+
+
+def caret(editor: Editor) -> tuple[int, int] | None:
+    """Return where the terminal's own cursor belongs, or None to hide it.
+
+    A prompt is typed into, so the cursor belongs after what has been typed:
+    the drawn block says where that is, and the real cursor says it again for
+    a terminal whose colours make the block hard to pick out.
+    """
+    if editor.prompt is None:
+        return None
+    column = len(f"{editor.prompt.label}: ") + len(editor.prompt.text)
+    return max(editor.height - 2, 0), max(0, min(column, editor.width - 2))
 
 
 def _keys(editor: Editor) -> str:
@@ -699,8 +761,8 @@ def _keys(editor: Editor) -> str:
     if cell.kind == SLOT:
         name, cycle = editor.cycles()[cell.schedule]
         if window_at(cycle, editor.schedule["tasks"], cell.task, cell.slot) is not None:
-            return "  enter pick up  d delete" + _MOVE
-        return f"  enter place {cell.task} here" + _MOVE
+            return "  enter pick up  d delete  r repeat" + _MOVE
+        return f"  enter place {cell.task} here  r repeat" + _MOVE
     offers = {
         TASK_NAME: "  enter rename  d delete",
         TASK_BUDGET: "  enter set budget  d delete",
@@ -746,7 +808,7 @@ def _loop(screen: Any, editor: Editor) -> None:
         height, width = screen.getmaxyx()
         editor.resize(width, height)
         editor.scroll()
-        paint(screen, frame(editor), width)
+        paint(screen, frame(editor), width, spot=caret(editor))
         try:
             pressed = screen.getch()
         except KeyboardInterrupt:
@@ -755,11 +817,17 @@ def _loop(screen: Any, editor: Editor) -> None:
 
 
 def paint(
-    screen: Any, rows: list[list[tuple[str, str]]], width: int, attribute: Any = None
+    screen: Any,
+    rows: list[list[tuple[str, str]]],
+    width: int,
+    attribute: Any = None,
+    spot: tuple[int, int] | None = None,
 ) -> None:
     """Draw a frame, leaving the last column clear so that writing never wraps.
 
     What a style looks like is the terminal's business, so tests pass their own.
+    The cursor rests where spot says, and is hidden when there is nowhere for
+    it to be, so that it never sits on a row the editor did not put it in.
     """
     attribute = attribute or _attribute
     screen.erase()
@@ -770,6 +838,12 @@ def paint(
             if text:
                 screen.addstr(row, column, text, attribute(style))
             column += len(text)
+    try:
+        curses.curs_set(1 if spot else 0)
+    except curses.error:
+        pass  # A terminal that cannot do without its cursor keeps it.
+    if spot:
+        screen.move(*spot)
     screen.refresh()
 
 
