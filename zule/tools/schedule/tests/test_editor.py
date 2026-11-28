@@ -13,9 +13,12 @@ from zule_schedule.editing import (
 )
 from zule_schedule.editor import (
     BAD,
+    Cell,
     HELD,
+    LANE,
     NEW_SCHEDULE,
     NEW_TASK,
+    PLACE_TASK,
     SCHEDULE_NAME,
     SCHEDULE_SLOTS,
     SELECTED,
@@ -61,17 +64,25 @@ def status(state):
 
 
 # The second cell of a row is reached by moving across it.
-ACROSS = {SCHEDULE_SLOTS: SCHEDULE_NAME, TASK_BUDGET: TASK_NAME}
+ACROSS = {SCHEDULE_SLOTS: SCHEDULE_NAME, TASK_BUDGET: TASK_NAME, SLOT: LANE}
 
 
-def to_cell(state, kind, task=None):
-    """Move the cursor down, then across, until it rests on this kind of cell."""
+def to_cell(state, kind, task=None, schedule=None):
+    """Move the cursor to the first cell, then down and across to this kind."""
     first = ACROSS.get(kind, kind)
     for _ in range(40):
+        state.key("up")
+    for _ in range(4):
+        state.key("left")
+    for _ in range(40):
         cell = state.cursor()
-        if cell.kind == first and (task is None or cell.task == task):
-            if kind in ACROSS:
-                state.key("right")
+        wanted = (task is None or cell.task == task) and (
+            schedule is None or cell.schedule == schedule
+        )
+        if cell.kind == kind and wanted:
+            return cell
+        if cell.kind == first and wanted:
+            state.key("right")
             return state.cursor()
         state.key("down")
     raise AssertionError(f"no {kind} cell for {task}")
@@ -148,7 +159,7 @@ class CursorTests(unittest.TestCase):
             seen.append(state.cursor().kind)
         self.assertEqual(
             [kind for index, kind in enumerate(seen) if index == 0 or kind != seen[index - 1]],
-            [TASK_NAME, NEW_TASK, SCHEDULE_NAME, SLOT, NEW_SCHEDULE],
+            [TASK_NAME, NEW_TASK, SCHEDULE_NAME, LANE, NEW_SCHEDULE],
         )
 
     def test_the_cursor_stops_at_the_ends(self):
@@ -194,10 +205,13 @@ class CursorTests(unittest.TestCase):
             state.key("right")
         self.assertEqual(state.cursor().slot, 39)
         self.assertGreater(state.first_slot("main"), 0)
-        for _ in range(39):
+        # Coming back, left walks to the lane's label and scrolls on from there.
+        for _ in range(60):
             state.key("left")
-        self.assertEqual(state.cursor().slot, 0)
+        self.assertEqual(state.cursor().kind, LANE)
         self.assertEqual(state.first_slot("main"), 0)
+        state.key("right")
+        self.assertEqual(state.cursor().slot, 0)
 
 
 class EnterTests(unittest.TestCase):
@@ -353,6 +367,91 @@ class HoldingTests(unittest.TestCase):
         self.assertEqual([w["task"] for w in state.cycles()[0][1]["windows"]], ["control", "output"])
 
 
+class LaneTests(unittest.TestCase):
+    """Lanes a schedule draws, and the row that reveals one it does not."""
+
+    def test_place_task_reveals_an_empty_lane_and_waits_there(self):
+        state = editor("valid/modes.json")
+        to_cell(state, PLACE_TASK)
+        self.assertIn("give a task a lane", keys(state))
+        state.key("enter")
+        self.assertIn("control, sense", status(state))
+        typed(state, "sense")
+        self.assertEqual(state.cursor(), Cell(SLOT, 1, "sense", 0))
+        self.assertIn("sense has a lane in startup", state.message)
+        # The lane is the editor's own state, so the file is untouched.
+        self.assertFalse(state.modified)
+        self.assertTrue(any(line.startswith("  sense") for line in lines(state)[-12:]))
+
+    def test_an_empty_lane_takes_a_window_the_ordinary_way(self):
+        state = editor("valid/modes.json")
+        to_cell(state, PLACE_TASK)
+        press(state, "enter")
+        typed(state, "sense")
+        press(state, "right", "enter")
+        _, cycle = state.cycles()[1]
+        self.assertEqual(
+            [(w["task"], w["start_slot"]) for w in cycle["windows"]],
+            [("sense", 1), ("mode_manager", 4)],
+        )
+
+    def test_place_task_refuses_a_task_that_is_not_waiting(self):
+        state = editor("valid/modes.json")
+        to_cell(state, PLACE_TASK)
+        state.key("enter")
+        typed(state, "mode_manager")
+        self.assertIn("no unplaced task", state.message)
+        self.assertIsNotNone(state.prompt)
+
+    def test_the_row_goes_once_every_task_has_a_lane(self):
+        state = editor()
+        self.assertFalse(any("place task" in line for line in lines(state)))
+
+    def test_d_on_a_lane_clears_that_schedule_only(self):
+        state = editor("valid/modes.json")
+        to_cell(state, LANE, "mode_manager")
+        self.assertIn("d clear mode_manager", keys(state))
+        state.key("d")
+        self.assertIn("cleared mode_manager from operational", state.message)
+        # The task and its window in the other schedule both stay.
+        self.assertIn("mode_manager", state.schedule["tasks"])
+        self.assertEqual(
+            [w["task"] for w in state.cycles()[0][1]["windows"]], ["sense", "control"]
+        )
+        self.assertEqual([w["task"] for w in state.cycles()[1][1]["windows"]], ["mode_manager"])
+
+    def test_clearing_a_lane_of_several_windows_asks_first(self):
+        state = editor("valid/repeated-task.json")
+        to_cell(state, LANE, "sense")
+        state.key("d")
+        self.assertIn("2 windows here", state.message)
+        self.assertEqual(len(state.cycles()[0][1]["windows"]), 2)
+        state.key("D")
+        self.assertEqual(state.cycles()[0][1]["windows"], [])
+        self.assertIn("sense", state.schedule["tasks"])
+
+    def test_d_hides_a_lane_with_no_windows(self):
+        state = editor("valid/modes.json")
+        to_cell(state, PLACE_TASK)
+        state.key("enter")
+        typed(state, "sense")
+        to_cell(state, LANE, "sense", schedule=1)
+        self.assertIn("hide the empty lane", keys(state))
+        state.key("d")
+        self.assertIn("hid the empty sense lane", state.message)
+        self.assertEqual(state.lanes(*state.cycles()[1]), ["mode_manager"])
+
+    def test_a_renamed_task_keeps_its_revealed_lane(self):
+        state = editor("valid/modes.json")
+        to_cell(state, PLACE_TASK)
+        state.key("enter")
+        typed(state, "sense")
+        to_cell(state, TASK_NAME, "sense")
+        state.key("enter")
+        typed(state, "sampler")
+        self.assertEqual(state.lanes(*state.cycles()[1]), ["mode_manager", "sampler"])
+
+
 class DeleteTests(unittest.TestCase):
     def test_d_on_a_window_deletes_it(self):
         state = editor()
@@ -398,12 +497,14 @@ class FrameTests(unittest.TestCase):
             "".join(text for text, style in marked[0] if style == SELECTED), "control"
         )
 
-    def test_every_task_has_a_lane_in_every_schedule(self):
-        """A lane is where a window is placed, so a task without one still needs it."""
+    def test_a_schedule_draws_a_lane_only_for_the_tasks_it_places(self):
+        """A lane is a task's use of one cycle, so an unused task has none."""
         drawn = lines(editor("valid/modes.json"))
         startup = drawn[next(i for i, line in enumerate(drawn) if "schedule startup" in line) :]
-        for task in ("control", "mode_manager", "sense"):
-            self.assertTrue(any(line.startswith(f"  {task}") for line in startup[:6]), task)
+        block = startup[: next(i for i, line in enumerate(startup) if "place task" in line)]
+        self.assertTrue(any(line.startswith("  mode_manager") for line in block))
+        for task in ("control", "sense"):
+            self.assertFalse(any(line.startswith(f"  {task}") for line in block), task)
 
     def test_both_rows_that_add_something_are_shown(self):
         drawn = lines(editor())

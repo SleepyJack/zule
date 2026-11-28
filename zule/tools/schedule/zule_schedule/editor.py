@@ -3,8 +3,13 @@
 The editor draws a file the way show prints it: its tasks, which every schedule
 in it shares, then each schedule below the last. One cursor moves over the
 whole of it, a cell at a time, and enter acts on the cell it is on. A cell is a
-task's name or budget, a schedule's name or cycle length, one slot of one
-task's lane, or a row that adds another task or schedule. The keys the current
+task's name or budget, a schedule's name or cycle length, a lane or one slot
+of it, or a row that adds a task, places one in a schedule, or adds a schedule.
+
+A schedule draws a lane for each task it places, as show does, and a row that
+reveals an empty lane for one it does not. A revealed lane is the editor's own
+state rather than the file's: one left without windows is simply not there the
+next time the file is opened. The keys the current
 cell offers are listed at the foot of the screen, so there is no mode to
 remember; the one exception is holding a window, which the screen says.
 
@@ -28,9 +33,11 @@ from .editing import (
     add_schedule,
     add_task,
     add_window,
+    delete_lane,
     delete_schedule,
     delete_task,
     delete_window,
+    lane_windows,
     move_window,
     placement_issue,
     rename_schedule,
@@ -59,7 +66,9 @@ TASK_BUDGET = "task-budget"
 NEW_TASK = "new-task"
 SCHEDULE_NAME = "schedule-name"
 SCHEDULE_SLOTS = "schedule-slots"
+LANE = "lane"
 SLOT = "slot"
+PLACE_TASK = "place-task"
 NEW_SCHEDULE = "new-schedule"
 
 _MOVE = "  ↑↓←→ move  w write  q quit"
@@ -114,6 +123,7 @@ class Editor:
     interrupted: bool = False
     saved: Any = None
     first_slots: dict[str, int] = field(default_factory=dict)
+    revealed: dict[str, set[str]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.saved = deepcopy(self.schedule)
@@ -132,6 +142,20 @@ class Editor:
     def budget(self, task: str) -> int:
         """Return a task's budget, or one slot for a task the file does not declare."""
         return self.schedule["tasks"].get(task, {}).get("budget_slots", 1)
+
+    def lanes(self, name: str, cycle: Any) -> list[str]:
+        """Return the tasks one schedule draws a lane for, in task order."""
+        shown = {window["task"] for window in cycle["windows"]} | self.revealed.get(name, set())
+        return [task for task in self.task_names() if task in shown]
+
+    def unplaced(self, name: str, cycle: Any) -> list[str]:
+        """Return the tasks that schedule has no lane for."""
+        drawn = set(self.lanes(name, cycle))
+        return [task for task in self.task_names() if task not in drawn]
+
+    def reveal(self, name: str, task: str) -> None:
+        """Draw an empty lane for a task, so a window can be placed in it."""
+        self.revealed.setdefault(name, set()).add(task)
 
     def per_view(self) -> int:
         """Return how many slots a grid holds at the current width."""
@@ -270,8 +294,12 @@ class Editor:
         self._scroll_across(row[navigable[self.cell]].cell, step)
 
     def _scroll_across(self, cell: Cell | None, step: int) -> None:
-        """At a lane's edge, bring the next slot of a long cycle into view."""
-        if cell is None or cell.kind != SLOT:
+        """At a lane's edge, bring the next slot of a long cycle into view.
+
+        A lane's label is the cell left of its first slot, so left from there
+        is what scrolls a cycle too long to fit back towards its start.
+        """
+        if cell is None or cell.kind not in (SLOT, LANE):
             return
         name, cycle = self.cycles()[cell.schedule]
         first = self.first_slot(name)
@@ -298,6 +326,10 @@ class Editor:
         elif cell.kind == SCHEDULE_SLOTS:
             name = self.cycles()[cell.schedule][0]
             self.prompt = Prompt(f"slots in the {name} cycle", "slots", data=name)
+        elif cell.kind == PLACE_TASK:
+            name, cycle = self.cycles()[cell.schedule]
+            choices = ", ".join(self.unplaced(name, cycle))
+            self.prompt = Prompt(f"place which task ({choices})", "place-task", data=name)
         elif cell.kind == NEW_SCHEDULE:
             self.prompt = Prompt("new schedule name", "new-schedule")
 
@@ -329,10 +361,27 @@ class Editor:
                 return
             self.schedule, _ = delete_window(self.schedule, name, index)
             self.message = f"deleted a {cell.task} window"
+        elif cell.kind == LANE:
+            self._delete_lane(cell.schedule, cell.task, force)
         elif cell.kind in (TASK_NAME, TASK_BUDGET):
             self._delete_task(cell.task, force)
         elif cell.kind in (SCHEDULE_NAME, SCHEDULE_SLOTS):
             self._delete_schedule(cell.schedule, force)
+
+    def _delete_lane(self, index: int, task: str, force: bool) -> None:
+        """Clear a task's windows from one schedule, or hide a lane it has none in."""
+        name, cycle = self.cycles()[index]
+        placed = lane_windows(cycle, task)
+        if not placed:
+            self.revealed.get(name, set()).discard(task)
+            self.message = f"hid the empty {task} lane"
+            return
+        if placed > 1 and not force:
+            self.message = f"{task} has {_count(placed, 'window')} here: D deletes them"
+            return
+        self.schedule = delete_lane(self.schedule, name, task)
+        self.revealed.get(name, set()).discard(task)
+        self.message = f"cleared {task} from {name}"
 
     def _delete_task(self, task: str, force: bool) -> None:
         if len(self.task_names()) == 1:
@@ -387,18 +436,34 @@ class Editor:
                 self.schedule, text, cycle["slots"], self.task_names()[0]
             )
             self.message = f"added schedule {text} with one window"
+        elif prompt.action == "place-task":
+            self._place_task(prompt.data, text)
         elif prompt.action == "rename-task":
             self.schedule = rename_task(self.schedule, prompt.data, text)
+            for tasks in self.revealed.values():
+                if prompt.data in tasks:
+                    tasks.discard(prompt.data)
+                    tasks.add(text)
         elif prompt.action == "rename-schedule":
             self.schedule = rename_schedule(self.schedule, prompt.data, text)
+            for state in (self.revealed, self.first_slots):
+                if prompt.data in state:
+                    state[text] = state.pop(prompt.data)
         elif prompt.action == "new-task-budget":
             self.schedule = add_task(self.schedule, prompt.data, int(text))
-            self.message = f"added {prompt.data}: place it in a lane below"
+            self.message = f"added {prompt.data}: place task gives it a lane"
         elif prompt.action == "budget":
             self.schedule = set_budget(self.schedule, prompt.data, int(text))
         elif prompt.action == "slots":
             self.schedule = set_slots(self.schedule, prompt.data, int(text))
         self.prompt = None
+
+    def _place_task(self, schedule: str, task: str) -> None:
+        """Reveal an empty lane, and put the cursor in it ready to place a window."""
+        self.reveal(schedule, task)
+        index = [name for name, _ in self.cycles()].index(schedule)
+        self._put_on(Cell(SLOT, index, task, self.first_slot(schedule)))
+        self.message = f"{task} has a lane in {schedule}: enter places a window"
 
     def write(self) -> None:
         """Write the schedule, unless it still has issues to fix."""
@@ -427,6 +492,11 @@ def _commit_issue(editor: Editor, prompt: Prompt, text: str) -> str | None:
         return task_name_issue(editor.schedule, text, prompt.data)
     if prompt.action in ("new-schedule", "rename-schedule"):
         return schedule_name_issue(editor.schedule, text, prompt.data)
+    if prompt.action == "place-task":
+        cycle = dict(editor.cycles())[prompt.data]
+        if text not in editor.unplaced(prompt.data, cycle):
+            return f"{prompt.data} has no unplaced task called {text!r}"
+        return None
     if not text.isdigit() or int(text) < 1:
         noun = "cycle" if prompt.action == "slots" else "budget"
         return f"a {noun} is a whole number of slots, at least one"
@@ -473,12 +543,19 @@ def layout(editor: Editor) -> list[list[Span]]:
         rows.append(_row())
         rows.append(_heading(index, name, cycle, first, last))
         rows.append(_row(Span(" " * labels + grid.ruler(first, last), DIM)))
-        for task in names:
+        for task in editor.lanes(name, cycle):
             rows.append(_lane(editor, index, task, cycle, first, last, labels, styles[task]))
         idle = grid.idle_slots(cycle, tasks)
         rows.append(
             _row(Span(grid.label("idle", labels) + grid.lane(idle, first, last, grid.IDLE, " "), DIM))
         )
+        if editor.unplaced(name, cycle):
+            rows.append(
+                _row(
+                    Span(" " * grid.MARGIN),
+                    Span("+ place task", DIM, Cell(PLACE_TASK, schedule=index)),
+                )
+            )
     rows.append(_row())
     rows.append(_row(Span(" " * grid.MARGIN), Span("+ new schedule", DIM, Cell(NEW_SCHEDULE))))
     return rows
@@ -516,7 +593,11 @@ def _lane(
     """Return a task's lane in one schedule, one cell per slot it can hold."""
     held = grid.coverage(cycle, editor.schedule["tasks"], task)
     drawn = grid.lane(held, first, last)
-    spans = [Span(grid.label(task, labels), DIM if not held else PLAIN)]
+    spans = [
+        Span(" " * grid.MARGIN),
+        Span(task, DIM if not held else PLAIN, Cell(LANE, index, task)),
+        Span(" " * (labels - grid.MARGIN - len(task))),
+    ]
     for position, slot in enumerate(range(first, last)):
         text = drawn[position * grid.SLOT_COLUMNS : (position + 1) * grid.SLOT_COLUMNS]
         spans.append(Span(text, style if slot in held else DIM, Cell(SLOT, index, task, slot)))
@@ -610,6 +691,11 @@ def _keys(editor: Editor) -> str:
     cell = editor.cursor()
     if cell is None:
         return _MOVE
+    if cell.kind == LANE:
+        name, cycle = editor.cycles()[cell.schedule]
+        if lane_windows(cycle, cell.task):
+            return f"  d clear {cell.task} from {name}" + _MOVE
+        return "  d hide the empty lane" + _MOVE
     if cell.kind == SLOT:
         name, cycle = editor.cycles()[cell.schedule]
         if window_at(cycle, editor.schedule["tasks"], cell.task, cell.slot) is not None:
@@ -621,6 +707,7 @@ def _keys(editor: Editor) -> str:
         NEW_TASK: "  enter add a task",
         SCHEDULE_NAME: "  enter rename  d delete",
         SCHEDULE_SLOTS: "  enter set cycle length  d delete",
+        PLACE_TASK: "  enter give a task a lane here",
         NEW_SCHEDULE: "  enter add a schedule",
     }
     return offers[cell.kind] + _MOVE
